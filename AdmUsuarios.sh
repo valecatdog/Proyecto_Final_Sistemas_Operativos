@@ -1,13 +1,14 @@
 #! /bin/bash
 
+#SI NO SE INGRESAN PARAMETROS######################################################################################
 if (($# == 0))
-#para 0 parametros
 then
+#para 0 parametros
 echo "sin parametros"
 #aca se escribe lo que se hace (asi para todos)
 
 
-elif (($# == 1))
+#SI SE INGRESA UN PARAMETRO######################################################################################
 #para un parametro (yo)
 #CHECHEAR QUE HAYA CERRADO LAS ESCRUCTURAS, QUE ESTE LA LOGICA BIEN ESCRITA, QUE ANDE
 then
@@ -81,7 +82,7 @@ then
                         echo "$i. listaUsuarios[((i+1))]"
                     done
                     opValida=false
-
+#me gusta la chocha de pueltolico
                     while ("$opValida" = false)
                     do
                         read -p "Opcion: " opcion
@@ -137,27 +138,13 @@ then
 
 
 #FIN DE SI SE INGRESO UN PARAMETRO
+#SI SE INGRESAN 2 PARAMETROS######################################################################################
 elif (($# == 2))
 nombre=$1
 apellido=$2
 
-# funcion para generar nombres
-generar_username() {
-        local nombre="$1"
-        local apellido="$2"
-        local primera_letra=$(echo "$nombre" | cut -c1) # agarra la primera letra del nombre de nuestro usuario 
-        local usuario="${primera_letra}${apellido}" #se guarda el nombre y el apellido de usuario en una variable usuario
-        echo "$usuario" | tr "A-Z" "a-z"
-}
-# compara en passwd para ver si hay un usuario con la misma inicial + apellido
-usuario_existe() {
-        local usuario="$1" # $1 es el primer parámetro DE LA FUNCIÓN
-        # -q = quiet (no imprime mada) # ^ inicio de linea 
-        grep -q "^${usuario}:" /etc/passwd
-}
-
-echo "1 - Añadir usuario"
-echo "2 - Borrar usuario"
+echo "1. Añadir usuario"
+echo "2. Borrar usuario"
 read -p "Elige una opción: " opcion
 
 if (( "$opcion" = 1 ))
@@ -191,5 +178,23 @@ fi
 else
     echo "Se ha ingresado una cantidad invalida de parametros"
 fi
+#-----------------------------------------FIN DEL IF Y COMIENZO DE FUNCIONES---------------------------------------
+
+# FUNCION PARA GENERAR NOMBRES ####################################################################
+generar_username() {
+        local nombre="$1"
+        local apellido="$2"
+        local primera_letra=$(cut -c1 " $nombre") # agarra la primera letra del nombre de nuestro usuario
+        local usuario="${primera_letra}${apellido}" #se guarda el nombre y el apellido de usuario en una variable usuario
+        echo "$usuario" | tr "A-Z" "a-z" #como bash es case sensitive me parece que esto no va, pueden haber 2
+        #usuarios con el mismo nombre pero con mayusculas distintas
+}
 
 
+#FUNCION PARA COMPROBAR SI EXISTE UN USUARIO ES PASSWD ################################################################
+# compara en passwd para ver si hay un usuario con la misma inicial + apellido
+usuario_existe() {
+        local usuario="$1" # $1 es el primer parámetro DE LA FUNCIÓN
+        # -q = quiet (no imprime mada) # ^ inicio de linea 
+        grep -q "^${usuario}:" /etc/passwd
+}
