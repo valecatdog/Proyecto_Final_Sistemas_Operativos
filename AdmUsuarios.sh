@@ -7,7 +7,7 @@ then
 echo "sin parametros"
 #aca se escribe lo que se hace (asi para todos)
 
-
+elif (($# == 1))
 #SI SE INGRESA UN PARAMETRO######################################################################################
 #para un parametro (yo)
 #CHECHEAR QUE HAYA CERRADO LAS ESCRUCTURAS, QUE ESTE LA LOGICA BIEN ESCRITA, QUE ANDE
