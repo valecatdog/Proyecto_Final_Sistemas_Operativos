@@ -82,7 +82,6 @@ then
                         echo "$i. listaUsuarios[((i+1))]"
                     done
                     opValida=false
-#me gusta la chocha de pueltolico
                     while ("$opValida" = false)
                     do
                         read -p "Opcion: " opcion
@@ -153,18 +152,14 @@ then
     if usuario_existe "$usuario"; then
         echo "Ya hay un usuario registrado con el username: $usuario"
     else
-        #añade el usuario como nuevo system user junto con su directorio de usuario 
-        # -c para comment, para poder dividir nombre y apellido en diferentes campos (para luego compararlos con lo del nombre + apellido)
-        sudo useradd -m -c "$nombre $apellido" "$usuario"
-        echo "usuario '$usuario' creado correctamente"
+        add_usuario "$usuario" "$nombre" "$apellido"
     fi
 
 elif (( "$opcion" = 2 ))
 then
-#para borrar el usuario 
+
 if usuario_existe "$usuario"; then
-            sudo userdel -r "$usuario"
-            echo "Usuario '$usuario' eliminado correctamente"
+            del_usuario "$usuario"
         else
             echo "El usuario '$usuario' no existe"
         fi
@@ -194,5 +189,20 @@ usuario_existe() {
         # -q = quiet (no imprime mada) # ^ inicio de linea 
         grep -q "^${usuario}:" /etc/passwd
 }
+#añade el usuario como nuevo system user junto con su directorio de usuario 
+        # -c para comment, para poder dividir nombre y apellido en diferentes campos (para luego compararlos con lo del nombre + apellido)
+add_usuario(){
+    local usuario="$1"
+    local nombre="$2"
+    local apellido="$3"
+    sudo useradd -m -c "$nombre $apellido" "$usuario"
+    echo "usuario '$usuario' creado correctamente"
+} 
+#para borrar el usuario 
+del_usuario(){
+    local usuario="$1"
+    sudo userdel -r "$usuario"
+    echo "Usuario '$usuario' eliminado correctamente"
+}
 
-#HAY QUE HACER LAS FUNCIONES PARA CREAR Y BORRAR
+ 
