@@ -64,22 +64,23 @@ then
     do
         #CAPAZ QUE HABRIA UQE HACER ALGO PARA RETROCEDER? 0?
         echo "Que desea hacer?"
-        echo "1. Añadir un usuario al sistema"
-        echo "2. Eliminar uno de los usuarios"
+        echo "1. Añadir usuarios al sistema"
+        echo "2. Eliminar usuarios del sistema"
         echo "-------------------------------------"
-        read -p "Opcion: " op
+        read -p "Opcion: " opcion
 
-        case $op in
+        case $opcion in
             1)
                 valido=true
                 echo "Elegido: 1. Añadir un usuario al sistema"
+
                 if [ ${#listaUsuarios[*]} > 1 ]
                 then
                     echo "Con cuál usuario desea trabajar?:"
                     echo "0. Retroceder"
                     for((i = 0 ; i <= ${#listaUsuarios[*]} ; i++))
                     do
-                        echo "$i. listaUsuarios[((i+1))]"
+                        echo "$((i+1)). listaUsuarios[i]"
                     done
                     opValida=false
                     while ("$opValida" = false)
