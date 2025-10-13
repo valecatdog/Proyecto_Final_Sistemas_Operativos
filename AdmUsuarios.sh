@@ -51,7 +51,7 @@ then
     wc -w "$ruta" devolveria tambien la ruta junto con la cantidad de palabras, lo cual no sirve en este caso'
         nombreUsuario=$(cut -f$i -c1 "$ruta")$(cut -f$((i+1)) "$ruta")
         #toma el primer caracter del campo que corresponda al valor de i en el archivo y lo une con todo el segundo campo
-        listaUsuarios+=$nombreUsuario
+        listaUsuarios+=("$nombreUsuario")
         #lo añade al array de usuarios
 
         # si sobra un nombre (queda fuera de los pares que se van formando), simplemente no se usa
@@ -74,19 +74,19 @@ then
                 valido=true
                 echo "Elegido: 1. Añadir un usuario al sistema"
 
-                if [ ${#listaUsuarios[*]} > 1 ]
+                if (( ${#listaUsuarios[*]} > 1 ))
                 then
                     echo "Con cuál usuario desea trabajar?:"
                     echo "0. Retroceder"
-                    for((i = 0 ; i <= ${#listaUsuarios[*]} ; i++))
+                    for((i = 0 ; i < ${#listaUsuarios[*]} ; i++))
                     do
-                        echo "$((i+1)). listaUsuarios[i]"
+                        echo "$((i+1)). ${listaUsuarios[i]}"
                     done
                     opValida=false
-                    while ("$opValida" = false)
+                    while [ "$opValida" = false ]
                     do
                         read -p "Opcion: " opcion
-                        if ($opcion > -1 && $opcion <= ${#listaUsuarios[*]})
+                        if (( opcion > -1 && $opcion <= ${#listaUsuarios[@]}))
                         then
                             opValida=true
                             #NOMBRE DE LA FUNCION QUE HACE USUARIOS. TIENE QUE RECIBIR UN PARAMETRO: NOMBRE DE USUARIO
@@ -105,19 +105,19 @@ then
             2) 
                 valido=true
                 echo "Elegido: 2. Eliminar uno de los usuarios"
-                if [ ${#listaUsuarios[*]} > 1 ]
+                if (( ${#listaUsuarios[*]} > 1 ))
                 then
                     echo "Con cuál usuario desea trabajar?:"
                     echo "0. Retroceder"
-                    for((i = 0 ; i <= ${#listaUsuarios[*]} ; i++))
+                    for((i = 0 ; i < ${#listaUsuarios[*]} ; i++))
                     do
-                        echo "$i. listaUsuarios[((i+1))]"
+                        echo "$((i+1)). ${listaUsuarios[i]}"
                     done
                     opValida=false
-                    while ("$opValida" = false)
+                    while [ "$opValida" = false ]
                     do
                         read -p "Opcion: " opcion
-                        if ($opcion > -1 && $opcion <= ${#listaUsuarios[*]})
+                        if (( opcion > -1 && $opcion <= ${#listaUsuarios[@]} ))
                         then
                             opValida=true
                             #NOMBRE DE LA FUNCION QUE HACE USUARIOS. TIENE QUE RECIBIR UN PARAMETRO: NOMBRE DE 
