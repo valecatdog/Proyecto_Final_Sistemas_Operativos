@@ -1,18 +1,20 @@
 #! /bin/bash
-generar_username() {
-    local primeraLetra="$(echo "$1" | cut -c1)"
-    local nombreUsuario=$primeraLetra$2
-    echo "$nombreUsuario"
+#combino las 2 funciones y pruebo si andan
+
+add_usuario(){
+    local usuario="$1"
+    letraNombre=$(echo "$usuario" | tr "[:lower:]" "[:upper]")
+    letraApellido=$(echo "$usuario" |tr "[:upper]" "[:lower:]")
+    passwd="$($letraNombre$letraApellido#1234)"
+    sudo useradd -mc "$nombre $apellido" "$usuario"
+    #aca hay qeu ver como sacar el apellido para poder hacer el comentario
+    echo "Usuario '$usuario' creado correctamente"
+} 
+
+usuario_existe() {
+        local usuario="$1"
+        # -q = quiet (no imprime mada) # ^ inicio de linea 
+        grep -q "^${usuario}:" /etc/passwd
 }
 
-#importante que la funcion este arriba, tiene que estar definida poruqe bash va linea por linea, no loee todo y dsp hace
-#como es en otros lenguajes
-echo "#####################pruebo la funcion con parametros"
-generar_username "nahiara" "sosa"
-
-#y para guardar el nombre de usuario
-echo "#####################pruebo la funcion guardandola en una variable y haceindole cat"
-nombreUsuario=$(generar_username "sophia" "castro")
-echo "$nombreUsuario"
-
-
+echo "Arranca la prueba--------------------------------------------"

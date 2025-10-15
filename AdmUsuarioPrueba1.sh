@@ -93,36 +93,43 @@ then
     do
         #CAPAZ QUE HABRIA UQE HACER ALGO PARA RETROCEDER? 0?
         echo "Que desea hacer?"
-        echo "1. Añadir usuarios al sistema"
+        echo "1. Crear usuarios"
         echo "2. Eliminar usuarios del sistema"
-        echo "-------------------------------------"
         read -p "Opcion: " opcion
-    
+        printf "\n-------------------------------------"
+        echo "\n-------------------------------------"
+        #el echo no expande el \n, printf si
+
         case $opcion in
             1)
                 valido=true
-                echo "Elegido: 1. Añadir un usuario al sistema"
+                echo "Elegido: 1. Crear usuarios"
 
                 if (( ${#listaUsuarios[*]} > 1 ))
                 then
-                    echo "Con cuál usuario desea trabajar?:"
+                    echo "Con qué usuarios desea trabajar?:"
                     echo "0. Retroceder"
+                    #el retroceder en realidad no te vuelve para atras, para todo
+                    #despliega todos los usuarios
                     for((i = 0 ; i < ${#listaUsuarios[*]} ; i++))
                     do
                         echo "$((i+1)). ${listaUsuarios[i]}"
                     done
+
                     opValida=false
                     while [ "$opValida" = false ]
                     do
-                        read -p "Opcion: " opcion
-                        if (( opcion > -1 && $opcion <= ${#listaUsuarios[@]}))
+                        read -pr "Opcion: " opcion
+                        if (( opcion > -1 && opcion <= ${#listaUsuarios[@]}))
                         then
                             opValida=true
-                            #NOMBRE DE LA FUNCION QUE HACE USUARIOS. TIENE QUE RECIBIR UN PARAMETRO: NOMBRE DE USUARIO
+                            add_user "USERNAME!!!"
                         else
-                        echo "Opcion inválida. Vuelva a intentarlo"
+                            echo "Opcion inválida. Vuelva a intentarlo"
                         fi
                     done
+
+                    #UN USUARIO SOLO---------------------------------------------------------
                 else
                     echo "si no me da error"
                     #MANDA DIRECTO EL USUARIO A LA FUNCION
