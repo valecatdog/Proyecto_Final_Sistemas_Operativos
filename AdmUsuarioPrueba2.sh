@@ -1,7 +1,7 @@
 #! /bin/bash
 generar_username() {
     local nombreCompleto="$1$2"
-    local nombreUsuario=$(cut -c1 "$nombreCompleto")$(cut -d" "-f2 "$nombreCompleto")
+    local nombreUsuario=$(cat nombreCompleto |cut -c1)$(cat nombreCompleto | cut -d" "-f2)
     cat nombreUsuario
 }
 
