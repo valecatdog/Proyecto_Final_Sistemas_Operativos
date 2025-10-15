@@ -1,6 +1,27 @@
 #! /bin/bash
 #ARCHIVO PARA PRUEBAS DEL SCRIPT COMPLETO
 
+#EXPLICACIONES
+: '
+-los read tienen -r para que no se intrprete lo que se escriba (el shell )
+'
+
+#ESPACIO PARA FUNCIONES
+generar_username() {
+    local primeraLetra
+    primeraLetra="$(echo "$1" | cut -c1)"
+    #se hace por separado porque al ponerle local de una se pierde el valor de retorno ($?, si es 0, 1 etc)
+    local nombreUsuario=$primeraLetra$2
+    echo "$nombreUsuario"
+}
+
+
+
+##########################################################################
+
+
+
+
 #SI NO SE INGRESAN PARAMETROS######################################################################################
 if (($# == 0))
 then
@@ -35,7 +56,7 @@ then
             if [ "$(wc -w < archivo.txt)" -lt 2 ]
             then
                 echo "Error: archivo invalido. Los archivos tienen que tener por lo menos dos palabras (nombre y apellido)"
-                read -p "Ingrese una ruta válida: " archivo
+                read -pr "Ingrese una ruta válida: " archivo
                 valido=true
                 #detiene el until
             else
@@ -44,7 +65,7 @@ then
         else
             #si no es valido
             echo "Error: archivo invalido o no encontrado"
-            read -p "Ingrese una ruta válida: " archivo
+            read -pr "Ingrese una ruta válida: " archivo
         fi
     done
     echo "-------------------------------------"
@@ -55,23 +76,23 @@ fi
 ##############################################ESTA PARTE ESTA CORRECTA############################################
 
     listaUsuarios=()
-    #creo un array con todos los usuarios con los que se va a estar trabajando
+    #creo un array para todos los usuarios con los que se va a estar trabajando
+
+    #recorro todos los elementod del archivo con un for
     for ((i = 1 ; i < $(wc -w < "$archivo") ; i+=2))
     do
-
-    : 'i va a ir tomando el valor de cada nombre en el archivo para hacer los nombres (se explica mejor mas adelante). Empieza en 1.
-    Incrementa de 2 en 2 (porque por cada vuelta se usan 2 campos: nombre y apellido). Se ejecuta hasta que i sea mayor a la cantidad de
-    campos en el archivo. para eso se cuentan la cantidad de palabras en la ruta. Se escribe wc -w < "$archivo" porque de otra forma, el comando
-    wc -w "$archivo" devolveria tambien la ruta junto con la cantidad de palabras, lo cual no sirve en este caso'
-
-        nombreUsuario=$(cut -f$i -c1 "$archivo")$(cut -f$((i+1)) "$archivo")
-        #toma el primer caracter del campo que corresponda al valor de i en el archivo y lo une con todo el segundo campo
+        nombreUsuario="generar_username $(echo "$archivo" | cut -d" " -f$i) $(echo "$archivo" | cut -d" " -f$((i+1)))"
         listaUsuarios+=("$nombreUsuario")
         #lo añade al array de usuarios
 
         # si sobra un nombre (queda fuera de los pares que se van formando), simplemente no se usa
 
         #HAY QEU CHECHEAR QUE EL ARCHIVO CONTENGA POR LO MENOS UN NOMBRE Y UN APELLIDO EN LA PARTE DE ARRIBA, CUANDO VEO SI EL ARHIVO ES VALIDO
+    done
+
+    for ((i=0 ; i < 3 ; i++))
+    do
+        echo hola "${listaUsuarios[$i]}"
     done
 
 
