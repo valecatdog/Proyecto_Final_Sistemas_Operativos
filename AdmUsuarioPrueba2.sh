@@ -13,6 +13,6 @@ generar_username "nahiara" "sosa"
 #y para guardar el nombre de usuario
 echo "#####################pruebo la funcion guardandola en una variable y haceindole cat"
 nombreUsuario=$(generar_username "sophia" "castro")
-cat "$nombreUsuario"
+echo "$nombreUsuario"
 
 
