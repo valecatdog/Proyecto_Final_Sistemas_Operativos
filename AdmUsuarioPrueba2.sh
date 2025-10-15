@@ -1,7 +1,7 @@
 #! /bin/bash
 generar_username() {
-    local nombreCompleto="$1$2"
-    local nombreUsuario=$(echo "$nombreCompleto" |echo -c1)$(cat "$nombreCompleto" | cut -d" "-f2)
+    local primeraLetra="$(echo "$1" | cut -c1)"
+    local nombreUsuario=$primeraLetra$2
     echo "$nombreUsuario"
 }
 
@@ -12,7 +12,7 @@ generar_username "nahiara" "sosa"
 
 #y para guardar el nombre de usuario
 echo "#####################pruebo la funcion guardandola en una variable y haceindole cat"
-nombreUsuario=$(generar_username "sophia castro")
-cat nombreUsuario
+nombreUsuario=$(generar_username "sophia" "castro")
+cat "$nombreUsuario"
 
 
