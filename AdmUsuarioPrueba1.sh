@@ -81,7 +81,7 @@ fi
     #recorro todos los elementod del archivo con un for
     for ((i = 1 ; i < $(wc -w < "$archivo") ; i+=2))
     do
-        nombreUsuario=$(generar_username "$(echo "$archivo" | cut -d" " -f$i)" "$(echo "$archivo" | cut -d" " -f$((i+1)))")
+        nombreUsuario=$(generar_username "$(cat "$archivo" | cut -d" " -f$i)" "$(cat "$archivo" | cut -d" " -f$((i+1)))")
         listaUsuarios+=("$nombreUsuario")
         #lo añade al array de usuarios
 
