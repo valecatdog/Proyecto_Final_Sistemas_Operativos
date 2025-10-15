@@ -71,9 +71,7 @@ then
     echo "-------------------------------------"
     #fin del until
 
-fi
 
-##############################################ESTA PARTE ESTA CORRECTA############################################
 
     listaUsuarios=()
     #creo un array para todos los usuarios con los que se va a estar trabajando
@@ -86,16 +84,89 @@ fi
         #lo añade al array de usuarios
 
         # si sobra un nombre (queda fuera de los pares que se van formando), simplemente no se usa
-
-        #HAY QEU CHECHEAR QUE EL ARCHIVO CONTENGA POR LO MENOS UN NOMBRE Y UN APELLIDO EN LA PARTE DE ARRIBA, CUANDO VEO SI EL ARHIVO ES VALIDO
     done
 
-    for ((i=0 ; i < 3 ; i++))
+##############################################ESTA PARTE ESTA CORRECTA############################################
+
+    valido=false
+    while [ "$valido" = false ]
     do
-        echo "${listaUsuarios[$i]}"
+        #CAPAZ QUE HABRIA UQE HACER ALGO PARA RETROCEDER? 0?
+        echo "Que desea hacer?"
+        echo "1. Añadir usuarios al sistema"
+        echo "2. Eliminar usuarios del sistema"
+        echo "-------------------------------------"
+        read -p "Opcion: " opcion
+    
+        case $opcion in
+            1)
+                valido=true
+                echo "Elegido: 1. Añadir un usuario al sistema"
+
+                if (( ${#listaUsuarios[*]} > 1 ))
+                then
+                    echo "Con cuál usuario desea trabajar?:"
+                    echo "0. Retroceder"
+                    for((i = 0 ; i < ${#listaUsuarios[*]} ; i++))
+                    do
+                        echo "$((i+1)). ${listaUsuarios[i]}"
+                    done
+                    opValida=false
+                    while [ "$opValida" = false ]
+                    do
+                        read -p "Opcion: " opcion
+                        if (( opcion > -1 && $opcion <= ${#listaUsuarios[@]}))
+                        then
+                            opValida=true
+                            #NOMBRE DE LA FUNCION QUE HACE USUARIOS. TIENE QUE RECIBIR UN PARAMETRO: NOMBRE DE USUARIO
+                        else
+                        echo "Opcion inválida. Vuelva a intentarlo"
+                        fi
+                    done
+                else
+                    echo "si no me da error"
+                    #MANDA DIRECTO EL USUARIO A LA FUNCION
+                fi
+
+            #esto para aca, no se repite ni nada
+
+            ;;
+            2) 
+                valido=true
+                echo "Elegido: 2. Eliminar uno de los usuarios"
+                if (( ${#listaUsuarios[*]} > 1 ))
+                then
+                    echo "Con cuál usuario desea trabajar?:"
+                    echo "0. Retroceder"
+                    for((i = 0 ; i < ${#listaUsuarios[*]} ; i++))
+                    do
+                        echo "$((i+1)). ${listaUsuarios[i]}"
+                    done
+                    opValida=false
+                    while [ "$opValida" = false ]
+                    do
+                        read -p "Opcion: " opcion
+                        if (( opcion > -1 && $opcion <= ${#listaUsuarios[@]} ))
+                        then
+                            opValida=true
+                            #NOMBRE DE LA FUNCION QUE HACE USUARIOS. TIENE QUE RECIBIR UN PARAMETRO: NOMBRE DE 
+                            #PARA FUTURO SE PODRIAN METER VARIOS USUARIOS
+                        else
+                        echo "No se ingresó una opcion valida, vuelva a intentarlo: "
+                        fi
+                    done
+                else
+                    #MANDA DIRECTO EL USUARIO A LA FUNCION
+                fi
+            ;;
+            *)
+                echo "Asegurese de elegir un valor válido"
+            ;;
+        esac
     done
 
 
 
 
 #esto es el final del if principal
+fi
