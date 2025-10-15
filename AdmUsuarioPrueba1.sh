@@ -131,34 +131,6 @@ then
             #esto para aca, no se repite ni nada
 
             ;;
-            2) 
-                valido=true
-                echo "Elegido: 2. Eliminar uno de los usuarios"
-                if (( ${#listaUsuarios[*]} > 1 ))
-                then
-                    echo "Con cuál usuario desea trabajar?:"
-                    echo "0. Retroceder"
-                    for((i = 0 ; i < ${#listaUsuarios[*]} ; i++))
-                    do
-                        echo "$((i+1)). ${listaUsuarios[i]}"
-                    done
-                    opValida=false
-                    while [ "$opValida" = false ]
-                    do
-                        read -p "Opcion: " opcion
-                        if (( opcion > -1 && $opcion <= ${#listaUsuarios[@]} ))
-                        then
-                            opValida=true
-                            #NOMBRE DE LA FUNCION QUE HACE USUARIOS. TIENE QUE RECIBIR UN PARAMETRO: NOMBRE DE 
-                            #PARA FUTURO SE PODRIAN METER VARIOS USUARIOS
-                        else
-                        echo "No se ingresó una opcion valida, vuelva a intentarlo: "
-                        fi
-                    done
-                else
-                    #MANDA DIRECTO EL USUARIO A LA FUNCION
-                fi
-            ;;
             *)
                 echo "Asegurese de elegir un valor válido"
             ;;
