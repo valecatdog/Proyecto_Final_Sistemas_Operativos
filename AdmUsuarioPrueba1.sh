@@ -54,7 +54,7 @@ then
             echo "Archivo encontrado."
     
             #le pongo comillas por las dudas de que me de mas de una palabra (no deberia). Es una buena practica.
-            if [ "$(wc -w < archivo.txt)" -lt 2 ]
+            if [ "$(wc -w < "$archivo")" -lt 2 ]
             then
                 echo "Error: archivo invalido. Los archivos tienen que tener por lo menos dos palabras (nombre y apellido)"
                 read -pr "Ingrese una ruta válida: " archivo
@@ -98,12 +98,12 @@ then
         echo "Que desea hacer?"
         echo "1. Crear usuarios"
         echo "2. Eliminar usuarios del sistema"
-        read -pr "Opcion: " opcion
+        read -p "Opcion: " opcion
         #el echo no expande el \n, printf si
 
         case $opcion in
             1)
-                valido=true
+                valido="true"
                 echo "Elegido: 1. Crear usuarios"
 
                 if (( ${#listaUsuarios[*]} > 1 ))
