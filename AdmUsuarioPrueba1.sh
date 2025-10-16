@@ -11,6 +11,7 @@ generar_username() {
     local primeraLetra
     primeraLetra="$(echo "$1" | cut -c1)"
     #se hace por separado porque al ponerle local de una se pierde el valor de retorno ($?, si es 0, 1 etc)
+    pero no se por que aca abajo nno y ahi arriba si
     local nombreUsuario=$primeraLetra$2
     echo "$nombreUsuario"
 }

@@ -1,9 +1,30 @@
 #! /bin/bash
 #combino las 2 funciones y pruebo si andan
 #PROBLEMAS!!!
-: '
--no tenemos nombre y apellido
-'
+archivo=UsuariosParaAnadir.txt
+
+
+ listaUsuarios=()
+    #creo un array para todos los usuarios con los que se va a estar trabajando
+
+    #recorro todos los elementod del archivo con un for
+    for ((i = 1 ; i < $(wc -w < "$archivo") ; i+=2))
+    do
+        nombre="$(cat "$archivo" | cut -d" " -f$i)"
+        apellido="$(cat "$archivo" | cut -d" " -f$((i+1)))"
+        nombreUsuario="$(cat "$nombre" | cut -c1)""$($apellido)"
+        listaUsuarios+=("$nombreUsuario":"$nombre":"$apellido")
+        
+        echo "nombre usuario: $nombreUsuario, nombre: $nombre, apellido: $apellido"
+        #lo añade al array de usuarios
+
+        # si sobra un nombre (queda fuera de los pares que se van formando), simplemente no se usa
+    done
+
+
+
+: '-no tenemos nombre y apellido
+
 
 add_usuario(){
     local nombre=
@@ -28,3 +49,4 @@ usuario_existe() {
 }
 
 echo "Arranca la prueba--------------------------------------------"
+'
