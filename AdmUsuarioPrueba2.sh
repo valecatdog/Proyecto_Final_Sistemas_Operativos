@@ -1,7 +1,7 @@
 #! /bin/bash
 #combino las 2 funciones y pruebo si andan
 #PROBLEMAS!!!
-archivo=UsuariosParaAnadir.txt
+archivo=UsuariosParaAniadir.txt
 
 
  listaUsuarios=()
