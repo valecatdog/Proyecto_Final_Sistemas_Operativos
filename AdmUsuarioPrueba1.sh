@@ -57,7 +57,7 @@ then
             if [ "$(wc -w < "$archivo")" -lt 2 ]
             then
                 echo "Error: archivo invalido. Los archivos tienen que tener por lo menos dos palabras (nombre y apellido)"
-                read -pr "Ingrese una ruta válida: " archivo
+                read -rp "Ingrese una ruta válida: " archivo
                 valido=true
                 #detiene el until
             else
@@ -66,7 +66,7 @@ then
         else
             #si no es valido
             echo "Error: archivo invalido o no encontrado"
-            read -pr "Ingrese una ruta válida: " archivo
+            read -rp "Ingrese una ruta válida: " archivo
         fi
     done
     echo "-------------------------------------"
@@ -87,7 +87,7 @@ then
     #ESTO ES SOLO PARA PROBAR 
     echo ${listaUsuarios[0]}
     echo ${listaUsuarios[1]}
-    print ${listaUsuarios[2]}
+    echo ${listaUsuarios[2]}
 
 
 #############################################ESTA PARTE ESTA CORRECTA############################################
@@ -98,7 +98,8 @@ then
         echo "Que desea hacer?"
         echo "1. Crear usuarios"
         echo "2. Eliminar usuarios del sistema"
-        read -p "Opcion: " opcion
+        read -rp "Opcion: " opcion
+        -pr
         #el echo no expande el \n, printf si
 
         case $opcion in
