@@ -12,7 +12,7 @@ archivo=UsuariosParaAniadir.txt
     do
         nombre="$(cat "$archivo" | cut -d" " -f$i)"
         apellido="$(cat "$archivo" | cut -d" " -f$((i+1)))"
-        nombreUsuario="$(echo "$nombre" | cut -c1)$(apellido)"
+        nombreUsuario="$(echo "$nombre" | cut -c1)$apellido"
         listaUsuarios+=("$nombreUsuario":"$nombre":"$apellido")
         
         echo "nombre usuario: $nombreUsuario, nombre: $nombre, apellido: $apellido"
