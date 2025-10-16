@@ -71,7 +71,7 @@ then
     echo "-------------------------------------"
     #fin del until
 
-
+##############################################ESTA PARTE ESTA CORRECTA############################################
 
     listaUsuarios=()
     #creo un array para todos los usuarios con los que se va a estar trabajando
@@ -79,14 +79,15 @@ then
     #recorro todos los elementod del archivo con un for
     for ((i = 1 ; i < $(wc -w < "$archivo") ; i+=2))
     do
-        nombreUsuario=$(generar_username "$(cat "$archivo" | cut -d" " -f$i)" "$(cat "$archivo" | cut -d" " -f$((i+1)))")
-        listaUsuarios+=("$nombreUsuario")
+        nombre="$(cat "$archivo" | cut -d" " -f$i)"
+        apellido="$(cat "$archivo" | cut -d" " -f$((i+1)))"
+        nombreUsuario="$()$apellido"
+        listaUsuarios+=("$nombreUsuario":"$nombre":"$apellido")
         #lo añade al array de usuarios
 
         # si sobra un nombre (queda fuera de los pares que se van formando), simplemente no se usa
     done
 
-##############################################ESTA PARTE ESTA CORRECTA############################################
 
     valido=false
     while [ "$valido" = false ]
