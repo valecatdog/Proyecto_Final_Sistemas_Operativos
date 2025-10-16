@@ -15,7 +15,6 @@ archivo=UsuariosParaAniadir.txt
         nombreUsuario="$(echo "$nombre" | cut -c1)$apellido"
         listaUsuarios+=("$nombreUsuario":"$nombre":"$apellido")
         
-        echo "nombre usuario: $nombreUsuario, nombre: $nombre, apellido: $apellido"
         #lo añade al array de usuarios
 
         # si sobra un nombre (queda fuera de los pares que se van formando), simplemente no se usa

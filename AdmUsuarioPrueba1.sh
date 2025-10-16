@@ -72,24 +72,25 @@ then
     echo "-------------------------------------"
     #fin del until
 
-##############################################ESTA PARTE ESTA CORRECTA############################################
-
     listaUsuarios=()
-    #creo un array para todos los usuarios con los que se va a estar trabajando
 
-    #recorro todos los elementod del archivo con un for
     for ((i = 1 ; i < $(wc -w < "$archivo") ; i+=2))
     do
         nombre="$(cat "$archivo" | cut -d" " -f$i)"
         apellido="$(cat "$archivo" | cut -d" " -f$((i+1)))"
-        nombreUsuario="$()$apellido"
-        listaUsuarios+=("$nombreUsuario":"$nombre":"$apellido")
-        #lo añade al array de usuarios
-
+        nombreUsuario="$(echo "$nombre" | cut -c1)$apellido"
+        listaUsuarios+=("${nombreUsuario}:${nombre}:${apellido}")
+        #lo añade al array de usuario
         # si sobra un nombre (queda fuera de los pares que se van formando), simplemente no se usa
     done
 
+    #ESTO ES SOLO PARA PROBAR 
+    echo ${listaUsuarios[0]}
+    echo ${listaUsuarios[1]}
+    print ${listaUsuarios[2]}
 
+
+#############################################ESTA PARTE ESTA CORRECTA############################################
     valido=false
     while [ "$valido" = false ]
     do
@@ -97,7 +98,7 @@ then
         echo "Que desea hacer?"
         echo "1. Crear usuarios"
         echo "2. Eliminar usuarios del sistema"
-        read -p "Opcion: " opcion
+        read -pr "Opcion: " opcion
         printf "\n-------------------------------------"
         echo "\n-------------------------------------"
         #el echo no expande el \n, printf si
@@ -125,7 +126,7 @@ then
                         if (( opcion > -1 && opcion <= ${#listaUsuarios[@]}))
                         then
                             opValida=true
-                            add_user "USERNAME!!!"
+                            #add_user "USERNAME!!!"
                         else
                             echo "Opcion inválida. Vuelva a intentarlo"
                         fi
