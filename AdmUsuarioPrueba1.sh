@@ -99,8 +99,6 @@ then
         echo "1. Crear usuarios"
         echo "2. Eliminar usuarios del sistema"
         read -pr "Opcion: " opcion
-        printf "\n-------------------------------------"
-        echo "\n-------------------------------------"
         #el echo no expande el \n, printf si
 
         case $opcion in
