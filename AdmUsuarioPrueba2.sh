@@ -47,8 +47,8 @@ usuario_existe() {
 
 echo "Arranca la prueba--------------------------------------------"
 
-read -rp "nombre del usuario" nombre
-add_user "$nombre"
+read -rp "nombre del usuario: " nombre
+add_usuario "$nombre"
 
-read -rp "nombre del usuario" nombre
-add_user "$nombre"
+read -rp "nombre del usuario: " nombre
+add_usuario "$nombre"
