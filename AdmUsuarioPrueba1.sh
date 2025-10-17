@@ -145,6 +145,7 @@ then
 : '
 -si ingresas una opcion incorrecta que no te saque
 -se ve medio raro el coso, arreglar el menu
+-hacer uqe se vea el nombre del usuairo y entre parantesis el nombre y el apellido
 -que te cree el usuario obvi
 '
     
@@ -174,7 +175,14 @@ then
                     #despliega todos los usuarios
                     for((i = 0 ; i < ${#listaUsuarios[*]} ; i++))
                     do
-                        echo "${i}. ${listaUsuarios[i]}"
+                        nombre="$(echo "$1" | cut -d: -f1)"
+                        apellido="$(echo "$1" | cut -d: -f2)"
+                        usuario="$(echo "$1" | cut -d: -f3)"
+
+                        nombre="$(echo "${#listaUsuarios[$i]}" | cut -d: -f1)"
+                        apellido="$(echo "${#listaUsuarios[$i]}" | cut -d: -f2)"
+                        usuario="$(echo "${#listaUsuarios[$i]}" | cut -d: -f3)"
+                        echo "${i}. ${nombre} ($nombre $apellido)}"
                     done
 
                     opValida=false
@@ -184,7 +192,7 @@ then
                         if (( opcion > -1 && opcion <= ${#listaUsuarios[@]}))
                         then
                             opValida=true
-                            add_usuario "$opcion"
+                            add_usuario "${listaUsuarios[$opcion]}"
                         elif [ "$opcion" -eq -1 ]
                         then
                             opValida=true
@@ -206,7 +214,7 @@ then
             *)
             #*CASE TERMINADO
                 echo "Asegurese de elegir un valor válido"
-                printf "\n--------------------------------"
+                printf "\n--------------------------------\n"
 
             ;;
         esac
