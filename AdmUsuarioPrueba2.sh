@@ -28,9 +28,9 @@ add_usuario(){
 
         #generar contraseña
         #SE PUEDE MEJORRAR ENCONTGRANDO UNA MANERA DE QEU DUNCIONE PARA CARACTERES ESPECIALES (pero rocky no aguanta [:upper:] y [:lower:])
-        letraNombre=$(echo "$nombre" | cut -c1 | tr a-z A-Z)
-        letraApellido=$(echo "$apellido" | cut -c1 | tr A-Z a-z)
-        passwd="$letraNombre${letraApellido}#1234"
+        letraNombre=$(echo "$nombre" | cut -c1 | tr '[:lower:]' '[:upper:]')
+        letraApellido=$(echo "$apellido" | cut -c1 | tr '[:upper:]' '[:lower:]')
+        passwd="$letraNombre${letraApellido}#123456"
 
         echo "!CONTRASEÑA: $passwd"
         #ingresar usuario
@@ -54,7 +54,3 @@ usuario_existe() {
         #habra que escapar el $
         grep -q "^${usuario}:" /etc/passwd
 }
-
-
-read -rp "amigA!! mete tu usuario con le formato nombre:apellido:usuario:  " coso
-add_usuario "$coso"
