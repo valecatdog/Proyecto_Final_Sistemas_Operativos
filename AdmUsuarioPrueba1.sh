@@ -101,7 +101,6 @@ then
         echo "2. Eliminar usuarios del sistema"
         read -rp "Opcion: " opcion
         printf "\n--------------------------------"
-        echo "\n--------------------------------"
         #el echo no expande el \n, printf si
 
         case $opcion in
@@ -147,7 +146,10 @@ then
 
             ;;
             *)
+            #*CASE TERMINADO
                 echo "Asegurese de elegir un valor válido"
+                printf "\n--------------------------------"
+
             ;;
         esac
     done

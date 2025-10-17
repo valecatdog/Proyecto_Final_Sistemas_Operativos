@@ -4,30 +4,51 @@
 
 
 add_usuario(){
-    #comprobar parametros antes
-    if [ $? -eq 1 ]; then
-        local nombre=$($)
-        local apellido=
-        local usuario="$1"
-        letraNombre=$(echo "$usuario" | tr "[:lower:]" "[:upper]")
-        letraApellido=$(echo "$usuario" |tr "[:upper]" "[:lower:]")
-        passwd="$($letraNombre$letraApellido#1234)"
+
+    #verifico la salida de la funcion, si es distinta a 0 entonces actua
+    if ! usuario_existe "$1"
+    then
+        local usuario
+        local nombre
+        local apellido
+        local letraNombre
+        local letraApellido
+        local passwd
+
+        #datos del usuario
+        usuario="$(echo "$1" | cut -d: -f1)"
+        nombre="$(echo "$1" | cut -d: -f2)"
+        apellido="$(echo "$1" | cut -d: -f3)"
+
+        #generar contraseña
+        letraNombre=$(echo "$nombre" | tr "[:lower:]" "[:upper]")
+        letraApellido=$(echo "$apellido" |tr "[:upper]" "[:lower:]")
+        passwd="{$letraNombre}${letraApellido}#1234"
+
+        #ingresar usuario
         sudo useradd -mc "$nombre $apellido" "$usuario"
-        #aca hay qeu ver como sacar el apellido para poder hacer el comentario
-        echo "Usuario '$usuario' creado correctamente"
-        chpasswd $usuario:$passwd
-        #chatgpt lo hace mas raro, no se si esto estara andando
-    
+        echo "$usuario":"$passwd" | sudo chpasswd 
+        #chpasswd espera recibir parametros por entrada estandar, por eso el pipe
+        #HACER QUE LA CONRASEÑA CADUQUE
+        echo "Usuario $usuario creado correctamente"
+        
+    else
+        echo "Error: el usuario ya existe en el sistema"
+        #HACER EL LOG
     fi
 } 
 
 usuario_existe() {
         local usuario="$1"
         # -q = quiet (no imprime mada) # ^ inicio de linea 
-        #diferencia entre {} y ()
         #habra que escapar el $
         grep -q "^${usuario}:" /etc/passwd
 }
 
 echo "Arranca la prueba--------------------------------------------"
-'
+
+read -rp "nombre del usuario" nombre
+add_user "$nombre"
+
+read -rp "nombre del usuario" nombre
+add_user "$nombre"
