@@ -85,8 +85,15 @@ then
     done
 
 #############################################ESTA PARTE ESTA CORRECTA############################################
-    usuariosParaTrabajar=()
+    #CORREGIR:
+: '
+-si ingresas una opcion incorrecta que no te saque
+-se ve medio raro el coso, arreglar el menu
+-que te cree el usuario obvi
+'
     
+    usuariosParaTrabajar=()
+
     valido=false
     while [ "$valido" = false ]
     do
@@ -95,7 +102,7 @@ then
         echo "1. Crear usuarios"
         echo "2. Eliminar usuarios del sistema"
         read -rp "Opcion: " opcion
-        printf "\n--------------------------------"
+        printf "\n--------------------------------\n"
         #el echo no expande el \n, printf si
 
         case $opcion in
