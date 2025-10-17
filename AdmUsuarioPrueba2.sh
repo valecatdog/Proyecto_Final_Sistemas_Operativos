@@ -13,6 +13,7 @@ add_usuario(){
     #verifico la salida de la funcion, si es distinta a 0 entonces actua
     if ! usuario_existe "$1"
     then
+        #creo las variables y las hago locales (solo existen para esta funcion)
         local usuario
         local nombre
         local apellido
@@ -20,16 +21,15 @@ add_usuario(){
         local letraApellido
         local passwd
 
-        #datos del usuario
+        #datos del usuario (almacenados como nombre:apellido:usuario)
         nombre="$(echo "$1" | cut -d: -f1)"
         apellido="$(echo "$1" | cut -d: -f2)"
         usuario="$(echo "$1" | cut -d: -f3)"
 
         #generar contraseña
-        #SE PUEDE MEJORRAR ENCONTGRANDO UNA MANERA DE QEU DUNCIONE PARA CARACTERES ESPECIALES (rocky no aguanta [:upper:] y [:lower:])
+        #SE PUEDE MEJORRAR ENCONTGRANDO UNA MANERA DE QEU DUNCIONE PARA CARACTERES ESPECIALES (pero rocky no aguanta [:upper:] y [:lower:])
         letraNombre=$(echo "$nombre" | cut -c1 | tr a-z A-Z)
-        letraNombre=$(echo "$apellido" | cut -c1 | tr A-Z a-z)
-        #lower y upper porque se pueden ingresar caracteres no comprendidos en el az (ej tildes)
+        letraApellido=$(echo "$apellido" | cut -c1 | tr A-Z a-z)
         passwd="{$letraNombre}${letraApellido}#1234"
 
         echo "!CONTRASEÑA: $passwd"
