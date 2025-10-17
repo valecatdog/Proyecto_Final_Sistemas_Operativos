@@ -51,14 +51,14 @@ add_usuario(){
         letraApellido=$(echo "$apellido" | cut -c1 | tr '[:upper:]' '[:lower:]')
         passwd="$letraNombre${letraApellido}#123456"
 
-        echo "!CONTRASEÑA: $passwd"
         #ingresar usuario
         sudo useradd -mc "$nombre $apellido" "$usuario"
         echo "$usuario":"$passwd" | sudo chpasswd 
         #chpasswd espera recibir parametros por entrada estandar, por eso el pipe
         sudo chage -d 0 "$usuario"
         #hace ruqe la contraseña expire inmediatamente
-        echo "Usuario $usuario creado correctamente"
+
+        echo "Usuario $usuario creado correctamente. Contraseña: $passwd"
         
     else
         echo "Error: el usuario ya existe en el sistema"
@@ -159,7 +159,7 @@ then
         echo "1. Crear usuarios"
         echo "2. Eliminar usuarios del sistema"
         read -rp "Opcion: " opcion
-        printf "\n--------------------------------\n"
+        printf "\n--------------------------------\n\n"
         #el echo no expande el \n, printf si
 
         case $opcion in
@@ -182,7 +182,7 @@ then
                         nombre="$(echo "${listaUsuarios[$i]}" | cut -d: -f1)"
                         apellido="$(echo "${listaUsuarios[$i]}" | cut -d: -f2)"
                         usuario="$(echo "${listaUsuarios[$i]}" | cut -d: -f3)"
-                        echo "${i}. ${nombre} ($nombre $apellido)}"
+                        echo "${i}. $usuario ($nombre $apellido)}"
                     done
 
                     opValida=false
