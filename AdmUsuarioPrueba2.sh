@@ -30,6 +30,7 @@ add_usuario(){
         #generar contraseña
         letraNombre=$(echo "$nombre" | tr '[:lower:]' '[:upper]')
         letraApellido=$(echo "$apellido" |tr '[:upper]' '[:lower:]' )
+        #lower y upper porque se pueden ingresar caracteres no comprendidos en el az (ej tildes)
         passwd="{$letraNombre}${letraApellido}#1234"
 
         echo "!CONTRASEÑA: $passwd"
@@ -52,3 +53,6 @@ usuario_existe() {
         #habra que escapar el $
         grep -q "^${usuario}:" /etc/passwd
 }
+
+
+add_usuario "vale:valentina:correa"
