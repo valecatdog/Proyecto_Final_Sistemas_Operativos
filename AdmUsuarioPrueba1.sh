@@ -1,6 +1,12 @@
 #! /bin/bash
 #ARCHIVO PARA PRUEBAS DEL SCRIPT COMPLETO
 
+#ACTUALMENTE TRABAJANDO EN:
+: '
+-ver que t permita ingresar varios usuarios a la vez para crearlos
+convertir el hacer el formato nombre:apellido:usuario una funcion (linea 133 aprox)
+'
+
 #EXPLICACIONES
 : '
 -los read tienen -r para que no se intrprete lo que se escriba (el shell )
@@ -16,7 +22,57 @@ generar_username() {
     echo "$nombreUsuario"
 }
 
+export LC_ALL=C.UTF-8
+: '
+le dice al shell que use UTF-8 como codificación para todo. lo agregamos poruqe funciones como tr [:upper:] [:lower:]
+no manejan por si solos la misma cantidad de caracteres y eso genera un problema en la ejecucion
+'
 
+add_usuario(){
+
+    #verifico la salida de la funcion, si es distinta a 0 entonces actua
+    if ! usuario_existe "$1"
+    then
+        #creo las variables y las hago locales (solo existen para esta funcion)
+        local usuario
+        local nombre
+        local apellido
+        local letraNombre
+        local letraApellido
+        local passwd
+
+        #datos del usuario (almacenados como nombre:apellido:usuario)
+        nombre="$(echo "$1" | cut -d: -f1)"
+        apellido="$(echo "$1" | cut -d: -f2)"
+        usuario="$(echo "$1" | cut -d: -f3)"
+
+        #generar contraseña
+        letraNombre=$(echo "$nombre" | cut -c1 | tr '[:lower:]' '[:upper:]')
+        letraApellido=$(echo "$apellido" | cut -c1 | tr '[:upper:]' '[:lower:]')
+        passwd="$letraNombre${letraApellido}#123456"
+
+        echo "!CONTRASEÑA: $passwd"
+        #ingresar usuario
+        sudo useradd -mc "$nombre $apellido" "$usuario"
+        echo "$usuario":"$passwd" | sudo chpasswd 
+        #chpasswd espera recibir parametros por entrada estandar, por eso el pipe
+        sudo chage -d 0 "$usuario"
+        #hace ruqe la contraseña expire inmediatamente
+        echo "Usuario $usuario creado correctamente"
+        
+    else
+        echo "Error: el usuario ya existe en el sistema"
+        echo "$1" >> cre_usuarios.log 
+    fi
+} 
+
+usuario_existe() {
+        local usuario
+        usuario="$(echo "$1" | cut -d: -f3)"
+        # -q = quiet (no imprime mada) # ^ inicio de linea 
+        #habra que escapar el $
+        grep -q "^${usuario}:" /etc/passwd
+}
 
 ##########################################################################
 
@@ -73,7 +129,7 @@ then
     #fin del until
 
     listaUsuarios=()
-
+#PUEDE SER UNA FUNCION
     for ((i = 1 ; i < $(wc -w < "$archivo") ; i+=2))
     do
         nombre="$(cat "$archivo" | cut -d" " -f$i)"
@@ -128,7 +184,7 @@ then
                         if (( opcion > -1 && opcion <= ${#listaUsuarios[@]}))
                         then
                             opValida=true
-                            #add_user "USERNAME!!!"
+                            add_usuario "$opcion"
                         elif [ "$opcion" -eq -1 ]
                         then
                             opValida=true
