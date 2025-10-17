@@ -10,9 +10,9 @@ listaUsuarios=()
 read -rp "1er user: " user1
 read -rp "2do user: " user2
 read -rp "3er user: " user3
-listaUsuarios+=(user1)
-listaUsuarios+=(user2)
-listaUsuarios+=(user3)
+listaUsuarios+=("$user1")
+listaUsuarios+=("$user2")
+listaUsuarios+=("$user3")
 
  usuariosTrabajar=()
 
