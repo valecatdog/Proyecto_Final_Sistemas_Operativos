@@ -141,12 +141,10 @@ then
     done
 
 #############################################ESTA PARTE ESTA CORRECTA############################################
-    #CORREGIR:
+#ARREGLAR
 : '
--si ingresas una opcion incorrecta que no te saque
--se ve medio raro el coso, arreglar el menu
--hacer uqe se vea el nombre del usuairo y entre parantesis el nombre y el apellido
--que te cree el usuario obvi
+-que te deje meter varios usuarios al mismo tiempo
+
 '
     
     usuariosParaTrabajar=()
