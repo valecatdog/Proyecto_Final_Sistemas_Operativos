@@ -51,9 +51,8 @@ listaUsuarios+=("$user3")
                     done
 
                     #toma las opciones y las guarda de a una en el array
-                    read -rp "opcion/es: " opciones
-                    #HACER E FOR PARA QUE ANDE EL COSO ESTE
 
+                    read -rp "opcion/es: " opciones
                     for ((i=1 ; i <= $(echo "$opciones" | wc -w) ; i++))
                     do
                         opcion=$(echo "$opciones" | cut -d" " -f$i)
@@ -61,27 +60,30 @@ listaUsuarios+=("$user3")
                         usuariosTrabajar+=("$usuario")
                     done
 
-                    echo "${usuariosTrabajar[@]}"
+                    if [ "${#usuariosTrabajar[@]}" -eq 0 ]
+                    then
+                        echo "No ha ingresado ninnun usuario valido"
+                    else
+                        opValida=false
+                        while [ "$opValida" = false ]
+                        do
+                            read -rp "Opcion: " opcion
+                            if (( opcion > -1 && opcion <= ${#listaUsuarios[@]}))
+                            then
+                                opValida=true
+                                add_usuario "${listaUsuarios[$opcion]}"
+                            elif [ "$opcion" -eq -1 ]
+                            then
+                                opValida=true
+                                #esto lo que hace es salir en realidad
+                            else
+                                echo "Opcion inválida. Vuelva a intentarlo"
+                            fi
+                        done
 
-
-                    opValida=false
-                    while [ "$opValida" = false ]
-                    do
-                        read -rp "Opcion: " opcion
-                        if (( opcion > -1 && opcion <= ${#listaUsuarios[@]}))
-                        then
-                            opValida=true
-                            add_usuario "${listaUsuarios[$opcion]}"
-                        elif [ "$opcion" -eq -1 ]
-                        then
-                            opValida=true
-                            #esto lo que hace es salir en realidad
-                        else
-                            echo "Opcion inválida. Vuelva a intentarlo"
-                        fi
-                    done
-
-                    #UN USUARIO SOLO---------------------------------------------------------
+                        #UN USUARIO SOLO---------------------------------------------------------
+                    fi
+                    
                 else
                     echo "si no me da error"
                     #MANDA DIRECTO EL USUARIO A LA FUNCION
