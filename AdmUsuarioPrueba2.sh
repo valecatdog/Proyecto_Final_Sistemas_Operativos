@@ -30,7 +30,7 @@ add_usuario(){
         #SE PUEDE MEJORRAR ENCONTGRANDO UNA MANERA DE QEU DUNCIONE PARA CARACTERES ESPECIALES (pero rocky no aguanta [:upper:] y [:lower:])
         letraNombre=$(echo "$nombre" | cut -c1 | tr a-z A-Z)
         letraApellido=$(echo "$apellido" | cut -c1 | tr A-Z a-z)
-        passwd="${letraNombre}${letraApellido}#1234"
+        passwd="$letraNombre${letraApellido}#1234"
 
         echo "!CONTRASEÑA: $passwd"
         #ingresar usuario
