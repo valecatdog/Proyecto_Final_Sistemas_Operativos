@@ -1,7 +1,10 @@
 #! /bin/bash
 #combino las 2 funciones y pruebo si andan
 #PROBLEMAS!!!
-
+: '
+sudo pide contraseña
+solucoin: ejecutar como sudo
+'
 
 add_usuario(){
 
@@ -21,8 +24,8 @@ add_usuario(){
         apellido="$(echo "$1" | cut -d: -f3)"
 
         #generar contraseña
-        letraNombre=$(echo "$nombre" | tr "[:lower:]" "[:upper]")
-        letraApellido=$(echo "$apellido" |tr "[:upper]" "[:lower:]")
+        letraNombre=$(echo "$nombre" | tr '[:lower:]' '[:upper]')
+        letraApellido=$(echo "$apellido" |tr '[:upper]' '[:lower:]' )
         passwd="{$letraNombre}${letraApellido}#1234"
 
         #ingresar usuario
