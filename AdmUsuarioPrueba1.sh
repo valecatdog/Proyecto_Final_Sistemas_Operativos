@@ -91,6 +91,7 @@ then
 
 
 #############################################ESTA PARTE ESTA CORRECTA############################################
+    usuariosParaTrabajar=()
     valido=false
     while [ "$valido" = false ]
     do
@@ -99,6 +100,8 @@ then
         echo "1. Crear usuarios"
         echo "2. Eliminar usuarios del sistema"
         read -rp "Opcion: " opcion
+        printf "\n--------------------------------"
+        echo "\n--------------------------------"
         #el echo no expande el \n, printf si
 
         case $opcion in
@@ -108,23 +111,27 @@ then
 
                 if (( ${#listaUsuarios[*]} > 1 ))
                 then
-                    echo "Con qué usuarios desea trabajar?:"
-                    echo "0. Retroceder"
+                    echo "Con qué usuarios desea trabajar? (ingrese sus numeros separados por espacios):"
+                    echo "-1. Retroceder"
                     #el retroceder en realidad no te vuelve para atras, para todo
                     #despliega todos los usuarios
                     for((i = 0 ; i < ${#listaUsuarios[*]} ; i++))
                     do
-                        echo "$((i+1)). ${listaUsuarios[i]}"
+                        echo "${i}. ${listaUsuarios[i]}"
                     done
 
                     opValida=false
                     while [ "$opValida" = false ]
                     do
-                        read -pr "Opcion: " opcion
+                        read -rp "Opcion: " opcion
                         if (( opcion > -1 && opcion <= ${#listaUsuarios[@]}))
                         then
                             opValida=true
                             #add_user "USERNAME!!!"
+                        elif [ "$opcion" -eq -1 ]
+                        then
+                            opValida=true
+                            #esto lo que hace es salir en realidad
                         else
                             echo "Opcion inválida. Vuelva a intentarlo"
                         fi
