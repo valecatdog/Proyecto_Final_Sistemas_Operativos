@@ -84,14 +84,9 @@ then
         # si sobra un nombre (queda fuera de los pares que se van formando), simplemente no se usa
     done
 
-    #ESTO ES SOLO PARA PROBAR 
-    echo ${listaUsuarios[0]}
-    echo ${listaUsuarios[1]}
-    echo ${listaUsuarios[2]}
-
-
 #############################################ESTA PARTE ESTA CORRECTA############################################
     usuariosParaTrabajar=()
+    
     valido=false
     while [ "$valido" = false ]
     do
