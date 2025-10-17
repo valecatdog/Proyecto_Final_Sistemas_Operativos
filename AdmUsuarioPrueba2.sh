@@ -23,10 +23,15 @@ add_usuario(){
         nombre="$(echo "$1" | cut -d: -f2)"
         apellido="$(echo "$1" | cut -d: -f3)"
 
+        echo "!!!!!!!!!!!!DATOS DEL USUARIO: $nombre $apellido $usuario"
+
+
         #generar contraseña
         letraNombre=$(echo "$nombre" | tr '[:lower:]' '[:upper]')
         letraApellido=$(echo "$apellido" |tr '[:upper]' '[:lower:]' )
         passwd="{$letraNombre}${letraApellido}#1234"
+
+        echo "!!!!!!!!!!!!!!!!!!!!!!CONTRASEÑA DEL USUARIO: $passwd"
 
         #ingresar usuario
         sudo useradd -mc "$nombre $apellido" "$usuario"
