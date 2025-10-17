@@ -179,9 +179,9 @@ then
                         apellido="$(echo "$1" | cut -d: -f2)"
                         usuario="$(echo "$1" | cut -d: -f3)"
 
-                        nombre="$(echo "${#listaUsuarios[$i]}" | cut -d: -f1)"
-                        apellido="$(echo "${#listaUsuarios[$i]}" | cut -d: -f2)"
-                        usuario="$(echo "${#listaUsuarios[$i]}" | cut -d: -f3)"
+                        nombre="$(echo "${listaUsuarios[$i]}" | cut -d: -f1)"
+                        apellido="$(echo "${listaUsuarios[$i]}" | cut -d: -f2)"
+                        usuario="$(echo "${listaUsuarios[$i]}" | cut -d: -f3)"
                         echo "${i}. ${nombre} ($nombre $apellido)}"
                     done
 
