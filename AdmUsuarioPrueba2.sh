@@ -54,3 +54,6 @@ usuario_existe() {
         #habra que escapar el $
         grep -q "^${usuario}:" /etc/passwd
 }
+
+read -rp "mete: " coso
+add_usuario "$coso"
