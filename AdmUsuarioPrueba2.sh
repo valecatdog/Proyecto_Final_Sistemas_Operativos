@@ -2,9 +2,8 @@
 #combino las 2 funciones y pruebo si andan
 #PROBLEMAS!!!
 : '
+cuando metes un usuario que ya esxste t deja igual
 
-
-asi de buena soy
 '
 
 export LC_ALL=C.UTF-8
@@ -49,12 +48,13 @@ add_usuario(){
 } 
 
 usuario_existe() {
-        local usuario="$1"
+        local usuario
+        usuario="$(echo "$1" | cut -d: -f3)"
         # -q = quiet (no imprime mada) # ^ inicio de linea 
         #habra que escapar el $
         grep -q "^${usuario}:" /etc/passwd
 }
 
 
-read -rp "amigA!! mete tu usuario con le formato nombre:apellido:usuario" coso
+read -rp "amigA!! mete tu usuario con le formato nombre:apellido:usuario:  " coso
 add_usuario "$coso"
