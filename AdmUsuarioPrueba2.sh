@@ -2,13 +2,12 @@
 #combino las 2 funciones y pruebo si andan
 #PROBLEMAS!!!
 : '
-sudo pide contraseña
-solucoin: ejecutar con sudo/como root
-hacer qeu la contraseña caduque
-hacer el log
-problemas con 
 
+
+asi de buena soy
 '
+
+export LC_ALL=C.UTF-8
 
 add_usuario(){
 
@@ -23,13 +22,14 @@ add_usuario(){
         local passwd
 
         #datos del usuario
-        usuario="$(echo "$1" | cut -d: -f1)"
-        nombre="$(echo "$1" | cut -d: -f2)"
-        apellido="$(echo "$1" | cut -d: -f3)"
+        nombre="$(echo "$1" | cut -d: -f1)"
+        apellido="$(echo "$1" | cut -d: -f2)"
+        usuario="$(echo "$1" | cut -d: -f3)"
 
         #generar contraseña
-        letraNombre=$(echo "$nombre" | tr '[:lower:]' '[:upper]')
-        letraApellido=$(echo "$apellido" |tr '[:upper]' '[:lower:]' )
+        #SE PUEDE MEJORRAR ENCONTGRANDO UNA MANERA DE QEU DUNCIONE PARA CARACTERES ESPECIALES (rocky no aguanta [:upper:] y [:lower:])
+        letraNombre=$(echo "$nombre" | cut -c1 | tr a-z A-Z)
+        letraNombre=$(echo "$apellido" | cut -c1 | tr A-Z a-z)
         #lower y upper porque se pueden ingresar caracteres no comprendidos en el az (ej tildes)
         passwd="{$letraNombre}${letraApellido}#1234"
 
@@ -38,12 +38,13 @@ add_usuario(){
         sudo useradd -mc "$nombre $apellido" "$usuario"
         echo "$usuario":"$passwd" | sudo chpasswd 
         #chpasswd espera recibir parametros por entrada estandar, por eso el pipe
-        #HACER QUE LA CONRASEÑA CADUQUE
+        sudo chage -d 0 "$usuario"
+        #hace ruqe la contraseña expire inmediatamente
         echo "Usuario $usuario creado correctamente"
         
     else
         echo "Error: el usuario ya existe en el sistema"
-        #HACER EL LOG
+        echo "$1" >> cre_usuarios.log 
     fi
 } 
 
@@ -55,4 +56,5 @@ usuario_existe() {
 }
 
 
-add_usuario "vale:valentina:correa"
+read -rp "amigA!! mete tu usuario con le formato nombre:apellido:usuario" coso
+add_usuario "$coso"

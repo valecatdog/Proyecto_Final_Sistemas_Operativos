@@ -79,7 +79,7 @@ then
         nombre="$(cat "$archivo" | cut -d" " -f$i)"
         apellido="$(cat "$archivo" | cut -d" " -f$((i+1)))"
         nombreUsuario="$(echo "$nombre" | cut -c1)$apellido"
-        listaUsuarios+=("${nombreUsuario}:${nombre}:${apellido}")
+        listaUsuarios+=("${nombre}:${apellido}:${nombreUsuario}")
         #lo añade al array de usuario
         # si sobra un nombre (queda fuera de los pares que se van formando), simplemente no se usa
     done
