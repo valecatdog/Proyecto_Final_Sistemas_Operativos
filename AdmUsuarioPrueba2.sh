@@ -47,7 +47,7 @@ listaUsuarios+=("$user3")
                         nombre="$(echo "${listaUsuarios[$i]}" | cut -d: -f1)"
                         apellido="$(echo "${listaUsuarios[$i]}" | cut -d: -f2)"
                         usuario="$(echo "${listaUsuarios[$i]}" | cut -d: -f3)"
-                        echo "${i}. $usuario ($nombre $apellido)}"
+                        echo "${i}. $usuario ($nombre $apellido)"
                     done
 
                     #toma las opciones y las guarda de a una en el array
@@ -57,7 +57,8 @@ listaUsuarios+=("$user3")
                     for ((i=1 ; i <= $(echo "$opciones" | wc -w) ; i++))
                     do
                         opcion=$(echo "$opciones" | cut -d" " -f$i)
-                        usuariosTrabajar+=("$opcion")
+                        usuario="${listaUsuarios[$opcion]}"
+                        usuariosTrabajar+=("$usuario")
                     done
 
                     echo "${usuariosTrabajar[@]}"
