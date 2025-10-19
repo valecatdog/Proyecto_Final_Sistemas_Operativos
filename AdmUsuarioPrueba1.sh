@@ -75,7 +75,7 @@ usuario_existe() {
         grep -q "^${usuario}:" /etc/passwd
 }
 
-##########################################################################
+#TERMINA ESPACIO DE FUNCIONES#########################################################################
 
 
 
@@ -105,7 +105,7 @@ then
     do
         if [ -f "$archivo" ]
         #velifica que "archivo" sea un archivo valido (existente)
-        #PODRIA VERIFICAR SI LA ESTRUCTURA ES VALIDA TAMMBIEN!!!
+        #PODRIA VERIFICAR SI LA ESTRUCTURA ES VALIDA TAMMBIEN!!! (ESTA PERO NO SE SI ESTA ANDANDO)
         then
             #si es valido
             echo "Archivo encontrado."
