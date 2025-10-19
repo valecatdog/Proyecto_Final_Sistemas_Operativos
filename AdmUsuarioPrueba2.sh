@@ -29,13 +29,12 @@ del_usuario(){
         nombre=$(echo "$1" | cut -d: -f1)
         apellido=$(echo "$1" | cut -d: -f2)
         usuario=$(echo "$1" | cut -d: -f3)
-        local usuario="$1"
 
         sudo userdel -r "$usuario"
         echo "Usuario $usuario ($nombre $apellido) eliminado correctamente"
         
     else
-        echo "Error: el usuario no existe"
+        echo "Error: el usuario $usuario ($nombre $apellido) no existe"
     fi
 }
 
