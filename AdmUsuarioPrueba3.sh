@@ -5,13 +5,14 @@
 valido=false
 archivo="$1"
 
-    while [ "$valido" ]
+    until [ "$valido" = "true" ]
     do
         echo "entro en el until"
         if [ -f "$archivo" ] || [ -r "$archivo" ] || [ "$(wc -w < "$archivo")" -lt 2 ]
         #velifica que "archivo" sea un archivo valido (existente, legible y que contenga 2 o mas palabras (nomb y apell))
         then
             echo "Archivo valido"
+            valido=true
         else
             echo "Error: archivo invalido o no encontrado"
             read -rp "Ingrese una ruta válida: " archivo
