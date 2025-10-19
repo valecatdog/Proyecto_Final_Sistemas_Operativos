@@ -6,7 +6,8 @@
 -ver que t permita ingresar varios usuarios a la vez para crearlos
 convertir el hacer el formato nombre:apellido:usuario una funcion (linea 133 aprox)
 
--Podriamos hacer algo para cancelar el si se ingreso un archivo valido 
+-Podriamos hacer algo para cancelar el si se ingreso un archivo valido, pero no me parece necesario porque con
+ctrl c ya podes salir
 '
 
 #EXPLICACIONES
@@ -110,11 +111,6 @@ then
         then
             echo "Archivo valido"
             valido=true
-
-        elif [ "$archivo" -eq 0 ]
-        then
-            valido=true
-            echo "Saliendo..."
         else
             echo "Error: archivo invalido o no encontrado"
             read -rp "Ingrese una ruta válida: " archivo
