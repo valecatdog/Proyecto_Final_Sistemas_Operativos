@@ -49,7 +49,7 @@ listaUsuarios+=("$user3")
                 read -rp "opcion/es: " opciones
                 
                 #Si no se ingreso nada (te devuelve al menu)
-                if [ -n "$opciones" ]
+                if [ -z "$opciones" ]
                 then
                     echo "No ha ingresado ningun usuario"
                 else
