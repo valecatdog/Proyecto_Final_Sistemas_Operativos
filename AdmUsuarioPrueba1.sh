@@ -101,7 +101,7 @@ then
     #ALGO PARA ROMPER EL BUCLE SI TE ARREPENTISTE!!!
 
     #empezando con el valor de la variable en falso, hace lo siguiente hasta que valido sea true
-    until [ $valido ]
+    until [ "$valido" ]
     do
         if [ -f "$archivo" ]
         #velifica que "archivo" sea un archivo valido (existente)
