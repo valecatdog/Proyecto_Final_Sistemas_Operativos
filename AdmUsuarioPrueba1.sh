@@ -17,6 +17,8 @@ ctrl c ya podes salir
 -podiramos mostrar el nombre que sobro cuando metes un archivo
 
 - los usuarios ya creados podriamos no mostrarlos
+
+-hacer los nobres con una funcion y no como los estoy haiendo ahora para 2 parametros
 '
 
 #EXPLICACIONES
@@ -42,7 +44,6 @@ no manejan por si solos la misma cantidad de caracteres y eso genera un problema
 '
 
 add_usuario(){
-
     #verifico la salida de la funcion, si es distinta a 0 entonces actua
     if ! usuario_existe "$1"
     then
@@ -140,9 +141,8 @@ then
         # si sobra un nombre (queda fuera de los pares que se van formando), simplemente no se usa
     done
 
-#############################################ESTA PARTE ESTA CORRECTA############################################
-#ARREGLAR
-valido=false
+
+    valido=false
     while [ "$valido" = false ]
     do
         #CAPAZ QUE HABRIA UQE HACER ALGO PARA RETROCEDER? 0?
@@ -204,16 +204,21 @@ valido=false
                 fi
 
             ;;
+#############################################ESTA PARTE ESTA CORRECTA############################################
+            2)
+                #PARA BORRAR USUARIOS
+            ;;
             *)
-            #*CASE TERMINADO
                 echo "Asegurese de elegir un valor válido"
                 printf "\n--------------------------------\n"
 
             ;;
         esac
     done
+#SI SE INGRESA UN PARAMETRO (ARREGLAR)
 
-
+else
+    echo "Se ha ingresado una cantidad invalida de parametros"
 
 
 #esto es el final del if principal

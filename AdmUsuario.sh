@@ -127,6 +127,7 @@ then
                         fi
                     done
                 else
+                    echo hola
                     #MANDA DIRECTO EL USUARIO A LA FUNCION
                 fi
             ;;
@@ -140,6 +141,7 @@ then
 #FIN DE SI SE INGRESO UN PARAMETRO
 #SI SE INGRESAN 2 PARAMETROS######################################################################################
 elif (($# == 2))
+then
 nombre=$1
 apellido=$2
 usuario=$(generar_username "$nombre" "$apellido")

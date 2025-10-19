@@ -1,17 +1,32 @@
 #! /bin/bash
 
-#empezando con el valor de la variable en falso, hace lo siguiente hasta que valido sea true
-    until [ "$valido" = "true" ]
-    do
-        if [ -f "$archivo" ] && [ -r "$archivo" ] && [ "$(wc -w < "$archivo")" -gt 2 ]
-        #velifica que "archivo" sea un archivo valido (existente, legible y que contenga 2 o mas palabras (nomb y apell))
-        then
-            echo "Archivo valido"
-            valido=true
-        else
-            echo "Error: archivo invalido o no encontrado"
-            read -rp "Ingrese una ruta válida: " archivo
-        fi
-    done
-    echo "----------------------------------"
-    #fin del until
+#escrctura del usuario:
+#nombre:apellido:usuario
+
+del_usuario(){
+    if usuario_existe "$1"
+    then
+        local nombre
+        local apellido
+        local usuario
+        
+        nombre=$(echo "$1" | cut -d: -f1)
+        apellido=$(echo "$1" | cut -d: -f2)
+        usuario=$(echo "$1" | cut -d: -f3)
+        local usuario="$1"
+
+        sudo userdel -r "$usuario"
+        echo "Usuario $usuario ($nombre $apellido) eliminado correctamente"
+        
+    else
+        echo "Error: el usuario no existe"
+    fi
+}
+
+usuario_existe() {
+        local usuario
+        usuario="$(echo "$1" | cut -d: -f3)"
+        # -q = quiet (no imprime mada) # ^ inicio de linea 
+        #habra que escapar el $
+        grep -q "^${usuario}:" /etc/passwd
+}

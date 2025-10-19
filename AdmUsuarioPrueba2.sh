@@ -10,14 +10,48 @@ listaUsuarios=()
 user1="hola:chau:hChau"
 user2="chau:hola:cHola"
 user3="vale:correa:vCorrea"
+user4="hola:noexisto:hNoexisto"
+
 listaUsuarios+=("$user1")
 listaUsuarios+=("$user2")
 listaUsuarios+=("$user3")
+listaUsuarios+=("$user4")
+
+#FUNCIONES
+
+del_usuario(){
+    if usuario_existe "$1"
+    then
+        local nombre
+        local apellido
+        local usuario
+        
+        nombre=$(echo "$1" | cut -d: -f1)
+        apellido=$(echo "$1" | cut -d: -f2)
+        usuario=$(echo "$1" | cut -d: -f3)
+        local usuario="$1"
+
+        sudo userdel -r "$usuario"
+        echo "Usuario $usuario ($nombre $apellido) eliminado correctamente"
+        
+    else
+        echo "Error: el usuario no existe"
+    fi
+}
+
+usuario_existe() {
+        local usuario
+        usuario="$(echo "$1" | cut -d: -f3)"
+        # -q = quiet (no imprime mada) # ^ inicio de linea 
+        #habra que escapar el $
+        grep -q "^${usuario}:" /etc/passwd
+}
+#FIN FUNCIONES################################33
 
 
 ########################EMPIEZA LOQ EU TENGO QEU COPIAR##############
 
-    valido=false
+   valido=false
     while [ "$valido" = false ]
     do
         #CAPAZ QUE HABRIA UQE HACER ALGO PARA RETROCEDER? 0?
@@ -29,8 +63,9 @@ listaUsuarios+=("$user3")
         #el echo no expande el \n, printf si
 
         case $opcion in
-            1)
-                echo "Elegido: 1. Crear usuarios"
+#############################################ESTA PARTE ESTA CORRECTA############################################
+            2)
+                echo "Elegido: 2. Eliminar usuarios del sistema"
 
                 echo "Con qué usuarios desea trabajar? (ingrese sus numeros separados por espacios):"
                 #despliega todos los usuarios
@@ -55,15 +90,15 @@ listaUsuarios+=("$user3")
                 else
                 #Si sí se ingresaron usuarios
                     cantOpciones=$(echo "$opciones" | wc -w) 
+                    valido=true
 
                     for ((i=1 ; i <= cantOpciones ; i++))
                     do
                         opcion=$(echo "$opciones" | cut -d" " -f$i)
                         if [[ "$opcion" =~ ^[0-9]+$ ]] && ((opcion > -1 && opcion < ${#listaUsuarios[@]}))
-                            #los [] se llaman "test". los dobles son avanzados y soportan regex (expresiones regulares)
                         then
                             usuario="${listaUsuarios[$opcion]}"
-                            add_usuario "$usuario"
+                            del_usuario "$usuario"
                         else
                             opcionesInvalidas+=" $opcion"
                         fi
@@ -72,18 +107,12 @@ listaUsuarios+=("$user3")
                     if [ -n "$opcionesInvalidas" ]
                     then
                         echo "Las opciones invalidas ingresadas fueron:$opcionesInvalidas"
+                        opcionesInvalidas=""
                     fi
                     
-                    #UN USUARIO SOLO---------------------------------------------------------
                 fi
-                    
-                
-
-            #esto para aca, no se repite ni nada
-
             ;;
             *)
-            #*CASE TERMINADO
                 echo "Asegurese de elegir un valor válido"
                 printf "\n--------------------------------\n"
 
