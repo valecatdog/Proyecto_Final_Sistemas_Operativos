@@ -49,9 +49,9 @@ listaUsuarios+=("$user3")
                 read -rp "opcion/es: " opciones
                 
                 #Si no se ingreso nada (te devuelve al menu)
-                if [ -z "$opciones" ]
+                if [ -n "$opciones" ]
                 then
-                    echo "No ha ingresado ningun usuario valido"
+                    echo "No ha ingresado ningun usuario"
                 else
                 #Si sí se ingresaron usuarios
                     cantOpciones=$(echo "$opciones" | wc -w) 
@@ -59,12 +59,13 @@ listaUsuarios+=("$user3")
                     for ((i=1 ; i <= cantOpciones ; i++))
                     do
                         opcion=$(echo "$opciones" | cut -d" " -f$i)
-                        if ((opcion > -1 && opcion < ${#listaUsuarios[@]}))
+                        if [[ "$opcion" =~ ^[0-9]+$ ]] && ((opcion > -1 && opcion < ${#listaUsuarios[@]}))
+                            #los [] se llaman "test". los dobles son avanzados y soportan regex (expresiones regulares)
                         then
                             usuario="${listaUsuarios[$opcion]}"
                             add_usuario "$usuario"
                         else
-                            opcionesInvalidas+=" $i"
+                            opcionesInvalidas+=" $opcion"
                         fi
                     done
 
