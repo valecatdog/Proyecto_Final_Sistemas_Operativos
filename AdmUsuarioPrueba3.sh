@@ -2,7 +2,7 @@
 
 #empezando con el valor de la variable en falso, hace lo siguiente hasta que valido sea true
 
-valido="true"
+valido=false
 archivo="$1"
 
     until [ "$valido" ]
