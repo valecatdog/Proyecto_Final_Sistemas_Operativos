@@ -8,7 +8,7 @@ archivo="$1"
     until [ "$valido" = "true" ]
     do
         echo "entro en el until"
-        if [ -f "$archivo" ] || [ -r "$archivo" ] || [ "$(wc -w < "$archivo")" -lt 2 ]
+        if [ -f "$archivo" ] && [ -r "$archivo" ] && [ "$(wc -w < "$archivo")" -lt 2 ]
         #velifica que "archivo" sea un archivo valido (existente, legible y que contenga 2 o mas palabras (nomb y apell))
         then
             echo "Archivo valido"
