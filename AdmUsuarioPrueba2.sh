@@ -16,7 +16,6 @@ listaUsuarios+=("$user3")
 
 
 ########################EMPIEZA LOQ EU TENGO QEU COPIAR##############
- usuariosTrabajar=()
 
     valido=false
     while [ "$valido" = false ]
@@ -34,8 +33,6 @@ listaUsuarios+=("$user3")
                 echo "Elegido: 1. Crear usuarios"
 
                 echo "Con qué usuarios desea trabajar? (ingrese sus numeros separados por espacios):"
-                echo "-1. Retroceder"
-                #el retroceder en realidad no te vuelve para atras, para todo
                 #despliega todos los usuarios
                 for((i = 0 ; i < ${#listaUsuarios[*]} ; i++))
                 do
@@ -52,32 +49,31 @@ listaUsuarios+=("$user3")
                 read -rp "opcion/es: " opciones
                 
                 #Si no se ingreso nada (te devuelve al menu)
-                if [ "${#usuariosTrabajar[@]}" -eq 0 ]
+                if [ -n "$opciones" ]
                 then
                     echo "No ha ingresado ningun usuario valido"
-                elif [ "$opciones" -eq -1 ]
-                #Si se ingresa -1 te devuelve al menu
-                then
-                    valido=true
                 else
                 #Si sí se ingresaron usuarios
-                    : '
-                    creo que tengo una mejor idea (no lo borro x las dudas)
-                        toma las opciones y las guarda de a una en el array
-                        for ((i=1 ; i <= $(echo "$opciones" | wc -w) ; i++))
-                        do
-                            opcion=$(echo "$opciones" | cut -d" " -f$i)
-                            usuario="${listaUsuarios[$opcion]}"
-                            usuariosTrabajar+=("$usuario")
-                        done
-                    '
+                    cantOpciones=$(echo "$opciones" | wc -w) 
 
-                    for ((i=1 ; i <= $(echo "$opciones" | wc -w) ; i++))
-                        do
-                            opcion=$(echo "$opciones" | cut -d" " -f$i)
+                    for ((i=1 ; i <= cantOpciones ; i++))
+                    do
+                        opcion=$(echo "$opciones" | cut -d" " -f$i)
+                        if ((opcion > -1 && opcion < ${#listaUsuarios[@]}))
+                        then
                             usuario="${listaUsuarios[$opcion]}"
                             add_usuario "$usuario"
-                        done
+                        else
+                            opcionesInvalidas+=" $i"
+                        fi
+                    done
+
+                if [ -z "$opcionesInvalidas" ]
+                then
+                    echo "Las opciones invalidas ingresadas fueron:$opcionesInvalidas"
+                fi
+                        
+                    
 
 
     
@@ -86,7 +82,7 @@ listaUsuarios+=("$user3")
 
 
 
-
+: '
                 #ESTO CREO UQE NO SIRVE
                     valido=true
                     opValida=false
@@ -105,6 +101,7 @@ listaUsuarios+=("$user3")
                             echo "Opcion inválida. Vuelva a intentarlo"
                         fi
                     done
+                    '
 
                     #UN USUARIO SOLO---------------------------------------------------------
                 fi
