@@ -68,41 +68,11 @@ listaUsuarios+=("$user3")
                         fi
                     done
 
-                if [ -z "$opcionesInvalidas" ]
-                then
-                    echo "Las opciones invalidas ingresadas fueron:$opcionesInvalidas"
-                fi
-                        
+                    if [ -z "$opcionesInvalidas" ]
+                    then
+                        echo "Las opciones invalidas ingresadas fueron:$opcionesInvalidas"
+                    fi
                     
-
-
-    
-
-
-
-
-
-: '
-                #ESTO CREO UQE NO SIRVE
-                    valido=true
-                    opValida=false
-                    while [ "$opValida" = false ]
-                    do
-                        read -rp "Opcion: " opcion
-                        if (( opcion > -1 && opcion <= ${#listaUsuarios[@]}))
-                        then
-                            opValida=true
-                            add_usuario "${listaUsuarios[$opcion]}"
-                        elif [ "$opcion" -eq -1 ]
-                        then
-                            opValida=true
-                            #esto lo que hace es salir en realidad
-                        else
-                            echo "Opcion inválida. Vuelva a intentarlo"
-                        fi
-                    done
-                    '
-
                     #UN USUARIO SOLO---------------------------------------------------------
                 fi
                     
