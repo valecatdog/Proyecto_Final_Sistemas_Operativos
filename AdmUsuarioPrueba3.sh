@@ -1,7 +1,11 @@
 #! /bin/bash
 
 #empezando con el valor de la variable en falso, hace lo siguiente hasta que valido sea true
-    until [ $valido ]
+
+valido="false"
+archivo="$1"
+
+    until [ "$valido" ]
     do
         if [ -f "$archivo" ]
         #velifica que "archivo" sea un archivo valido (existente)

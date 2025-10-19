@@ -90,7 +90,7 @@ echo "sin parametros"
 #SI SE INGRESA UN PARAMETRO######################################################################################
 elif (($# == 1))
 then
-    valido=false
+    valido="false"
     #variable para el untill
     archivo="$1"
     #guardo en la variable archivo  el valor del primer parametro ingresado (su ruta)
