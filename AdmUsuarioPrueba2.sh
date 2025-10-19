@@ -69,7 +69,7 @@ listaUsuarios+=("$user3")
                         fi
                     done
 
-                    if [ -z "$opcionesInvalidas" ]
+                    if [ -n "$opcionesInvalidas" ]
                     then
                         echo "Las opciones invalidas ingresadas fueron:$opcionesInvalidas"
                     fi
