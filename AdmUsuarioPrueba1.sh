@@ -8,6 +8,10 @@ convertir el hacer el formato nombre:apellido:usuario una funcion (linea 133 apr
 
 -Podriamos hacer algo para cancelar el si se ingreso un archivo valido, pero no me parece necesario porque con
 ctrl c ya podes salir
+
+-cuando metes varios ususaris si pones varios espacios se tranca
+
+-podiramos poner el nombre que sobro cuando metes un archivo
 '
 
 #EXPLICACIONES
@@ -133,14 +137,7 @@ then
 
 #############################################ESTA PARTE ESTA CORRECTA############################################
 #ARREGLAR
-: '
--que te deje meter varios usuarios al mismo tiempo
-
-'
-    
-    usuariosParaTrabajar=()
-
-    valido=false
+valido=false
     while [ "$valido" = false ]
     do
         #CAPAZ QUE HABRIA UQE HACER ALGO PARA RETROCEDER? 0?
@@ -153,51 +150,52 @@ then
 
         case $opcion in
             1)
-                valido="true"
                 echo "Elegido: 1. Crear usuarios"
 
-                if (( ${#listaUsuarios[*]} > 1 ))
+                echo "Con qué usuarios desea trabajar? (ingrese sus numeros separados por espacios):"
+                #despliega todos los usuarios
+                for((i = 0 ; i < ${#listaUsuarios[*]} ; i++))
+                do
+                    nombre="$(echo "$1" | cut -d: -f1)"
+                    apellido="$(echo "$1" | cut -d: -f2)"
+                    usuario="$(echo "$1" | cut -d: -f3)"
+
+                    nombre="$(echo "${listaUsuarios[$i]}" | cut -d: -f1)"
+                    apellido="$(echo "${listaUsuarios[$i]}" | cut -d: -f2)"
+                    usuario="$(echo "${listaUsuarios[$i]}" | cut -d: -f3)"
+                    echo "${i}. $usuario ($nombre $apellido)"
+                done
+
+                read -rp "opcion/es: " opciones
+                
+                #Si no se ingreso nada (te devuelve al menu)
+                if [ -z "$opciones" ]
                 then
-                    echo "Con qué usuarios desea trabajar? (ingrese sus numeros separados por espacios):"
-                    echo "-1. Retroceder"
-                    #el retroceder en realidad no te vuelve para atras, para todo
-                    #despliega todos los usuarios
-                    for((i = 0 ; i < ${#listaUsuarios[*]} ; i++))
-                    do
-                        nombre="$(echo "$1" | cut -d: -f1)"
-                        apellido="$(echo "$1" | cut -d: -f2)"
-                        usuario="$(echo "$1" | cut -d: -f3)"
+                    echo "No ha ingresado ningun usuario"
+                else
+                #Si sí se ingresaron usuarios
+                    cantOpciones=$(echo "$opciones" | wc -w) 
 
-                        nombre="$(echo "${listaUsuarios[$i]}" | cut -d: -f1)"
-                        apellido="$(echo "${listaUsuarios[$i]}" | cut -d: -f2)"
-                        usuario="$(echo "${listaUsuarios[$i]}" | cut -d: -f3)"
-                        echo "${i}. $usuario ($nombre $apellido)}"
-                    done
-
-                    opValida=false
-                    while [ "$opValida" = false ]
+                    for ((i=1 ; i <= cantOpciones ; i++))
                     do
-                        read -rp "Opcion: " opcion
-                        if (( opcion > -1 && opcion <= ${#listaUsuarios[@]}))
+                        opcion=$(echo "$opciones" | cut -d" " -f$i)
+                        if [[ "$opcion" =~ ^[0-9]+$ ]] && ((opcion > -1 && opcion < ${#listaUsuarios[@]}))
+                            #los [] se llaman "test". los dobles son avanzados y soportan regex (expresiones regulares)
                         then
-                            opValida=true
-                            add_usuario "${listaUsuarios[$opcion]}"
-                        elif [ "$opcion" -eq -1 ]
-                        then
-                            opValida=true
-                            #esto lo que hace es salir en realidad
+                            usuario="${listaUsuarios[$opcion]}"
+                            add_usuario "$usuario"
                         else
-                            echo "Opcion inválida. Vuelva a intentarlo"
+                            opcionesInvalidas+=" $opcion"
                         fi
                     done
 
+                    if [ -n "$opcionesInvalidas" ]
+                    then
+                        echo "Las opciones invalidas ingresadas fueron:$opcionesInvalidas"
+                    fi
+                    
                     #UN USUARIO SOLO---------------------------------------------------------
-                else
-                    echo "si no me da error"
-                    #MANDA DIRECTO EL USUARIO A LA FUNCION
                 fi
-
-            #esto para aca, no se repite ni nada
 
             ;;
             *)
