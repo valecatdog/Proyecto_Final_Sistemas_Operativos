@@ -3,15 +3,20 @@
 
 #ACTUALMENTE TRABAJANDO EN:
 : '
--ver que t permita ingresar varios usuarios a la vez para crearlos
-convertir el hacer el formato nombre:apellido:usuario una funcion (linea 133 aprox)
+-cuando venga del sirocco voy a hacer lo de meter 2 parametros
+i go girl
+'
 
+#SUGERENCIAS
+: '
 -Podriamos hacer algo para cancelar el si se ingreso un archivo valido, pero no me parece necesario porque con
 ctrl c ya podes salir
 
 -cuando metes varios ususaris si pones varios espacios se tranca
 
--podiramos poner el nombre que sobro cuando metes un archivo
+-podiramos mostrar el nombre que sobro cuando metes un archivo
+
+- los usuarios ya creados podriamos no mostrarlos
 '
 
 #EXPLICACIONES
@@ -175,6 +180,7 @@ valido=false
                 else
                 #Si sí se ingresaron usuarios
                     cantOpciones=$(echo "$opciones" | wc -w) 
+                    valido=true
 
                     for ((i=1 ; i <= cantOpciones ; i++))
                     do
@@ -192,9 +198,9 @@ valido=false
                     if [ -n "$opcionesInvalidas" ]
                     then
                         echo "Las opciones invalidas ingresadas fueron:$opcionesInvalidas"
+                        opcionesInvalidas=""
                     fi
                     
-                    #UN USUARIO SOLO---------------------------------------------------------
                 fi
 
             ;;
