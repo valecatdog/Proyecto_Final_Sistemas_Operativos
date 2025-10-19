@@ -5,7 +5,7 @@
 valido=false
 archivo="$1"
 
-    until [ "$valido" ]
+    while [ "$valido" ]
     do
         echo "entro en el until"
         if [ -f "$archivo" ] || [ -r "$archivo" ] || [ "$(wc -w < "$archivo")" -lt 2 ]
