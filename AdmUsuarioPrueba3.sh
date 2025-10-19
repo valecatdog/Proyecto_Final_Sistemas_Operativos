@@ -1,13 +1,8 @@
 #! /bin/bash
 
 #empezando con el valor de la variable en falso, hace lo siguiente hasta que valido sea true
-
-valido=false
-archivo="$1"
-
     until [ "$valido" = "true" ]
     do
-        echo "entro en el until"
         if [ -f "$archivo" ] && [ -r "$archivo" ] && [ "$(wc -w < "$archivo")" -gt 2 ]
         #velifica que "archivo" sea un archivo valido (existente, legible y que contenga 2 o mas palabras (nomb y apell))
         then

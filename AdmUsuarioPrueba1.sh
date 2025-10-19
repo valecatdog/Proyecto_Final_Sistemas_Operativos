@@ -5,6 +5,8 @@
 : '
 -ver que t permita ingresar varios usuarios a la vez para crearlos
 convertir el hacer el formato nombre:apellido:usuario una funcion (linea 133 aprox)
+
+-Podriamos hacer algo para cancelar el si se ingreso un archivo valido 
 '
 
 #EXPLICACIONES
@@ -101,32 +103,24 @@ then
     #ALGO PARA ROMPER EL BUCLE SI TE ARREPENTISTE!!!
 
     #empezando con el valor de la variable en falso, hace lo siguiente hasta que valido sea true
-    until [ "$valido" ]
+    until [ "$valido" = "true" ]
     do
-        if [ -f "$archivo" ]
-        #velifica que "archivo" sea un archivo valido (existente)
-        #PODRIA VERIFICAR SI LA ESTRUCTURA ES VALIDA TAMMBIEN!!! (ESTA PERO NO SE SI ESTA ANDANDO)
+        if [ -f "$archivo" ] && [ -r "$archivo" ] && [ "$(wc -w < "$archivo")" -gt 2 ]
+        #velifica que "archivo" sea un archivo valido (existente, legible y que contenga 2 o mas palabras (nomb y apell))
         then
-            #si es valido
-            echo "Archivo encontrado."
-    
-            #le pongo comillas por las dudas de que me de mas de una palabra (no deberia). Es una buena practica.
-            if [ "$(wc -w < "$archivo")" -lt 2 ]
-            then
-                echo "Error: archivo invalido. Los archivos tienen que tener por lo menos dos palabras (nombre y apellido)"
-                read -rp "Ingrese una ruta válida: " archivo
-                valido=true
-                #detiene el until
-            else
-                echo "Archivo valido"
-            fi
+            echo "Archivo valido"
+            valido=true
+
+        elif [ "$archivo" -eq 0 ]
+        then
+            valido=true
+            echo "Saliendo..."
         else
-            #si no es valido
             echo "Error: archivo invalido o no encontrado"
             read -rp "Ingrese una ruta válida: " archivo
         fi
     done
-    echo "-------------------------------------"
+    echo "----------------------------------"
     #fin del until
 
     listaUsuarios=()
