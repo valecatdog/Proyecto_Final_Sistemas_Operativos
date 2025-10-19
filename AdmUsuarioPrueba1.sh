@@ -13,6 +13,7 @@ convertir el hacer el formato nombre:apellido:usuario una funcion (linea 133 apr
 '
 
 #ESPACIO PARA FUNCIONES
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!HAY QUE CAMBIAR ESTA FUNCION, YA NO SIRVE AMS
 generar_username() {
     local primeraLetra
     primeraLetra="$(echo "$1" | cut -c1)"
