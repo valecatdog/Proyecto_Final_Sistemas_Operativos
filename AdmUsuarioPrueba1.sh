@@ -27,19 +27,25 @@ ctrl c ya podes salir
 
 #ESPACIO PARA FUNCIONES
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!HAY QUE CAMBIAR ESTA FUNCION, YA NO SIRVE AMS
-generar_username() {
+generar_data() {
+    local nombre
+    local apellido
+    local usuario
     local primeraLetra
-    primeraLetra="$(echo "$1" | cut -c1)"
     #se hace por separado porque al ponerle local de una se pierde el valor de retorno ($?, si es 0, 1 etc)
-    pero no se por que aca abajo nno y ahi arriba si
-    local nombreUsuario=$primeraLetra$2
-    echo "$nombreUsuario"
+
+    nombre="$1"
+    apellido="$2"
+    primeraLetra=$(echo "$nombre" | cut -c1)
+    usuario="$primeraLetra$apellido"
+    data="${nombre}:${apellido}:$usuario"
+    #parece qeu no se usa, pero mas adelante si se usa
 }
 
 export LC_ALL=C.UTF-8
 : '
 le dice al shell que use UTF-8 como codificación para todo. lo agregamos poruqe funciones como tr [:upper:] [:lower:]
-no manejan por si solos la misma cantidad de caracteres y eso genera un problema en la ejecucion
+no manejan por si solos la misma cantidad de caracteress y eso genera un problema en la ejecucion
 '
 
 add_usuario(){
