@@ -28,18 +28,12 @@ generar_data() {
 
 read -rp "1er nombre y apellido: " nombres
 nombre=$(echo "$nombres" | cut -d" " -f1)
-apellido=$(echo "$nombres" | cut -d" " -f12)
+apellido=$(echo "$nombres" | cut -d" " -f2)
 generar_data "$nombre" "$apellido"
-echo "los datos son: $data"
-
-read -rp "2do nombre y apellido: " nombres
-nombre=$(echo "$nombres" | cut -d" " -f1)
-apellido=$(echo "$nombres" | cut -d" " -f12)
-generar_data "sandra" "carbajal"
 echo "los datos son: $data"
 
 read -rp "3er nombre y apellido: " nombres
 nombre=$(echo "$nombres" | cut -d" " -f1)
-apellido=$(echo "$nombres" | cut -d" " -f12)
+apellido=$(echo "$nombres" | cut -d" " -f2)
 generar_data "$nombre" "$apellido"
 echo "los datos son: $data"
