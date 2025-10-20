@@ -35,7 +35,7 @@ echo "los datos son: $data"
 read -rp "2do nombre y apellido: " nombres
 nombre=$(echo "$nombres" | cut -d" " -f1)
 apellido=$(echo "$nombres" | cut -d" " -f12)
-generar_data "$nombre" "$apellido"
+generar_data "sandra" "carbajal"
 echo "los datos son: $data"
 
 read -rp "3er nombre y apellido: " nombres
