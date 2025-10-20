@@ -100,10 +100,10 @@ del_usuario(){
         usuario=$(echo "$1" | cut -d: -f3)
 
         sudo userdel -r "$usuario"
-        echo "Usuario $usuario ($nombre $apellido) eliminado correctamente"
+        echo "Usuario $usuario ($nombre $apellido) eliminado correctamente del sistema"
         
     else
-        echo "Error: el usuario $usuario ($nombre $apellido) no existe"
+        echo "Error: el usuario $usuario ($nombre $apellido) no existe en el sistema"
     fi
 }
 
