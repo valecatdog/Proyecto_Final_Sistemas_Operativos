@@ -229,7 +229,6 @@ then
                 fi
 
             ;;
-#############################################ESTA PARTE ESTA CORRECTA############################################
             2)
                 echo "Elegido: 2. Eliminar usuarios del sistema"
 
@@ -285,6 +284,7 @@ then
             ;;
         esac
     done
+#############################################ESTA PARTE ESTA CORRECTA############################################
 #SI SE INGRESA UN PARAMETRO (ARREGLAR)
 
 else

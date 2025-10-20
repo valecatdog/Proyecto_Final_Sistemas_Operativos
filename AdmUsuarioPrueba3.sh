@@ -1,32 +1,41 @@
 #! /bin/bash
-
+#espacio 2 para probar casos individuales
+#TRABAJANDO EN:
+: '
+- hacer que la funcion generar username ande
+'
 #escrctura del usuario:
 #nombre:apellido:usuario
 
-del_usuario(){
-    if usuario_existe "$1"
-    then
-        local nombre
-        local apellido
-        local usuario
-        
-        nombre=$(echo "$1" | cut -d: -f1)
-        apellido=$(echo "$1" | cut -d: -f2)
-        usuario=$(echo "$1" | cut -d: -f3)
-        local usuario="$1"
+generar_data() {
+    local nombre
+    local apellido
+    local usuario
+    local primeraLetra
+    #se hace por separado porque al ponerle local de una se pierde el valor de retorno ($?, si es 0, 1 etc)
 
-        sudo userdel -r "$usuario"
-        echo "Usuario $usuario ($nombre $apellido) eliminado correctamente"
-        
-    else
-        echo "Error: el usuario no existe"
-    fi
+    nombre="$1"
+    apellido="$2"
+    primeraLetra=$(echo "$nombre" | cut -c1)
+    usuario="$primeraLetra$apellido"
+    primeraLetra="$(echo "$1" | cut -c1)"
+    data="${nombre}:${apellido}:$usuario"
 }
 
-usuario_existe() {
-        local usuario
-        usuario="$(echo "$1" | cut -d: -f3)"
-        # -q = quiet (no imprime mada) # ^ inicio de linea 
-        #habra que escapar el $
-        grep -q "^${usuario}:" /etc/passwd
-}
+read -rp "1er nombre y apellido: " nombres
+nombre=$(echo "$nombres" | cut -d" " -f1)
+apellido=$(echo "$nombres" | cut -d" " -f12)
+generar_data "$nombre" "$apellido"
+echo "los datos son: $data"
+
+read -rp "2do nombre y apellido: " nombres
+nombre=$(echo "$nombres" | cut -d" " -f1)
+apellido=$(echo "$nombres" | cut -d" " -f12)
+generar_data "$nombre" "$apellido"
+echo "los datos son: $data"
+
+read -rp "3er nombre y apellido: " nombres
+nombre=$(echo "$nombres" | cut -d" " -f1)
+apellido=$(echo "$nombres" | cut -d" " -f12)
+generar_data "$nombre" "$apellido"
+echo "los datos son: $data"
