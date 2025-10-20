@@ -15,11 +15,15 @@ generar_data() {
     #se hace por separado porque al ponerle local de una se pierde el valor de retorno ($?, si es 0, 1 etc)
 
     nombre="$1"
+    echo "-------------$nombre"
     apellido="$2"
+    echo "-------------$apellido"
     primeraLetra=$(echo "$nombre" | cut -c1)
+    echo "-------------$primeraLetra"
     usuario="$primeraLetra$apellido"
-    primeraLetra="$(echo "$1" | cut -c1)"
+    echo "-------------$usuario"
     data="${nombre}:${apellido}:$usuario"
+    echo "-------------$data"
 }
 
 read -rp "1er nombre y apellido: " nombres
