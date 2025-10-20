@@ -45,6 +45,14 @@ no manejan por si solos la misma cantidad de caracteres y eso genera un problema
 
 add_usuario(){
     #verifico la salida de la funcion, si es distinta a 0 entonces actua
+     local usuario
+    local nombre
+    local apellido
+    #datos del usuario (almacenados como nombre:apellido:usuario)
+    nombre="$(echo "$1" | cut -d: -f1)"
+    apellido="$(echo "$1" | cut -d: -f2)"
+    usuario="$(echo "$1" | cut -d: -f3)"
+    
     if ! usuario_existe "$1"
     then
         #creo las variables y las hago locales (solo existen para esta funcion)
@@ -75,7 +83,7 @@ add_usuario(){
         echo "Usuario $usuario creado correctamente. Contraseña: $passwd"
         
     else
-        echo "Error: el usuario ya existe en el sistema"
+        echo "Error: el usuario $usuario ($nombre $apellido) ya existe en el sistema"
         echo "$1" >> cre_usuarios.log 
     fi
 } 
