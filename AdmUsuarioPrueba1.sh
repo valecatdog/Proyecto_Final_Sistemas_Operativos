@@ -89,9 +89,7 @@ usuario_existe() {
 }
 
 del_usuario(){
-    if usuario_existe "$1"
-    then
-        local nombre
+    local nombre
         local apellido
         local usuario
         
@@ -99,9 +97,10 @@ del_usuario(){
         apellido=$(echo "$1" | cut -d: -f2)
         usuario=$(echo "$1" | cut -d: -f3)
 
+    if usuario_existe "$1"
+    then
         sudo userdel -r "$usuario"
         echo "Usuario $usuario ($nombre $apellido) eliminado correctamente del sistema"
-        
     else
         echo "Error: el usuario $usuario ($nombre $apellido) no existe en el sistema"
     fi
