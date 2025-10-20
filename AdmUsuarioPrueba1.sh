@@ -88,6 +88,25 @@ usuario_existe() {
         grep -q "^${usuario}:" /etc/passwd
 }
 
+del_usuario(){
+    if usuario_existe "$1"
+    then
+        local nombre
+        local apellido
+        local usuario
+        
+        nombre=$(echo "$1" | cut -d: -f1)
+        apellido=$(echo "$1" | cut -d: -f2)
+        usuario=$(echo "$1" | cut -d: -f3)
+
+        sudo userdel -r "$usuario"
+        echo "Usuario $usuario ($nombre $apellido) eliminado correctamente"
+        
+    else
+        echo "Error: el usuario $usuario ($nombre $apellido) no existe"
+    fi
+}
+
 #TERMINA ESPACIO DE FUNCIONES#########################################################################
 
 
@@ -206,7 +225,52 @@ then
             ;;
 #############################################ESTA PARTE ESTA CORRECTA############################################
             2)
-                #PARA BORRAR USUARIOS
+                echo "Elegido: 2. Eliminar usuarios del sistema"
+
+                echo "Con qué usuarios desea trabajar? (ingrese sus numeros separados por espacios):"
+                #despliega todos los usuarios
+                for((i = 0 ; i < ${#listaUsuarios[*]} ; i++))
+                do
+                    nombre="$(echo "$1" | cut -d: -f1)"
+                    apellido="$(echo "$1" | cut -d: -f2)"
+                    usuario="$(echo "$1" | cut -d: -f3)"
+
+                    nombre="$(echo "${listaUsuarios[$i]}" | cut -d: -f1)"
+                    apellido="$(echo "${listaUsuarios[$i]}" | cut -d: -f2)"
+                    usuario="$(echo "${listaUsuarios[$i]}" | cut -d: -f3)"
+                    echo "${i}. $usuario ($nombre $apellido)"
+                done
+
+                read -rp "opcion/es: " opciones
+                
+                #Si no se ingreso nada (te devuelve al menu)
+                if [ -z "$opciones" ]
+                then
+                    echo "No ha ingresado ningun usuario"
+                else
+                #Si sí se ingresaron usuarios
+                    cantOpciones=$(echo "$opciones" | wc -w) 
+                    valido=true
+
+                    for ((i=1 ; i <= cantOpciones ; i++))
+                    do
+                        opcion=$(echo "$opciones" | cut -d" " -f$i)
+                        if [[ "$opcion" =~ ^[0-9]+$ ]] && ((opcion > -1 && opcion < ${#listaUsuarios[@]}))
+                        then
+                            usuario="${listaUsuarios[$opcion]}"
+                            del_usuario "$usuario"
+                        else
+                            opcionesInvalidas+=" $opcion"
+                        fi
+                    done
+
+                    if [ -n "$opcionesInvalidas" ]
+                    then
+                        echo "Las opciones invalidas ingresadas fueron:$opcionesInvalidas"
+                        opcionesInvalidas=""
+                    fi
+                    
+                fi
             ;;
             *)
                 echo "Asegurese de elegir un valor válido"

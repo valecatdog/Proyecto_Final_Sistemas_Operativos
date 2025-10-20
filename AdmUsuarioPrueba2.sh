@@ -19,24 +19,7 @@ listaUsuarios+=("$user4")
 
 #FUNCIONES
 
-del_usuario(){
-    if usuario_existe "$1"
-    then
-        local nombre
-        local apellido
-        local usuario
-        
-        nombre=$(echo "$1" | cut -d: -f1)
-        apellido=$(echo "$1" | cut -d: -f2)
-        usuario=$(echo "$1" | cut -d: -f3)
 
-        sudo userdel -r "$usuario"
-        echo "Usuario $usuario ($nombre $apellido) eliminado correctamente"
-        
-    else
-        echo "Error: el usuario $usuario ($nombre $apellido) no existe"
-    fi
-}
 
 usuario_existe() {
         local usuario
