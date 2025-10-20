@@ -3,8 +3,7 @@
 
 #ACTUALMENTE TRABAJANDO EN:
 : '
--cuando venga del sirocco voy a hacer lo de meter 2 parametros
-i go girl
+-hacer que ande para 2 parametros
 '
 
 #SUGERENCIAS
