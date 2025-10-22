@@ -73,6 +73,23 @@ usuario_existe() {
         grep -q "^${usuario}:" /etc/passwd
 }
 
+del_usuario(){
+    local nombre
+        local apellido
+        local usuario
+        
+        nombre=$(echo "$1" | cut -d: -f1)
+        apellido=$(echo "$1" | cut -d: -f2)
+        usuario=$(echo "$1" | cut -d: -f3)
+
+    if usuario_existe "$1"
+    then
+        sudo userdel -r "$usuario"
+        echo "Usuario $usuario ($nombre $apellido) eliminado correctamente del sistema"
+    else
+        echo "Error: el usuario $usuario ($nombre $apellido) no existe en el sistema"
+    fi
+}
 
 
 if  (($# == 1))
@@ -101,7 +118,7 @@ then
             valido="true"
             del_usuario "$usuario"
         else
-            printf "\n----------------------------\n"
+            printf "\n----------------------------\n\n"
             echo "Error: opcion invalida"
             printf "\n----------------------------\n"
         fi
