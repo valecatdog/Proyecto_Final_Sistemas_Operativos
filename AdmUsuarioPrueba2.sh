@@ -5,7 +5,7 @@
 -para un usuario
 '
 
-generar_data() {
+generar_usuario() {
     local nombre
     local apellido
     local user
@@ -78,7 +78,8 @@ then
     valido=false
     until [ "$valido" = true ]
     do
-        generar_username "$1" "$2"
+        generar_usuario "$1" "$2"
+        echo "$usuario"
 
         echo "Que desea hacer?"
         echo "1. Crear usuario"
