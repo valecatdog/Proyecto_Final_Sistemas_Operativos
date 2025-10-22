@@ -148,11 +148,13 @@ while [ "$valido" = false ]
                                 
                                 case $opcionCase1_1 in
                                     1)
+                                    #ingresar por consola
                                         validoOpcion1_1="true"
                                         echo "Crear usuarios por pantalla"
                                         printf "\n"
 
                                         #esto se podria hacer mas robusto
+                                        #ej: no se ingresa nada
                                         echo "Ingresar: "
                                         read -rp "nombre: " nombreUsuario
                                         nombreUsuario=$(echo "$nombreUsuario" | tr -d " ")
@@ -166,6 +168,24 @@ while [ "$valido" = false ]
                                         #se añade al usuario
                                     ;;
                                     2)
+                                    #ingresar con archivo
+                                    valido="false"                                
+                                    #empezando con el valor de la variable en falso, hace lo siguiente hasta que valido sea true
+                                    until [ "$valido" = "true" ]
+                                    do
+                                        read -rp "Ingrese una ruta válida: " archivo
+                                        if [ -f "$archivo" ] && [ -r "$archivo" ] && [ "$(wc -w < "$archivo")" -gt 2 ]
+                                        #velifica que "archivo" sea un archivo valido (existente, legible y que contenga 2 o mas palabras (nomb y apell))
+                                        then
+                                            echo "Archivo valido"
+                                            valido=true
+                                        else
+                                            echo "Error: archivo invalido o no encontrado"
+                                        fi
+                                    done
+                                    echo "----------------------------------"
+
+                                    #pasar lo otro a fun
 
                                     ;;
                                     *)
