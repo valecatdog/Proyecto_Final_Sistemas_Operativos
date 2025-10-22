@@ -79,7 +79,6 @@ then
     until [ "$valido" = true ]
     do
         generar_usuario "$1" "$2"
-        echo "$usuario"
 
         echo "Que desea hacer?"
         echo "1. Crear usuario"
@@ -87,13 +86,13 @@ then
         read -rp "Elija una opción: " opcion
 
         if (( "$opcion" = 1 )); then
-            valido=true
+            valido="true"
             add_usuario "$usuario"
         elif (( "$opcion" = 2 )); then
-            valido=true
+            valido="true"
             del_usuario "$usuario"
         else
-            echo "Error: opcion incorrecta"
+            echo "Error: opcion invalida"
             printf "\n----------------------------\n"
         fi
     done
