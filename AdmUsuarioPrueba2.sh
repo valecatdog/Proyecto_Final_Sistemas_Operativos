@@ -155,7 +155,10 @@ while [ "$valido" = false ]
                                         #esto se podria hacer mas robusto
                                         echo "Ingresar: "
                                         read -rp "nombre: " nombreUsuario
+                                        nombreUsuario=$(echo "$nombreUsuario" | tr -d " ")
+                                        #saco los espacios para evitar errores
                                         read -rp "apellido: " apellidoUsuario
+                                        apellidoUsuario=$(echo "$apellidoUsuario" | tr -d " ")
 
                                         generar_usuario "$nombreUsuario" "$apellidoUsuario"
                                         #se hace la data del usuario y se guarda en la variable "usuario"
