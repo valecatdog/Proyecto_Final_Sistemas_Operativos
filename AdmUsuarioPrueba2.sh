@@ -65,6 +65,14 @@ add_usuario(){
     fi
 } 
 
+usuario_existe() {
+        local usuario
+        usuario="$(echo "$1" | cut -d: -f3)"
+        # -q = quiet (no imprime mada) # ^ inicio de linea 
+        #habra que escapar el $
+        grep -q "^${usuario}:" /etc/passwd
+}
+
 
 
 if  (($# == 1))
@@ -85,13 +93,15 @@ then
         printf "2. Eliminar usuario del sistema\n"
         read -rp "Elija una opción: " opcion
 
-        if (( "$opcion" == 1 )); then
+        if (( "$opcion" == 1 )) 2>/dev/null; then
+        #mando el error a /dev/null porque pode ingresar cosas no numericas y te tira error, pero funciona bien
             valido="true"
             add_usuario "$usuario"
-        elif (( "$opcion" == 2 )); then
+        elif (( "$opcion" == 2 )) 2>/dev/null; then
             valido="true"
             del_usuario "$usuario"
         else
+            printf "\n----------------------------\n"
             echo "Error: opcion invalida"
             printf "\n----------------------------\n"
         fi
