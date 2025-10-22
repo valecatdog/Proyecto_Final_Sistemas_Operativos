@@ -148,16 +148,18 @@ while [ "$valido" = false ]
                                 
                                 case $opcionCase1_1 in
                                     1)
+                                        validoOpcion1_1="true"
                                         echo "Crear usuarios por pantalla"
                                         printf "\n"
 
+                                        #esto se podria hacer mas robusto
                                         echo "Ingresar: "
                                         read -rp "nombre: " nombreUsuario
                                         read -rp "apellido: " apellidoUsuario
 
                                         generar_usuario "$nombreUsuario" "$apellidoUsuario"
                                         #se hace la data del usuario y se guarda en la variable "usuario"
-                                        add_usuario $usuario
+                                        add_usuario "$usuario"
                                         #se añade al usuario
                                     ;;
                                     2)
@@ -165,6 +167,7 @@ while [ "$valido" = false ]
                                     ;;
                                     *)
                                         echo "Error: opcion invalida"
+                                        printf "\n--------------------------------\n\n"
                                     ;;
                                 esac
                             done
@@ -195,6 +198,7 @@ while [ "$valido" = false ]
                         ;;
                         *)
                             echo "Error: opcion incorrecta"
+                            printf "\n--------------------------------\n\n"
                         ;;
                     esac
 
@@ -220,6 +224,7 @@ while [ "$valido" = false ]
             
             *)
                 echo "Error: opcion invalida"
+                printf "\n--------------------------------\n\n"
             ;;
         esac
 
