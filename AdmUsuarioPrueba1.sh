@@ -24,9 +24,9 @@ ctrl c ya podes salir
 : '
 -los read tienen -r para que no se intrprete lo que se escriba (el shell )
 '
+export LC_ALL=C.UTF-8
 
 #ESPACIO PARA FUNCIONES
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!HAY QUE CAMBIAR ESTA FUNCION, YA NO SIRVE AMS
 generar_usuario() {
     local nombre
     local apellido
@@ -42,7 +42,6 @@ generar_usuario() {
     #parece qeu no se usa, pero mas adelante si se usa
 }
 
-export LC_ALL=C.UTF-8
 : '
 le dice al shell que use UTF-8 como codificación para todo. lo agregamos poruqe funciones como tr [:upper:] [:lower:]
 no manejan por si solos la misma cantidad de caracteress y eso genera un problema en la ejecucion
@@ -50,7 +49,7 @@ no manejan por si solos la misma cantidad de caracteress y eso genera un problem
 
 add_usuario(){
     #verifico la salida de la funcion, si es distinta a 0 entonces actua
-     local usuario
+    local usuario
     local nombre
     local apellido
     #datos del usuario (almacenados como nombre:apellido:usuario)
