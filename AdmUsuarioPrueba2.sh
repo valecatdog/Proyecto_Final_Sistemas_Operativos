@@ -85,10 +85,10 @@ then
         printf "2. Eliminar usuario del sistema\n"
         read -rp "Elija una opción: " opcion
 
-        if (( "$opcion" = 1 )); then
+        if (( "$opcion" == 1 )); then
             valido="true"
             add_usuario "$usuario"
-        elif (( "$opcion" = 2 )); then
+        elif (( "$opcion" == 2 )); then
             valido="true"
             del_usuario "$usuario"
         else
