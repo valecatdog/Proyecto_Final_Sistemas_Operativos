@@ -18,7 +18,7 @@ crear_dir_backup(){
     fi
 }
 
-# se encarga de verificar si el backup esta up and running :D, crontab -l te da una lista con las tareas Cron actuales (te devuelve )
+# se encarga de verificar si el backup esta up and running :D, crontab -l te da una lista con las tareas Cron actuales (te devuelve un 1 (true) si es false )
 backup_automatico_activo(){
     sudo crontab -l 2>/dev/null | grep -q "$Delta automatico"
 }
