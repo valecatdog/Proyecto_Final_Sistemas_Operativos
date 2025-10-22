@@ -218,6 +218,7 @@ then
                         opcion=$(echo "$opciones" | cut -d" " -f$i)
                         if [[ "$opcion" =~ ^[0-9]+$ ]] && ((opcion > -1 && opcion < ${#listaUsuarios[@]}))
                             #los [] se llaman "test". los dobles son avanzados y soportan regex (expresiones regulares)
+                            #PONER PARA QUE ES =~
                         then
                             usuario="${listaUsuarios[$opcion]}"
                             add_usuario "$usuario"
@@ -230,6 +231,7 @@ then
                     then
                         echo "Las opciones invalidas ingresadas fueron:$opcionesInvalidas"
                         opcionesInvalidas=""
+
                     fi
                     
                 fi
@@ -292,6 +294,8 @@ then
     done
 #############################################ESTA PARTE ESTA CORRECTA############################################
 #SI SE INGRESA UN PARAMETRO (ARREGLAR)
+
+
 
 else
     echo "Se ha ingresado una cantidad invalida de parametros"
