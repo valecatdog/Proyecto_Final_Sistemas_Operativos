@@ -15,7 +15,7 @@ elif (($# == 2))
 then
     valido=false
     echo "que le pasa a esto"
-    until [ "$valido" ]
+    until [ "$valido" = true ]
     do
         usuario=$(generar_username "$1" "$2")
 
