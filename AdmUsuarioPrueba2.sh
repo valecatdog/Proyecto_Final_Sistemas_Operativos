@@ -345,7 +345,7 @@ while [ "$valido" = false ]
     do
         clear
         #0 NO ANDA
-        echo "==ELIJA UN MODO==: "
+        echo "==ELIJA UN MODO== "
         printf "\n"
         echo "0. Volver al menu principal"
         echo "1. Gestion de usuarios"
@@ -424,7 +424,7 @@ while [ "$valido" = false ]
             *)
                 echo "Error: opcion invalida"
                 printf "\n--------------------------------\n\n"
-                sleep 2
+                sleep 1
             ;;
         esac
 
