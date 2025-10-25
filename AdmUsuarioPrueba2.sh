@@ -94,6 +94,7 @@ del_usuario(){
 }
 
 gestion_usuario(){
+    clear
     echo "Desea ingresar un usuario o un archivo para procesar?"
     #0 NO ANDA
     echo "0. Volver a menu anterior" 
@@ -344,7 +345,8 @@ while [ "$valido" = false ]
     do
         clear
         #0 NO ANDA
-        echo "Elija el modo al que desea acceder: "
+        echo "==ELIJA UN MODO==: "
+        printf "\n"
         echo "0. Volver al menu principal"
         echo "1. Gestion de usuarios"
         echo "2. Gestion de backups"
@@ -354,16 +356,15 @@ while [ "$valido" = false ]
 
         case $opcion in
             1)
-                clear
-                echo "==GESTION DE USUARIOS=="
-                printf "\n"
-
                 valido="true"
                 validoOpcion1="false"
                 while [ "$validoOpcion1" = false ]
                 do
+                    clear
+                    echo "==GESTION DE USUARIOS=="
+                    printf "\n"
                     #0  NO ANDA
-                    echo "Que desea hacer? "
+                    echo "Que desea hacer?"
                     echo "0. Volver al menu anterior"
                     echo "1. Crear o eliminar usuarios"
                     echo "2. Crear o eliminar grupos"
@@ -374,81 +375,14 @@ while [ "$valido" = false ]
                     
                     case $opcionCase1 in
                         1)
-                        #tengo que mover gestion_usuarios a una funcion real a ver si anda
+                        validoOpcion1="true"
                             while ! gestion_usuario
                             do
                                 gestion_usuario
                                 
                             done
-                            
-                        #crear usuarios
-                            echo "Crear o eliminar usuarios"
-                            printf "\n"
-                        
-
-
-                            validoOpcion1="true"
-                            validoOpcion1_1="false"
-
-                            #COMO SE VA A REPETIR CASI IGUAL PUEDE SER UNA FUNCION
-                            while [ "$validoOpcion1_1" = false ]
-                            do
-                                echo "Como los quiere crear? "
-                                echo "1. Ingresando los datos por pantalla (permite un usuario)"
-                                echo "2. Con un archivo (permite multiples usuarios)"
-                                read -rp "Opcion: " opcionCase1_1
-                                printf "\n--------------------------------\n\n"
-                                
-                                case $opcionCase1_1 in
-                                    1)
-                                    #ingresar por consola
-                                        validoOpcion1_1="true"
-                                        echo "Crear usuarios por pantalla"
-                                        printf "\n"
-
-                                        #esto se podria hacer mas robusto
-                                        #ej: no se ingresa nada
-                                        echo "Ingresar: "
-                                        read -rp "nombre: " nombreUsuario
-                                        nombreUsuario=$(echo "$nombreUsuario" | tr -d " ")
-                                        #saco los espacios para evitar errores
-                                        read -rp "apellido: " apellidoUsuario
-                                        apellidoUsuario=$(echo "$apellidoUsuario" | tr -d " ")
-
-                                        generar_usuario "$nombreUsuario" "$apellidoUsuario"
-                                        #se hace la data del usuario y se guarda en la variable "usuario"
-                                        add_usuario "$usuario"
-                                        #se añade al usuario
-                                    ;;
-                                    2)
-                                    #ingresar con archivo
-                                    valido="false"                                
-                                    #empezando con el valor de la variable en falso, hace lo siguiente hasta que valido sea true
-                                    until [ "$valido" = "true" ]
-                                    do
-                                        read -rp "Ingrese una ruta válida: " archivo
-                                        if [ -f "$archivo" ] && [ -r "$archivo" ] && [ "$(wc -w < "$archivo")" -gt 2 ]
-                                        #velifica que "archivo" sea un archivo valido (existente, legible y que contenga 2 o mas palabras (nomb y apell))
-                                        then
-                                            echo "Archivo valido"
-                                            valido=true
-                                        else
-                                            echo "Error: archivo invalido o no encontrado"
-                                        fi
-                                    done
-                                    echo "----------------------------------"
-
-                                    
-
-                                    ;;
-                                    *)
-                                        echo "Error: opcion invalida"
-                                        printf "\n--------------------------------\n\n"
-                                    ;;
-                                esac
-                            done
-
                         ;;
+
                         2)
                         #eliminar usuarios
 
@@ -483,12 +417,14 @@ while [ "$valido" = false ]
             
             2)
             #MODO GESTION DE BACKUPS,  LO HACER ARU
-            echo "te extraño"
+                valido="true"
+                echo "te extraño"
             ;;
             
             *)
                 echo "Error: opcion invalida"
                 printf "\n--------------------------------\n\n"
+                sleep 2
             ;;
         esac
 
