@@ -22,6 +22,8 @@ ctrl c ya podes salir
 -¿cuales son las condiciones para los nombres? ¿que caracteres pueden tener?
 
 -podria mejorar los nombres de las funciones
+
+-verificar que los usuarios/grupos no coincidan con cosas que no se deberian borrar (cosas que vienen con el sistema)
 '
 
 #EXPLICACIONES

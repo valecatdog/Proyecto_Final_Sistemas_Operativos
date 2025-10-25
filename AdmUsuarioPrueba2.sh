@@ -4,6 +4,19 @@
 : '
 modo sin parametros
 actualmente estoy trabajando en gestion de usuarios, crear usuarios, crear usuarios por consola
+
+HACER:
+-que ande la lista de usuarios
+-qeu se pueda crear grupos
+-que se pueda borrar grupos
+-que se vea la lista de grupos
+-que se puedan añadir y dacar usuarios de grupos
+
+y ta eso es todo lo qeu queda. despues se le pueden agregar mas cosas para hacerlo mas robusto
+se le podria agregar la opcion de ponerle contraseña a un gruó
+
+
+ayuda no me da la cabeza para mas
 '
 #COMIENZO DEL ESPACIO PARA FUNCIONES
 
@@ -72,7 +85,9 @@ usuario_existe() {
         usuario="$(echo "$1" | cut -d: -f3)"
         # -q = quiet (no imprime mada) # ^ inicio de linea 
         #habra que escapar el $
-        grep -q "^${usuario}:" /etc/passwd
+        getent passwd "$usuario" >/dev/null
+        : 'verifica si existe el usuario en passwd, si existe te imprime su info. como no qeuremos eso, lo mandamos a 
+        /dev/null'
 }
 
 del_usuario(){
@@ -91,60 +106,6 @@ del_usuario(){
     else
         echo "Error: el usuario $usuario ($nombre $apellido) no existe en el sistema"
     fi
-}
-
-gestion_usuario(){
-    clear
-    echo "Desea ingresar un usuario o un archivo para procesar?"
-    #0 NO ANDA
-    echo "0. Volver a menu anterior" 
-    echo "1. Ingresar un archivo para procesar"
-    echo "2. Ingresar un usuario"
-    printf "\n"
-    read -rp "Opcion: " opcionCase11
-
-    case $opcionCase11 in
-        1)
-            printf "\n"
-            echo "==PROCESAR UN ARCHIVO=="
-            printf "\n"
-            read -rp "Ingrese la ruta del archivo a procesar (no ingresar nada para cancelar): " archivo
-            #AGREGAR 0 PARA CANCELAR EN LA OTRA FUNCION    
-            archivo_procesar "$archivo"
-
-            return 0
-        ;;
-        
-        2)
-            echo "==INGRESAR UN USUARIO=="
-            printf "\n"
-            validoOpcion112=false
-            while [ "$validoOpcion112" = false ]
-            do
-                read -rp "Ingrese el nombre y apellido del usuario (no ingresar nada para cancelar): " nombre apellido
-                #AGREGAR 0 PARA CANCELAR EN LA OTRA FUNCION
-                if [ -n "$nombre" ] && [ -n "$apellido" ]
-                then
-                    validoOpcion112=true
-                    ingreso_usuario "$nombre" "$apellido"
-                elif [ -z "$nombre" ] && [ -z "$apellido" ]
-                then
-                    validoOpcion112=true
-                    echo SALIR
-                else
-                    echo "ERROR: formato de nombres incorrecto"
-                fi
-            done
-
-            return 0
-        ;;
-        *)
-            echo "Opcion incorrecta"
-            clear
-            return 1
-        ;;
-    esac
-
 }
 
 verificar_archivo(){
@@ -336,6 +297,159 @@ ingreso_usuario(){
     done
 }
 
+gestion_usuarios(){
+    clear
+    echo "==GESTION DE USUARIOS=="
+    printf "\n\n"
+    echo "Desea ingresar un usuario o un archivo para procesar?"
+    printf "\n"
+    #0 NO ANDA
+    echo "0. Volver a menu anterior" 
+    echo "1. Ingresar un archivo para procesar"
+    echo "2. Ingresar un usuario"
+    #NO ANDA
+    echo "3. Listar usuarios existentes"
+    printf "\n"
+    read -rp "Opcion: " opcionCase11
+
+    case $opcionCase11 in
+        1)
+            clear
+            echo "==PROCESAR UN ARCHIVO=="
+            printf "\n"
+            read -rp "Ingrese la ruta del archivo a procesar (no ingresar nada para cancelar): " archivo
+            #AGREGAR 0 PARA CANCELAR EN LA OTRA FUNCION    
+            archivo_procesar "$archivo"
+
+            return 0
+        ;;
+        
+        2)
+            clear
+            echo "==INGRESAR UN USUARIO=="
+            printf "\n"
+            validoOpcion112=false
+            while [ "$validoOpcion112" = false ]
+            do
+                read -rp "Ingrese el nombre y apellido del usuario (no ingresar nada para cancelar): " nombre apellido
+                #AGREGAR 0 PARA CANCELAR EN LA OTRA FUNCION
+                if [ -n "$nombre" ] && [ -n "$apellido" ]
+                then
+                    validoOpcion112=true
+                    ingreso_usuario "$nombre" "$apellido"
+                elif [ -z "$nombre" ] && [ -z "$apellido" ]
+                then
+                    validoOpcion112=true
+                    echo SALIR
+                else
+                    echo "ERROR: formato de nombres incorrecto"
+                fi
+            done
+
+            return 0
+        ;;
+        3)
+            echo "==LISTADO DE USUARIOS=="
+            echo "*este listado solo contiene usuarios estandar"
+            printf "\n\n"
+# NO ANDA
+            listaUsuarios=()
+            grep /etc/group
+
+            read -n 1 -srp "------Presione cualquier tecla para continuar------"
+        ;;
+        *)
+            read -t2 -n1 -rsp "Error: opción incorrecta" 
+            clear
+            return 1
+        ;;
+    esac
+
+}
+
+gestion_grupos(){
+    clear
+    echo "==GESTION DE GRUPOS=="
+    printf "\n\n"
+    echo "Desea ingresar un grupo o un archivo para procesar?"
+    printf "\n"
+    #0 NO ANDA
+    echo "0. Volver a menu anterior" 
+    echo "1. Ingresar un archivo para procesar"
+    echo "2. Ingresar un grupo"
+    #NO ANDA
+    echo "3. Listar grupos"
+    printf "\n"
+    read -rp "Opcion: " opcionCase11
+
+    case $opcionCase11 in
+        1)
+            clear
+            echo "==PROCESAR UN ARCHIVO=="
+            printf "\n"
+            read -rp "Ingrese la ruta del archivo a procesar (no ingresar nada para cancelar): " archivo
+            #AGREGAR 0 PARA CANCELAR EN LA OTRA FUNCION    
+            archivo_procesar "$archivo"
+
+            return 0
+        ;;
+        
+        2)
+            clear
+            echo "==INGRESAR UN GRUPO=="
+            printf "\n"
+            validoOpcion112=false
+            while [ "$validoOpcion112" = false ]
+            do
+                read -rp "Ingrese el nombre del grupo (no ingresar nada para cancelar): " grupo
+                crear_grupo "$grupo"
+            done
+
+            return 0
+        ;;
+
+        3)
+            echo "==LISTA DE GRUPOS=="
+            #reminder: grupos del 1000 en adelante
+            return 0
+        ;;
+
+        *)
+            read -t2 -n1 -rsp "Error: opción incorrecta" 
+            clear
+            return 1
+        ;;
+    esac
+}
+
+crear_grupo(){
+    local grupo
+    grupo="$1"
+
+    if getent group "$grupo" >/dev/null; then
+        echo "El grupo '$grupo' ya existe"
+    else
+        groupadd "$grupo"
+        echo "Grupo '$grupo' creado correctamente"
+    fi
+}
+
+eliminar_grupo(){
+    local grupo
+    grupo="$1"
+
+    if getent group "$grupo" >/dev/null; then
+        groupdel "$grupo"
+        echo "Grupo '$grupo' eliminado correctamente"
+    else
+        echo "El grupo '$grupo' no existe"
+    fi
+}
+
+
+
+
+
 #FIN DEL ESPACIO PARA FUNCIONES 
 #TODO LO QUE DIGA VOLVER AL MENU PRINCIPAL O RETROCEDER NO ANDA
 
@@ -348,7 +462,7 @@ while [ "$valido" = false ]
         echo "==ELIJA UN MODO== "
         printf "\n"
         echo "0. Volver al menu principal"
-        echo "1. Gestion de usuarios"
+        echo "1. Gestion de usuarios y grupos"
         echo "2. Gestion de backups"
         read -rp "Opcion: " opcion
         printf "\n--------------------------------\n\n"
@@ -361,14 +475,15 @@ while [ "$valido" = false ]
                 while [ "$validoOpcion1" = false ]
                 do
                     clear
-                    echo "==GESTION DE USUARIOS=="
-                    printf "\n"
+                    echo "==GESTION DE USUARIOS Y GRUPOS=="
+                    printf "\n\n"
                     #0  NO ANDA
                     echo "Que desea hacer?"
+                    printf "\n"
                     echo "0. Volver al menu anterior"
                     echo "1. Crear o eliminar usuarios"
                     echo "2. Crear o eliminar grupos"
-                    echo "3. Incorporar o remover usuarios de un grupo"
+                    echo "3. Incorporar o remover usuarios de grupos"
                     #evitamos palabras con enie a toda costa para prevenir errores
                     read -rp "Opcion: " opcionCase1
                     printf "\n--------------------------------\n\n"
@@ -377,16 +492,22 @@ while [ "$valido" = false ]
                         1)
                         #crear/eliminar users
                         validoOpcion1="true"
-                            while ! gestion_usuario
+                            while ! gestion_usuarios
                             do
-                                gestion_usuario
+                                gestion_usuarios
                                 
                             done
                         ;;
 
                         2)
                         #crear/eliminar grupos
-    
+                            validoOpcion1="true"
+                            while ! gestion_grupos
+                            do
+                                gestion_grupos
+                                
+                            done
+
                         ;;
 
                         3)
