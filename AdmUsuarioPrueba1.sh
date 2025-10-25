@@ -20,6 +20,8 @@ ctrl c ya podes salir
 -hacer los nobres con una funcion y no como los estoy haiendo ahora para 2 parametros
 
 -¿cuales son las condiciones para los nombres? ¿que caracteres pueden tener?
+
+-podria mejorar los nombres de las funciones
 '
 
 #EXPLICACIONES
@@ -156,7 +158,7 @@ archivo_procesar(){
     do
         nombre="$(cat "$archivo" | cut -d" " -f$i)"
         apellido="$(cat "$archivo" | cut -d" " -f$((i+1)))"
-        generar_user "$nombre" "$apellido"
+        generar_usuario "$nombre" "$apellido"
         listaUsuarios+=("$usuario")
         #lo añade al array de usuario
         # si sobra un nombre (queda fuera de los pares que se van formando), simplemente no se usa
