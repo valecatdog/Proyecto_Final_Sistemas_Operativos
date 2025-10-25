@@ -18,13 +18,20 @@ ctrl c ya podes salir
 - los usuarios ya creados podriamos no mostrarlos
 
 -hacer los nobres con una funcion y no como los estoy haiendo ahora para 2 parametros
+
+-¿cuales son las condiciones para los nombres? ¿que caracteres pueden tener?
 '
 
 #EXPLICACIONES
 : '
 -los read tienen -r para que no se intrprete lo que se escriba (el shell )
 '
+
 export LC_ALL=C.UTF-8
+: '
+le dice al shell que use UTF-8 como codificación para todo. lo agregamos poruqe funciones como tr [:upper:] [:lower:]
+no manejan por si solos la misma cantidad de caracteress y eso genera un problema en la ejecucion
+'
 
 #ESPACIO PARA FUNCIONES
 generar_usuario() {
@@ -41,11 +48,6 @@ generar_usuario() {
     usuario="${nombre}:${apellido}:$user"
     #parece qeu no se usa, pero mas adelante si se usa
 }
-
-: '
-le dice al shell que use UTF-8 como codificación para todo. lo agregamos poruqe funciones como tr [:upper:] [:lower:]
-no manejan por si solos la misma cantidad de caracteress y eso genera un problema en la ejecucion
-'
 
 add_usuario(){
     #verifico la salida de la funcion, si es distinta a 0 entonces actua
@@ -118,21 +120,7 @@ del_usuario(){
     fi
 }
 
-#TERMINA ESPACIO DE FUNCIONES#########################################################################
-
-
-
-
-#SI NO SE INGRESAN PARAMETROS######################################################################################
-if (($# == 0))
-then
-echo "sin parametros"
-#todavia no hay nada
-
-
-#SI SE INGRESA UN PARAMETRO######################################################################################
-elif (($# == 1))
-then
+verificar_archivo(){
     valido="false"
     #variable para el untill
     archivo="$1"
@@ -158,19 +146,21 @@ then
     done
     echo "----------------------------------"
     #fin del until
+}
 
+archivo_procesar(){
+    verificar_archivo "$1"
+    
     listaUsuarios=()
-#PUEDE SER UNA FUNCION
     for ((i = 1 ; i < $(wc -w < "$archivo") ; i+=2))
     do
         nombre="$(cat "$archivo" | cut -d" " -f$i)"
         apellido="$(cat "$archivo" | cut -d" " -f$((i+1)))"
-        nombreUsuario="$(echo "$nombre" | cut -c1)$apellido"
-        listaUsuarios+=("${nombre}:${apellido}:${nombreUsuario}")
+        generar_user "$nombre" "$apellido"
+        listaUsuarios+=("$usuario")
         #lo añade al array de usuario
         # si sobra un nombre (queda fuera de los pares que se van formando), simplemente no se usa
     done
-
 
     valido=false
     while [ "$valido" = false ]
@@ -291,10 +281,9 @@ then
             ;;
         esac
     done
-#############################################ESTA PARTE ESTA CORRECTA############################################
-#SI SE INGRESA UN PARAMETRO (ARREGLAR)
-elif (($# == 2))
-then
+}
+
+ingreso_usuario(){
     valido=false
     until [ "$valido" = true ]
     do
@@ -318,11 +307,32 @@ then
             printf "\n----------------------------\n"
         fi
     done
+}
+#TERMINA ESPACIO DE FUNCIONES#########################################################################
 
+#NO SE SI ANDA ESTO, NO LO PROBE DESPUES DE PASAR LAS COSAS A FUNCIONES
 
+#ESTRUCTURA PRINCIPAL---------------------------------
+clear
+#SI NO SE INGRESAN PARAMETROS
+if (($# == 0))
+then
+echo "sin parametros"
+#PONER 
+
+#SI SE INGRESA 1 PARAMETRO
+elif (($# == 1))
+then
+    archivo_procesar "$1"
+
+#SI SE INGRESAN 2 PARAMETROS
+elif (($# == 2))
+then
+    ingreso_usuario "$1" "$2"
+
+#CANTIDAD INCORRECTA DE PARAMETROS
 else
     echo "Se ha ingresado una cantidad invalida de parametros"
 
-
-#esto es el final del if principal
+#FI DE LA ESTRUCTURA PRINCIPAL
 fi

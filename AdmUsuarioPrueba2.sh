@@ -22,11 +22,6 @@ generar_usuario() {
     #parece qeu no se usa, pero mas adelante si se usa
 }
 
-: '
-le dice al shell que use UTF-8 como codificación para todo. lo agregamos poruqe funciones como tr [:upper:] [:lower:]
-no manejan por si solos la misma cantidad de caracteress y eso genera un problema en la ejecucion
-'
-
 add_usuario(){
     #verifico la salida de la funcion, si es distinta a 0 entonces actua
     local usuario
@@ -98,13 +93,259 @@ del_usuario(){
     fi
 }
 
+gestion_usuario(){
+    echo "Desea ingresar un usuario o un archivo para procesar?"
+    #0 NO ANDA
+    echo "0. Volver a menu anterior" 
+    echo "1. Ingresar un archivo para procesar"
+    echo "2. Ingresar un usuario"
+    printf "\n"
+    read -rp "Opcion: " opcionCase11
+
+    case $opcionCase11 in
+        1)
+            printf "\n"
+            echo "==PROCESAR UN ARCHIVO=="
+            printf "\n"
+            read -rp "Ingrese la ruta del archivo a procesar (no ingresar nada para cancelar): " archivo
+            #AGREGAR 0 PARA CANCELAR EN LA OTRA FUNCION    
+            archivo_procesar "$archivo"
+
+            return 0
+        ;;
+        
+        2)
+            echo "==INGRESAR UN USUARIO=="
+            printf "\n"
+            validoOpcion112=false
+            while [ "$validoOpcion112" = false ]
+            do
+                read -rp "Ingrese el nombre y apellido del usuario (no ingresar nada para cancelar): " nombre apellido
+                #AGREGAR 0 PARA CANCELAR EN LA OTRA FUNCION
+                if [ -n "$nombre" ] && [ -n "$apellido" ]
+                then
+                    validoOpcion112=true
+                    ingreso_usuario "$nombre" "$apellido"
+                elif [ -z "$nombre" ] && [ -z "$apellido" ]
+                then
+                    validoOpcion112=true
+                    echo SALIR
+                else
+                    echo "ERROR: formato de nombres incorrecto"
+                fi
+            done
+
+            return 0
+        ;;
+        *)
+            echo "Opcion incorrecta"
+            clear
+            return 1
+        ;;
+    esac
+
+}
+
+verificar_archivo(){
+    valido="false"
+    #variable para el untill
+    archivo="$1"
+    #guardo en la variable archivo  el valor del primer parametro ingresado (su ruta)
+    : 'le puse comillas porque el valor de la variable puede contener espacios (no deberia) o caracteres especiales (*$?etc). Lo preciso para poder 
+    #trabajar con la variable aunque hagan eso que dije'
+   
+    #verifica que se haya pasado un archivo valido. En otro caso, te sigue preguntando hasta que se lo ingreses
+    #ALGO PARA ROMPER EL BUCLE SI TE ARREPENTISTE!!!
+
+    #empezando con el valor de la variable en falso, hace lo siguiente hasta que valido sea true
+    until [ "$valido" = "true" ]
+    do
+        if [ -f "$archivo" ] && [ -r "$archivo" ] && [ "$(wc -w < "$archivo")" -gt 2 ]
+        #velifica que "archivo" sea un archivo valido (existente, legible y que contenga 2 o mas palabras (nomb y apell))
+        then
+            echo "Archivo valido"
+            valido=true
+        else
+            echo "Error: archivo invalido o no encontrado"
+            read -rp "Ingrese una ruta válida: " archivo
+        fi
+    done
+    echo "----------------------------------"
+    #fin del until
+}
+
+archivo_procesar(){
+    verificar_archivo "$1"
+    
+    listaUsuarios=()
+    for ((i = 1 ; i < $(wc -w < "$archivo") ; i+=2))
+    do
+        nombre="$(cat "$archivo" | cut -d" " -f$i)"
+        apellido="$(cat "$archivo" | cut -d" " -f$((i+1)))"
+        generar_user "$nombre" "$apellido"
+        listaUsuarios+=("$usuario")
+        #lo añade al array de usuario
+        # si sobra un nombre (queda fuera de los pares que se van formando), simplemente no se usa
+    done
+
+    valido=false
+    while [ "$valido" = false ]
+    do
+        #CAPAZ QUE HABRIA UQE HACER ALGO PARA RETROCEDER? 0?
+        echo "Que desea hacer?"
+        echo "1. Crear usuarios"
+        echo "2. Eliminar usuarios del sistema"
+        read -rp "Opcion: " opcion
+        printf "\n--------------------------------\n\n"
+        #el echo no expande el \n, printf si
+
+        case $opcion in
+            1)
+                echo "Elegido: 1. Crear usuarios"
+
+                echo "Con qué usuarios desea trabajar? (ingrese sus numeros separados por espacios):"
+                #despliega todos los usuarios
+                for((i = 0 ; i < ${#listaUsuarios[*]} ; i++))
+                do
+                    nombre="$(echo "$1" | cut -d: -f1)"
+                    apellido="$(echo "$1" | cut -d: -f2)"
+                    usuario="$(echo "$1" | cut -d: -f3)"
+
+                    nombre="$(echo "${listaUsuarios[$i]}" | cut -d: -f1)"
+                    apellido="$(echo "${listaUsuarios[$i]}" | cut -d: -f2)"
+                    usuario="$(echo "${listaUsuarios[$i]}" | cut -d: -f3)"
+                    echo "${i}. $usuario ($nombre $apellido)"
+                done
+
+                read -rp "opcion/es: " opciones
+                
+                #Si no se ingreso nada (te devuelve al menu)
+                if [ -z "$opciones" ]
+                then
+                    echo "No ha ingresado ningun usuario"
+                else
+                #Si sí se ingresaron usuarios
+                    cantOpciones=$(echo "$opciones" | wc -w) 
+                    valido=true
+
+                    for ((i=1 ; i <= cantOpciones ; i++))
+                    do
+                        opcion=$(echo "$opciones" | cut -d" " -f$i)
+                        if [[ "$opcion" =~ ^[0-9]+$ ]] && ((opcion > -1 && opcion < ${#listaUsuarios[@]}))
+                            #los [] se llaman "test". los dobles son avanzados y soportan regex (expresiones regulares)
+                            #PONER PARA QUE ES =~
+                        then
+                            usuario="${listaUsuarios[$opcion]}"
+                            add_usuario "$usuario"
+                        else
+                            opcionesInvalidas+=" $opcion"
+                        fi
+                    done
+
+                    if [ -n "$opcionesInvalidas" ]
+                    then
+                        echo "Las opciones invalidas ingresadas fueron:$opcionesInvalidas"
+                        opcionesInvalidas=""
+
+                    fi
+                    
+                fi
+
+            ;;
+            2)
+                echo "Elegido: 2. Eliminar usuarios del sistema"
+
+                echo "Con qué usuarios desea trabajar? (ingrese sus numeros separados por espacios):"
+                #despliega todos los usuarios
+                for((i = 0 ; i < ${#listaUsuarios[*]} ; i++))
+                do
+                    nombre="$(echo "$1" | cut -d: -f1)"
+                    apellido="$(echo "$1" | cut -d: -f2)"
+                    usuario="$(echo "$1" | cut -d: -f3)"
+
+                    nombre="$(echo "${listaUsuarios[$i]}" | cut -d: -f1)"
+                    apellido="$(echo "${listaUsuarios[$i]}" | cut -d: -f2)"
+                    usuario="$(echo "${listaUsuarios[$i]}" | cut -d: -f3)"
+                    echo "${i}. $usuario ($nombre $apellido)"
+                done
+
+                read -rp "opcion/es: " opciones
+                
+                #Si no se ingreso nada (te devuelve al menu)
+                if [ -z "$opciones" ]
+                then
+                    echo "No ha ingresado ningun usuario"
+                else
+                #Si sí se ingresaron usuarios
+                    cantOpciones=$(echo "$opciones" | wc -w) 
+                    valido=true
+
+                    for ((i=1 ; i <= cantOpciones ; i++))
+                    do
+                        opcion=$(echo "$opciones" | cut -d" " -f$i)
+                        if [[ "$opcion" =~ ^[0-9]+$ ]] && ((opcion > -1 && opcion < ${#listaUsuarios[@]}))
+                        then
+                            usuario="${listaUsuarios[$opcion]}"
+                            del_usuario "$usuario"
+                        else
+                            opcionesInvalidas+=" $opcion"
+                        fi
+                    done
+
+                    if [ -n "$opcionesInvalidas" ]
+                    then
+                        echo "Las opciones invalidas ingresadas fueron:$opcionesInvalidas"
+                        opcionesInvalidas=""
+                    fi
+                    
+                fi
+            ;;
+            *)
+                echo "Asegurese de elegir un valor válido"
+                printf "\n--------------------------------\n"
+
+            ;;
+        esac
+    done
+}
+
+ingreso_usuario(){
+    valido=false
+    until [ "$valido" = true ]
+    do
+        generar_usuario "$1" "$2"
+
+        echo "Que desea hacer?"
+        echo "1. Crear usuario"
+        printf "2. Eliminar usuario del sistema\n"
+        read -rp "Elija una opción: " opcion
+
+        if (( "$opcion" == 1 )) 2>/dev/null; then
+        #mando el error a /dev/null porque pode ingresar cosas no numericas y te tira error, pero funciona bien
+            valido="true"
+            add_usuario "$usuario"
+        elif (( "$opcion" == 2 )) 2>/dev/null; then
+            valido="true"
+            del_usuario "$usuario"
+        else
+            printf "\n----------------------------\n\n"
+            echo "Error: opcion invalida"
+            printf "\n----------------------------\n"
+        fi
+    done
+}
+
 #FIN DEL ESPACIO PARA FUNCIONES 
+#TODO LO QUE DIGA VOLVER AL MENU PRINCIPAL O RETROCEDER NO ANDA
 
 #COMIENZA LO QE TENGO UQE PEGAR
 valido="false"
 while [ "$valido" = false ]
     do
+        clear
+        #0 NO ANDA
         echo "Elija el modo al que desea acceder: "
+        echo "0. Volver al menu principal"
         echo "1. Gestion de usuarios"
         echo "2. Gestion de backups"
         read -rp "Opcion: " opcion
@@ -113,27 +354,39 @@ while [ "$valido" = false ]
 
         case $opcion in
             1)
-            #MODO GESTION DE USUARIOS
-                valido="true"
+                clear
+                echo "==GESTION DE USUARIOS=="
+                printf "\n"
 
+                valido="true"
                 validoOpcion1="false"
                 while [ "$validoOpcion1" = false ]
                 do
+                    #0  NO ANDA
                     echo "Que desea hacer? "
-                    echo "1. Crear usuarios"
-                    echo "2. Eliminar usuarios"
-                    echo "3. Crear un grupo"
-                    echo "4. Eliminar un grupo"
-                    echo "5. Incorporar usuarios a un grupo"
-                    #evitamos la palabra aniadir por si la enie llegara a generar problemas
+                    echo "0. Volver al menu anterior"
+                    echo "1. Crear o eliminar usuarios"
+                    echo "2. Crear o eliminar grupos"
+                    echo "3. Incorporar o remover usuarios de un grupo"
+                    #evitamos palabras con enie a toda costa para prevenir errores
                     read -rp "Opcion: " opcionCase1
                     printf "\n--------------------------------\n\n"
                     
                     case $opcionCase1 in
                         1)
+                        #tengo que mover gestion_usuarios a una funcion real a ver si anda
+                            while ! gestion_usuario
+                            do
+                                gestion_usuario
+                                
+                            done
+                            
                         #crear usuarios
-                            echo "Crear usuarios"
+                            echo "Crear o eliminar usuarios"
                             printf "\n"
+                        
+
+
                             validoOpcion1="true"
                             validoOpcion1_1="false"
 
@@ -185,7 +438,7 @@ while [ "$valido" = false ]
                                     done
                                     echo "----------------------------------"
 
-                                    #pasar lo otro a fun
+                                    
 
                                     ;;
                                     *)
@@ -229,20 +482,8 @@ while [ "$valido" = false ]
             ;;
             
             2)
-            #MODO GESTION DE BACKUPS
-            #NO BORRO ESTO PORUQE ME SIRVE DE BASE PARA EL RESTO
-
-                valido="true"
-                valido1="false"
-                while [ "$valido2" = false ]
-                    do
-                        echo "Elija el modo al que desea acceder: "
-                        echo "1. Gestion de usuarios"
-                        echo "2. Gestion de backups"
-                        read -rp "Opcion: " opcion
-                        printf "\n--------------------------------\n\n"
-                        #el echo no expande el \n, printf si
-                    done
+            #MODO GESTION DE BACKUPS,  LO HACER ARU
+            echo "te extraño"
             ;;
             
             *)
