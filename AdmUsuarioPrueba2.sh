@@ -375,6 +375,7 @@ while [ "$valido" = false ]
                     
                     case $opcionCase1 in
                         1)
+                        #crear/eliminar users
                         validoOpcion1="true"
                             while ! gestion_usuario
                             do
@@ -384,31 +385,18 @@ while [ "$valido" = false ]
                         ;;
 
                         2)
-                        #eliminar usuarios
-
-                            validoOpcion1="true"
-                            echo "Eliminar usuarios"
-                            printf "\n"
+                        #crear/eliminar grupos
+    
                         ;;
+
                         3)
-                        #crear un grupo
-                        #poner el nombre de la opcion y coso
-
+                        #usuarios&grupos
                             validoOpcion1="true"
-                        ;;
-                        4)
-                        #eliminar un grupo
 
-                            validoOpcion1="true"
                         ;;
-                        5)
-                        #ingresar usuario a grupo
 
-                            validoOpcion1="true"
-                        ;;
                         *)
-                            echo "Error: opcion incorrecta"
-                            printf "\n--------------------------------\n\n"
+                            read -t2 -n1 -rsp "Error: opción incorrecta"
                         ;;
                     esac
 
@@ -422,9 +410,12 @@ while [ "$valido" = false ]
             ;;
             
             *)
-                echo "Error: opcion invalida"
-                printf "\n--------------------------------\n\n"
-                sleep 1
+                read -t2 -n1 -rsp "Error: opción incorrecta" 
+                : 't (timeout): tiempo de espera; -n (num. of char.): permite escribir sol un caracter. es util porque si el usuario
+                toca una tecla puede terminar el tiempo de espera antes, y previene que lo que el usuario escriba
+                se quede guardado para el proximo read (o sea ue limpia la entrada y previene errores); -s (secret/
+                silent): no muestra lo que escribe el usuario; -r (raw): no interpreta; -p (prompt): muestra el texto
+                '
             ;;
         esac
 
