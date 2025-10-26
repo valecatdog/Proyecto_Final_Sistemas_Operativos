@@ -389,7 +389,7 @@ gestion_grupos(){
             printf "\n"
             read -rp "Ingrese la ruta del archivo a procesar (no ingresar nada para cancelar): " archivo
             #AGREGAR 0 PARA CANCELAR EN LA OTRA FUNCION    
-            archivo_procesar "$archivo"
+            #archivo_procesar "$archivo"
 
             return 0
         ;;
