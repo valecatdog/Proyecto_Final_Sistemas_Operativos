@@ -130,6 +130,7 @@ verificar_archivo(){
             read -n1 -t1 -rsp "Archivo valido"
         elif [ -z "$archivo" ]
         then    
+            valido=true
             read -n1 -t1 -rsp "Saliendo..."  
             return 1
         else
