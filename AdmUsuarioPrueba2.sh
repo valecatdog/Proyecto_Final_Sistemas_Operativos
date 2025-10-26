@@ -345,7 +345,7 @@ gestion_usuarios(){
                         :
                         #una forma de decir no hacer nada
                     else
-                        echo "ERROR: formato de nombres incorrecto"
+                        print -n1 -t1 -rsp "Error: formato de nombres incorrecto"
                     fi
                 ;;  
             3)
