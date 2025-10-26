@@ -130,9 +130,8 @@ verificar_archivo(){
             read -n1 -t1 -rsp "Archivo valido"
         elif [ -z "$archivo" ]
         then    
-            valido=true
-            read -n1 -t1 -rsp "caca..."  
-            return 1
+            read -n1 -t1 -rsp "Saliendo..."  
+            break
         else
             echo "Error: archivo invalido o no encontrado"
             read -rp "Ingrese una ruta válida (no ingresar nada para cancelar): " archivo
