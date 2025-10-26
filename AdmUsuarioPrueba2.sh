@@ -313,15 +313,22 @@ gestion_usuarios(){
     read -rp "Opcion: " opcionCase11
 
     case $opcionCase11 in
+        0)
+            menu_usuarios_grupos 
+            return 0
+        ;;
+
         1)
             clear
             echo "==PROCESAR UN ARCHIVO=="
             printf "\n"
             read -rp "Ingrese la ruta del archivo a procesar (no ingresar nada para cancelar): " archivo
-            #AGREGAR 0 PARA CANCELAR EN LA OTRA FUNCION    
-            archivo_procesar "$archivo"
-
-            return 0
+            if [ -z "$archivo" ]; then
+                return 1
+            else
+                archivo_procesar "$archivo"
+                return 0
+            fi
         ;;
         
         2)
@@ -352,7 +359,7 @@ gestion_usuarios(){
             echo "==LISTADO DE USUARIOS=="
             echo "*este listado solo contiene usuarios estandar"
             printf "\n\n"
-# NO ANDA
+
             listaUsuarios=()
             grep /etc/group
 
@@ -373,7 +380,7 @@ gestion_grupos(){
     printf "\n\n"
     echo "Desea ingresar un grupo o un archivo para procesar?"
     printf "\n"
-    #0 NO ANDA
+
     echo "0. Volver a menu anterior" 
     echo "1. Ingresar un archivo para procesar"
     echo "2. Ingresar un grupo"
@@ -383,6 +390,9 @@ gestion_grupos(){
     read -rp "Opcion: " opcionCase11
 
     case $opcionCase11 in
+        0)
+            menu_usuarios_grupos
+        ;;
         1)
             clear
             echo "==PROCESAR UN ARCHIVO=="
