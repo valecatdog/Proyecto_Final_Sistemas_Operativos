@@ -446,101 +446,112 @@ eliminar_grupo(){
     fi
 }
 
+menu_usuarios_grupos(){
+    valido="true"
+    validoOpcion1="false"
+    while [ "$validoOpcion1" = false ]
+    do
+        clear
+        echo "==GESTION DE USUARIOS Y GRUPOS=="
+        printf "\n\n"
+        #0  NO ANDA
+        echo "Que desea hacer?"
+        printf "\n"
+        echo "0. Volver al menu anterior"
+        echo "1. Crear o eliminar usuarios"
+        echo "2. Crear o eliminar grupos"
+        echo "3. Incorporar o remover usuarios de grupos"
+        #evitamos palabras con enie a toda costa para prevenir errores
+        read -rp "Opcion: " opcionCase1
+        printf "\n--------------------------------\n\n"
+        
+        case $opcionCase1 in
+            0)
+                menu_principal
+            ;;
+            1)
+            #crear/eliminar users
+            validoOpcion1="true"
+                while ! gestion_usuarios
+                do
+                    gestion_usuarios
+                    
+                done
+            ;;
+
+            2)
+            #crear/eliminar grupos
+                validoOpcion1="true"
+                while ! gestion_grupos
+                do
+                    gestion_grupos
+                    
+                done
+
+            ;;
+
+            3)
+            #usuarios&grupos
+                validoOpcion1="true"
+
+            ;;
+
+            *)
+                read -t2 -n1 -rsp "Error: opción incorrecta"
+            ;;
+        esac
+
+    done
+}
 
 
+menu_principal(){
+    valido="false"
+    while [ "$valido" = false ]
+        do
+            clear
+            #0 NO ANDA
+            echo "==ELIJA UN MODO== "
+            printf "\n"
+            echo "CTRL+C. Salir"
+            echo "1. Gestion de usuarios y grupos"
+            echo "2. Gestion de backups"
+            read -rp "Opcion: " opcion
+            printf "\n--------------------------------\n\n"
+            #el echo no expande el \n, printf si
+
+            case $opcion in
+                1)
+                    menu_usuarios_grupos
+                ;;
+                
+                2)
+                #MODO GESTION DE BACKUPS,  LO HACER ARU
+                    valido="true"
+                    echo "te extraño"
+                ;;
+                
+                *)
+                    read -t2 -n1 -rsp "Error: opción incorrecta" 
+                    : 't (timeout): tiempo de espera; -n (num. of char.): permite escribir sol un caracter. es util porque si el usuario
+                    toca una tecla puede terminar el tiempo de espera antes, y previene que lo que el usuario escriba
+                    se quede guardado para el proximo read (o sea ue limpia la entrada y previene errores); -s (secret/
+                    silent): no muestra lo que escribe el usuario; -r (raw): no interpreta; -p (prompt): muestra el texto
+                    '
+                ;;
+        esac    
+
+     done
+
+}
 
 
 #FIN DEL ESPACIO PARA FUNCIONES 
 #TODO LO QUE DIGA VOLVER AL MENU PRINCIPAL O RETROCEDER NO ANDA
 
 #COMIENZA LO QE TENGO UQE PEGAR
-valido="false"
-while [ "$valido" = false ]
-    do
-        clear
-        #0 NO ANDA
-        echo "==ELIJA UN MODO== "
-        printf "\n"
-        echo "0. Volver al menu principal"
-        echo "1. Gestion de usuarios y grupos"
-        echo "2. Gestion de backups"
-        read -rp "Opcion: " opcion
-        printf "\n--------------------------------\n\n"
-        #el echo no expande el \n, printf si
 
-        case $opcion in
-            1)
-                valido="true"
-                validoOpcion1="false"
-                while [ "$validoOpcion1" = false ]
-                do
-                    clear
-                    echo "==GESTION DE USUARIOS Y GRUPOS=="
-                    printf "\n\n"
-                    #0  NO ANDA
-                    echo "Que desea hacer?"
-                    printf "\n"
-                    echo "0. Volver al menu anterior"
-                    echo "1. Crear o eliminar usuarios"
-                    echo "2. Crear o eliminar grupos"
-                    echo "3. Incorporar o remover usuarios de grupos"
-                    #evitamos palabras con enie a toda costa para prevenir errores
-                    read -rp "Opcion: " opcionCase1
-                    printf "\n--------------------------------\n\n"
-                    
-                    case $opcionCase1 in
-                        1)
-                        #crear/eliminar users
-                        validoOpcion1="true"
-                            while ! gestion_usuarios
-                            do
-                                gestion_usuarios
-                                
-                            done
-                        ;;
-
-                        2)
-                        #crear/eliminar grupos
-                            validoOpcion1="true"
-                            while ! gestion_grupos
-                            do
-                                gestion_grupos
-                                
-                            done
-
-                        ;;
-
-                        3)
-                        #usuarios&grupos
-                            validoOpcion1="true"
-
-                        ;;
-
-                        *)
-                            read -t2 -n1 -rsp "Error: opción incorrecta"
-                        ;;
-                    esac
-
-                done
-            ;;
-            
-            2)
-            #MODO GESTION DE BACKUPS,  LO HACER ARU
-                valido="true"
-                echo "te extraño"
-            ;;
-            
-            *)
-                read -t2 -n1 -rsp "Error: opción incorrecta" 
-                : 't (timeout): tiempo de espera; -n (num. of char.): permite escribir sol un caracter. es util porque si el usuario
-                toca una tecla puede terminar el tiempo de espera antes, y previene que lo que el usuario escriba
-                se quede guardado para el proximo read (o sea ue limpia la entrada y previene errores); -s (secret/
-                silent): no muestra lo que escribe el usuario; -r (raw): no interpreta; -p (prompt): muestra el texto
-                '
-            ;;
-        esac
-
-    done
+menu_principal
 
 
 
