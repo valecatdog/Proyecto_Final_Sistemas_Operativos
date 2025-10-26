@@ -342,13 +342,12 @@ gestion_usuarios(){
                         return 0
                     elif [ -z "$nombre" ] && [ -z "$apellido" ]
                     then
-                        return 1
+                        :
+                        #una forma de decir no hacer nada
                     else
                         echo "ERROR: formato de nombres incorrecto"
-                        return 1
                     fi
-                ;;
-        
+                ;;  
             3)
                 clear
                 echo "==LISTADO DE USUARIOS=="
