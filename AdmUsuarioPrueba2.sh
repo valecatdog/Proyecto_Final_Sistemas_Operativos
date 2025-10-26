@@ -144,7 +144,7 @@ archivo_procesar(){
     do
         nombre="$(cat "$archivo" | cut -d" " -f$i)"
         apellido="$(cat "$archivo" | cut -d" " -f$((i+1)))"
-        generar_user "$nombre" "$apellido"
+        generar_usuario "$nombre" "$apellido"
         listaUsuarios+=("$usuario")
         #lo añade al array de usuario
         # si sobra un nombre (queda fuera de los pares que se van formando), simplemente no se usa
@@ -298,8 +298,8 @@ ingreso_usuario(){
 }
 
 gestion_usuarios(){
-    clear
     while true; do
+        clear
         echo "==GESTION DE USUARIOS=="
         printf "\n\n"
 
