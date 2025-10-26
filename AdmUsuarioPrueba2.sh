@@ -447,9 +447,7 @@ eliminar_grupo(){
 }
 
 menu_usuarios_grupos(){
-    valido="true"
-    validoOpcion1="false"
-    while [ "$validoOpcion1" = false ]
+    while true 
     do
         clear
         echo "==GESTION DE USUARIOS Y GRUPOS=="
@@ -468,20 +466,19 @@ menu_usuarios_grupos(){
         case $opcionCase1 in
             0)
                 menu_principal
+                break
             ;;
             1)
-            #crear/eliminar users
-            validoOpcion1="true"
+                #crear/eliminar users
                 while ! gestion_usuarios
                 do
                     gestion_usuarios
-                    
                 done
+                break
             ;;
 
             2)
             #crear/eliminar grupos
-                validoOpcion1="true"
                 while ! gestion_grupos
                 do
                     gestion_grupos
@@ -492,7 +489,7 @@ menu_usuarios_grupos(){
 
             3)
             #usuarios&grupos
-                validoOpcion1="true"
+                
 
             ;;
 
