@@ -299,6 +299,7 @@ ingreso_usuario(){
 
 gestion_usuarios(){
     clear
+    while true; do
     echo "==GESTION DE USUARIOS=="
     printf "\n\n"
 
@@ -312,70 +313,66 @@ gestion_usuarios(){
     printf "\n"
     read -rp "Opcion: " opcionCase11
 
-    case $opcionCase11 in
-        0)
-            menu_usuarios_grupos 
-            return 0
-        ;;
-
-        1)
-            clear
-            echo "==PROCESAR UN ARCHIVO=="
-            printf "\n"
-            read -rp "Ingrese la ruta del archivo a procesar (no ingresar nada para cancelar): " archivo
-            if [ -z "$archivo" ]; then
-                return 1
-            else
-                archivo_procesar "$archivo"
+    
+        case $opcionCase11 in
+            0)
+                menu_usuarios_grupos 
                 return 0
-            fi
-        ;;
-        
-        2)
-            clear
-            echo "==INGRESAR UN USUARIO=="
-            printf "\n"
-            while true; do
-                read -rp "Ingrese el nombre y apellido del usuario (no ingresar nada para cancelar): " nombre apellido
-                #AGREGAR 0 PARA CANCELAR EN LA OTRA FUNCION
-                if [[ "$nombre" =~ ^[A-Za-z]+$  && "$apellido" =~ ^[A-Za-z]+$ ]]
-                then
-                    ingreso_usuario "$nombre" "$apellido"
-                    return 0
-                elif [ -z "$nombre" ] && [ -z "$apellido" ]
-                then
+            ;;
+
+            1)
+                clear
+                echo "==PROCESAR UN ARCHIVO=="
+                printf "\n"
+                read -rp "Ingrese la ruta del archivo a procesar (no ingresar nada para cancelar): " archivo
+                if [ -z "$archivo" ]; then
                     return 1
                 else
-                    echo "ERROR: formato de nombres incorrecto"
-                    return 1
+                    archivo_procesar "$archivo"
+                    return 0
                 fi
-            done
-        ;;
+            ;;
+            
+            2)
+                clear
+                echo "==INGRESAR UN USUARIO=="
+                printf "\n"
+                    read -rp "Ingrese el nombre y apellido del usuario (no ingresar nada para cancelar): " nombre apellido
+                    if [[ "$nombre" =~ ^[A-Za-z]+$  && "$apellido" =~ ^[A-Za-z]+$ ]]
+                    then
+                        ingreso_usuario "$nombre" "$apellido"
+                        return 0
+                    elif [ -z "$nombre" ] && [ -z "$apellido" ]
+                    then
+                        return 1
+                    else
+                        echo "ERROR: formato de nombres incorrecto"
+                        return 1
+                    fi
+                ;;
+        
+            3)
+                clear
+                echo "==LISTADO DE USUARIOS=="
+                echo "*este listado solo contiene usuarios estandar"
+                printf "\n"
 
-        3)
-            clear
-            echo "==LISTADO DE USUARIOS=="
-            echo "*este listado solo contiene usuarios estandar"
-            printf "\n"
-
-            getent passwd | awk -F: '$3 >= 1000 && $3 <= 60000 { print $3 ". " $1 }'
-            : ' getent passwd es lo mismo que cat /etc/passwd
-            -F: funciona como un cut -d: 
-            $ 3 es el 3er campo (tiene los uid). verifica que sea  >= 1000 (ahi empiezan los usuarios normales)
-            60000 es aproximadamente el numero donde terminan los usuarios normales 
-            { print $ 1 } imprime el primer campo (el nombre de usuario)
-            '
-            printf "\n"
-            read -n 1 -srp "------Presione cualquier tecla para continuar------"
-            gestion_usuarios
-            return 0
-        ;;
-        *)
-            read -t2 -n1 -rsp "Error: opción incorrecta" 
-            clear
-            return 1
-        ;;
-    esac
+                getent passwd | awk -F: '$3 >= 1000 && $3 <= 60000 { print $3 ". " $1 }'
+                : ' getent passwd es lo mismo que cat /etc/passwd
+                -F: funciona como un cut -d: 
+                $ 3 es el 3er campo (tiene los uid). verifica que sea  >= 1000 (ahi empiezan los usuarios normales)
+                60000 es aproximadamente el numero donde terminan los usuarios normales 
+                { print $ 1 } imprime el primer campo (el nombre de usuario)
+                '
+                printf "\n"
+                read -n 1 -srp "------Presione cualquier tecla para continuar------"
+            ;;
+            *)
+                read -t2 -n1 -rsp "Error: opción incorrecta" 
+                clear
+            ;;
+        esac
+    done
 
 }
 
@@ -487,21 +484,12 @@ menu_usuarios_grupos(){
             ;;
             1)
                 #crear/eliminar users
-                while ! gestion_usuarios
-                do
-                    gestion_usuarios
-                done
-                break
+                gestion_usuarios
             ;;
 
             2)
-            #crear/eliminar grupos
-                while ! gestion_grupos
-                do
-                    gestion_grupos
-                    
-                done
-
+                #crear/eliminar grupos
+                gestion_grupos
             ;;
 
             3)
@@ -530,6 +518,7 @@ menu_principal(){
             echo "CTRL+C. Salir"
             echo "1. Gestion de usuarios y grupos"
             echo "2. Gestion de backups"
+            printf "\n"
             read -rp "Opcion: " opcion
             printf "\n--------------------------------\n\n"
             #el echo no expande el \n, printf si
