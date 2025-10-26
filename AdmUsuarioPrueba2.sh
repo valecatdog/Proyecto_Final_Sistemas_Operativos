@@ -356,7 +356,7 @@ gestion_usuarios(){
             clear
             echo "==LISTADO DE USUARIOS=="
             echo "*este listado solo contiene usuarios estandar"
-            printf "\n\n"
+            printf "\n"
 
             getent passwd | awk -F: '$3 >= 1000 && $3 <= 60000 { print $3 ". " $1 }'
             : ' getent passwd es lo mismo que cat /etc/passwd
@@ -365,7 +365,7 @@ gestion_usuarios(){
             60000 es aproximadamente el numero donde terminan los usuarios normales 
             { print $ 1 } imprime el primer campo (el nombre de usuario)
             '
-
+            printf "\n"
             read -n 1 -srp "------Presione cualquier tecla para continuar------"
             gestion_usuarios
             return 0
@@ -477,6 +477,7 @@ menu_usuarios_grupos(){
         echo "2. Crear o eliminar grupos"
         echo "3. Incorporar o remover usuarios de grupos"
         #evitamos palabras con enie a toda costa para prevenir errores
+        printf "\n"
         read -rp "Opcion: " opcionCase1
         
         case $opcionCase1 in
