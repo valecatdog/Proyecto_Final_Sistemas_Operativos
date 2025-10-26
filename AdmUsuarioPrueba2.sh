@@ -131,7 +131,7 @@ verificar_archivo(){
         elif [ -z "$archivo" ]
         then    
             valido=true
-            read -n1 -t1 -rsp "Saliendo..."  
+            read -n1 -t1 -rsp "caca..."  
             return 1
         else
             echo "Error: archivo invalido o no encontrado"
