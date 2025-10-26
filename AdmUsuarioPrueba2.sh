@@ -143,9 +143,8 @@ verificar_archivo(){
 }
 
 archivo_procesar(){
-    verificar_archivo "$1"
 
-    if ! verificar_archivo; then
+    if ! verificar_archivo "$1"; then
         gestion_usuarios
     else
         listaUsuarios=()
