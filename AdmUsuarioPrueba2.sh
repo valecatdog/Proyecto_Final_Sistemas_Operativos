@@ -353,11 +353,12 @@ gestion_usuarios(){
         ;;
 
         3)
+            clear
             echo "==LISTADO DE USUARIOS=="
             echo "*este listado solo contiene usuarios estandar"
             printf "\n\n"
 
-            getent passwd | awk -F: '$3 >= 1000 && $3 <= 60000 { print $1 }'
+            getent passwd | awk -F: '$3 >= 1000 && $3 <= 60000 { print $3 ". " $1 }'
             : ' getent passwd es lo mismo que cat /etc/passwd
             -F: funciona como un cut -d: 
             $ 3 es el 3er campo (tiene los uid). verifica que sea  >= 1000 (ahi empiezan los usuarios normales)
@@ -375,6 +376,8 @@ gestion_usuarios(){
     esac
 
 }
+
+
 
 gestion_grupos(){
     clear
