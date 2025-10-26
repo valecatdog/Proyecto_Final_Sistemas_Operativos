@@ -461,7 +461,6 @@ menu_usuarios_grupos(){
         echo "3. Incorporar o remover usuarios de grupos"
         #evitamos palabras con enie a toda costa para prevenir errores
         read -rp "Opcion: " opcionCase1
-        printf "\n--------------------------------\n\n"
         
         case $opcionCase1 in
             0)
