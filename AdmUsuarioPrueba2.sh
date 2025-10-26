@@ -367,6 +367,7 @@ gestion_usuarios(){
             '
 
             read -n 1 -srp "------Presione cualquier tecla para continuar------"
+            gestion_usuarios
             return 0
         ;;
         *)
