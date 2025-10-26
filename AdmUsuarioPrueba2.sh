@@ -300,18 +300,18 @@ ingreso_usuario(){
 gestion_usuarios(){
     clear
     while true; do
-    echo "==GESTION DE USUARIOS=="
-    printf "\n\n"
+        echo "==GESTION DE USUARIOS=="
+        printf "\n\n"
 
-    echo "Desea ingresar un usuario o un archivo para procesar?"
-    printf "\n"
-    echo "0. Volver a menu anterior" 
-    echo "1. Ingresar un archivo para procesar"
-    echo "2. Ingresar un usuario"
-    #NO ANDA
-    echo "3. Listar usuarios existentes"
-    printf "\n"
-    read -rp "Opcion: " opcionCase11
+        echo "Desea ingresar un usuario o un archivo para procesar?"
+        printf "\n"
+        echo "0. Volver a menu anterior" 
+        echo "1. Ingresar un archivo para procesar"
+        echo "2. Ingresar un usuario"
+        #NO ANDA
+        echo "3. Listar usuarios existentes"
+        printf "\n"
+        read -rp "Opcion: " opcionCase11
 
     
         case $opcionCase11 in
@@ -325,9 +325,7 @@ gestion_usuarios(){
                 echo "==PROCESAR UN ARCHIVO=="
                 printf "\n"
                 read -rp "Ingrese la ruta del archivo a procesar (no ingresar nada para cancelar): " archivo
-                if [ -z "$archivo" ]; then
-                    return 1
-                else
+                if [ -n "$archivo" ]; then
                     archivo_procesar "$archivo"
                     return 0
                 fi
