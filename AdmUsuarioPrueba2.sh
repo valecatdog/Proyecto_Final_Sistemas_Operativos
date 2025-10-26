@@ -367,6 +367,7 @@ gestion_usuarios(){
             '
 
             read -n 1 -srp "------Presione cualquier tecla para continuar------"
+            return 0
         ;;
         *)
             read -t2 -n1 -rsp "Error: opción incorrecta" 
