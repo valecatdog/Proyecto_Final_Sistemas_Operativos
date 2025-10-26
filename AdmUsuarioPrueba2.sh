@@ -301,9 +301,9 @@ gestion_usuarios(){
     clear
     echo "==GESTION DE USUARIOS=="
     printf "\n\n"
+
     echo "Desea ingresar un usuario o un archivo para procesar?"
     printf "\n"
-    #0 NO ANDA
     echo "0. Volver a menu anterior" 
     echo "1. Ingresar un archivo para procesar"
     echo "2. Ingresar un usuario"
@@ -335,33 +335,35 @@ gestion_usuarios(){
             clear
             echo "==INGRESAR UN USUARIO=="
             printf "\n"
-            validoOpcion112=false
-            while [ "$validoOpcion112" = false ]
-            do
+            while true; do
                 read -rp "Ingrese el nombre y apellido del usuario (no ingresar nada para cancelar): " nombre apellido
                 #AGREGAR 0 PARA CANCELAR EN LA OTRA FUNCION
-                if [ -n "$nombre" ] && [ -n "$apellido" ]
+                if [[ "$nombre" =~ ^[A-Za-z]+$  && "$apellido" =~ ^[A-Za-z]+$ ]]
                 then
-                    validoOpcion112=true
                     ingreso_usuario "$nombre" "$apellido"
+                    return 0
                 elif [ -z "$nombre" ] && [ -z "$apellido" ]
                 then
-                    validoOpcion112=true
-                    echo SALIR
+                    return 1
                 else
                     echo "ERROR: formato de nombres incorrecto"
+                    return 1
                 fi
             done
-
-            return 0
         ;;
+
         3)
             echo "==LISTADO DE USUARIOS=="
             echo "*este listado solo contiene usuarios estandar"
             printf "\n\n"
 
-            listaUsuarios=()
-            grep /etc/group
+            getent passwd | awk -F: '$3 >= 1000 && $3 <= 60000 { print $1 }'
+            : ' getent passwd es lo mismo que cat /etc/passwd
+            -F: funciona como un cut -d: 
+            $ 3 es el 3er campo (tiene los uid). verifica que sea  >= 1000 (ahi empiezan los usuarios normales)
+            60000 es aproximadamente el numero donde terminan los usuarios normales 
+            { print $ 1 } imprime el primer campo (el nombre de usuario)
+            '
 
             read -n 1 -srp "------Presione cualquier tecla para continuar------"
         ;;

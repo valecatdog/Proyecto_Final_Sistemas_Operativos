@@ -31,9 +31,9 @@ ctrl c ya podes salir
 -los read tienen -r para que no se intrprete lo que se escriba (el shell )
 '
 
-export LC_ALL=C.UTF-8
+export LC_ALL=es_ES.UTF-8
 : '
-le dice al shell que use UTF-8 como codificación para todo. lo agregamos poruqe funciones como tr [:upper:] [:lower:]
+le dice al shell que use es_ES.UTF-8 como codificación para todo. lo agregamos poruqe funciones como tr [:upper:] [:lower:]
 no manejan por si solos la misma cantidad de caracteress y eso genera un problema en la ejecucion
 '
 
