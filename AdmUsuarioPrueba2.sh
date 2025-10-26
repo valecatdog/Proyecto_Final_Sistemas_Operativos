@@ -108,6 +108,7 @@ del_usuario(){
     fi
 }
 
+#VER ACA QUE HICE CAMBIOS
 verificar_archivo(){
     valido="false"
     #variable para el untill
@@ -125,11 +126,16 @@ verificar_archivo(){
         if [ -f "$archivo" ] && [ -r "$archivo" ] && [ "$(wc -w < "$archivo")" -gt 2 ]
         #velifica que "archivo" sea un archivo valido (existente, legible y que contenga 2 o mas palabras (nomb y apell))
         then
-            echo "Archivo valido"
             valido=true
+            read -n1 -t1 -rsp "Archivo valido"
+        elif [ -z "$archivo" ]
+        then    
+            read -n1 -t1 -rsp "Saliendo..."  
+            return 1
         else
             echo "Error: archivo invalido o no encontrado"
-            read -rp "Ingrese una ruta válida: " archivo
+            read -rp "Ingrese una ruta válida (no ingresar nada para cancelar): " archivo
+            clear
         fi
     done
     echo "----------------------------------"
@@ -138,137 +144,142 @@ verificar_archivo(){
 
 archivo_procesar(){
     verificar_archivo "$1"
-    
-    listaUsuarios=()
-    for ((i = 1 ; i < $(wc -w < "$archivo") ; i+=2))
-    do
-        nombre="$(cat "$archivo" | cut -d" " -f$i)"
-        apellido="$(cat "$archivo" | cut -d" " -f$((i+1)))"
-        generar_usuario "$nombre" "$apellido"
-        listaUsuarios+=("$usuario")
-        #lo añade al array de usuario
-        # si sobra un nombre (queda fuera de los pares que se van formando), simplemente no se usa
-    done
 
-    valido=false
-    while [ "$valido" = false ]
-    do
-        #CAPAZ QUE HABRIA UQE HACER ALGO PARA RETROCEDER? 0?
-        echo "Que desea hacer?"
-        echo "1. Crear usuarios"
-        echo "2. Eliminar usuarios del sistema"
-        read -rp "Opcion: " opcion
-        printf "\n--------------------------------\n\n"
-        #el echo no expande el \n, printf si
+    if ! verificar_archivo; then
+        gestion_usuarios
+    else
+        listaUsuarios=()
+        for ((i = 1 ; i < $(wc -w < "$archivo") ; i+=2))
+        do
+            nombre="$(cat "$archivo" | cut -d" " -f$i)"
+            apellido="$(cat "$archivo" | cut -d" " -f$((i+1)))"
+            generar_usuario "$nombre" "$apellido"
+            listaUsuarios+=("$usuario")
+            #lo añade al array de usuario
+            # si sobra un nombre (queda fuera de los pares que se van formando), simplemente no se usa
+        done
 
-        case $opcion in
-            1)
-                echo "Elegido: 1. Crear usuarios"
+        valido=false
+        while [ "$valido" = false ]
+        do
+            #CAPAZ QUE HABRIA UQE HACER ALGO PARA RETROCEDER? 0?
+            echo "Que desea hacer?"
+            echo "1. Crear usuarios"
+            echo "2. Eliminar usuarios del sistema"
+            read -rp "Opcion: " opcion
+            printf "\n--------------------------------\n\n"
+            #el echo no expande el \n, printf si
 
-                echo "Con qué usuarios desea trabajar? (ingrese sus numeros separados por espacios):"
-                #despliega todos los usuarios
-                for((i = 0 ; i < ${#listaUsuarios[*]} ; i++))
-                do
-                    nombre="$(echo "$1" | cut -d: -f1)"
-                    apellido="$(echo "$1" | cut -d: -f2)"
-                    usuario="$(echo "$1" | cut -d: -f3)"
+            case $opcion in
+                1)
+                    echo "Elegido: 1. Crear usuarios"
 
-                    nombre="$(echo "${listaUsuarios[$i]}" | cut -d: -f1)"
-                    apellido="$(echo "${listaUsuarios[$i]}" | cut -d: -f2)"
-                    usuario="$(echo "${listaUsuarios[$i]}" | cut -d: -f3)"
-                    echo "${i}. $usuario ($nombre $apellido)"
-                done
-
-                read -rp "opcion/es: " opciones
-                
-                #Si no se ingreso nada (te devuelve al menu)
-                if [ -z "$opciones" ]
-                then
-                    echo "No ha ingresado ningun usuario"
-                else
-                #Si sí se ingresaron usuarios
-                    cantOpciones=$(echo "$opciones" | wc -w) 
-                    valido=true
-
-                    for ((i=1 ; i <= cantOpciones ; i++))
+                    echo "Con qué usuarios desea trabajar? (ingrese sus numeros separados por espacios):"
+                    #despliega todos los usuarios
+                    for((i = 0 ; i < ${#listaUsuarios[*]} ; i++))
                     do
-                        opcion=$(echo "$opciones" | cut -d" " -f$i)
-                        if [[ "$opcion" =~ ^[0-9]+$ ]] && ((opcion > -1 && opcion < ${#listaUsuarios[@]}))
-                            #los [] se llaman "test". los dobles son avanzados y soportan regex (expresiones regulares)
-                            #PONER PARA QUE ES =~
-                        then
-                            usuario="${listaUsuarios[$opcion]}"
-                            add_usuario "$usuario"
-                        else
-                            opcionesInvalidas+=" $opcion"
-                        fi
+                        nombre="$(echo "$1" | cut -d: -f1)"
+                        apellido="$(echo "$1" | cut -d: -f2)"
+                        usuario="$(echo "$1" | cut -d: -f3)"
+
+                        nombre="$(echo "${listaUsuarios[$i]}" | cut -d: -f1)"
+                        apellido="$(echo "${listaUsuarios[$i]}" | cut -d: -f2)"
+                        usuario="$(echo "${listaUsuarios[$i]}" | cut -d: -f3)"
+                        echo "${i}. $usuario ($nombre $apellido)"
                     done
 
-                    if [ -n "$opcionesInvalidas" ]
-                    then
-                        echo "Las opciones invalidas ingresadas fueron:$opcionesInvalidas"
-                        opcionesInvalidas=""
-
-                    fi
+                    read -rp "opcion/es: " opciones
                     
-                fi
+                    #Si no se ingreso nada (te devuelve al menu)
+                    if [ -z "$opciones" ]
+                    then
+                        echo "No ha ingresado ningun usuario"
+                    else
+                    #Si sí se ingresaron usuarios
+                        cantOpciones=$(echo "$opciones" | wc -w) 
+                        valido=true
 
-            ;;
-            2)
-                echo "Elegido: 2. Eliminar usuarios del sistema"
+                        for ((i=1 ; i <= cantOpciones ; i++))
+                        do
+                            opcion=$(echo "$opciones" | cut -d" " -f$i)
+                            if [[ "$opcion" =~ ^[0-9]+$ ]] && ((opcion > -1 && opcion < ${#listaUsuarios[@]}))
+                                #los [] se llaman "test". los dobles son avanzados y soportan regex (expresiones regulares)
+                                #PONER PARA QUE ES =~
+                            then
+                                usuario="${listaUsuarios[$opcion]}"
+                                add_usuario "$usuario"
+                            else
+                                opcionesInvalidas+=" $opcion"
+                            fi
+                        done
 
-                echo "Con qué usuarios desea trabajar? (ingrese sus numeros separados por espacios):"
-                #despliega todos los usuarios
-                for((i = 0 ; i < ${#listaUsuarios[*]} ; i++))
-                do
-                    nombre="$(echo "$1" | cut -d: -f1)"
-                    apellido="$(echo "$1" | cut -d: -f2)"
-                    usuario="$(echo "$1" | cut -d: -f3)"
-
-                    nombre="$(echo "${listaUsuarios[$i]}" | cut -d: -f1)"
-                    apellido="$(echo "${listaUsuarios[$i]}" | cut -d: -f2)"
-                    usuario="$(echo "${listaUsuarios[$i]}" | cut -d: -f3)"
-                    echo "${i}. $usuario ($nombre $apellido)"
-                done
-
-                read -rp "opcion/es: " opciones
-                
-                #Si no se ingreso nada (te devuelve al menu)
-                if [ -z "$opciones" ]
-                then
-                    echo "No ha ingresado ningun usuario"
-                else
-                #Si sí se ingresaron usuarios
-                    cantOpciones=$(echo "$opciones" | wc -w) 
-                    valido=true
-
-                    for ((i=1 ; i <= cantOpciones ; i++))
-                    do
-                        opcion=$(echo "$opciones" | cut -d" " -f$i)
-                        if [[ "$opcion" =~ ^[0-9]+$ ]] && ((opcion > -1 && opcion < ${#listaUsuarios[@]}))
+                        if [ -n "$opcionesInvalidas" ]
                         then
-                            usuario="${listaUsuarios[$opcion]}"
-                            del_usuario "$usuario"
-                        else
-                            opcionesInvalidas+=" $opcion"
+                            echo "Las opciones invalidas ingresadas fueron:$opcionesInvalidas"
+                            opcionesInvalidas=""
+
                         fi
+                        
+                    fi
+
+                ;;
+                2)
+                    echo "Elegido: 2. Eliminar usuarios del sistema"
+
+                    echo "Con qué usuarios desea trabajar? (ingrese sus numeros separados por espacios):"
+                    #despliega todos los usuarios
+                    for((i = 0 ; i < ${#listaUsuarios[*]} ; i++))
+                    do
+                        nombre="$(echo "$1" | cut -d: -f1)"
+                        apellido="$(echo "$1" | cut -d: -f2)"
+                        usuario="$(echo "$1" | cut -d: -f3)"
+
+                        nombre="$(echo "${listaUsuarios[$i]}" | cut -d: -f1)"
+                        apellido="$(echo "${listaUsuarios[$i]}" | cut -d: -f2)"
+                        usuario="$(echo "${listaUsuarios[$i]}" | cut -d: -f3)"
+                        echo "${i}. $usuario ($nombre $apellido)"
                     done
 
-                    if [ -n "$opcionesInvalidas" ]
-                    then
-                        echo "Las opciones invalidas ingresadas fueron:$opcionesInvalidas"
-                        opcionesInvalidas=""
-                    fi
+                    read -rp "opcion/es: " opciones
                     
-                fi
-            ;;
-            *)
-                echo "Asegurese de elegir un valor válido"
-                printf "\n--------------------------------\n"
+                    #Si no se ingreso nada (te devuelve al menu)
+                    if [ -z "$opciones" ]
+                    then
+                        echo "No ha ingresado ningun usuario"
+                    else
+                    #Si sí se ingresaron usuarios
+                        cantOpciones=$(echo "$opciones" | wc -w) 
+                        valido=true
 
-            ;;
-        esac
-    done
+                        for ((i=1 ; i <= cantOpciones ; i++))
+                        do
+                            opcion=$(echo "$opciones" | cut -d" " -f$i)
+                            if [[ "$opcion" =~ ^[0-9]+$ ]] && ((opcion > -1 && opcion < ${#listaUsuarios[@]}))
+                            then
+                                usuario="${listaUsuarios[$opcion]}"
+                                del_usuario "$usuario"
+                            else
+                                opcionesInvalidas+=" $opcion"
+                            fi
+                        done
+
+                        if [ -n "$opcionesInvalidas" ]
+                        then
+                            echo "Las opciones invalidas ingresadas fueron:$opcionesInvalidas"
+                            opcionesInvalidas=""
+                        fi
+                        
+                    fi
+                ;;
+                *)
+                    echo "Asegurese de elegir un valor válido"
+                    printf "\n--------------------------------\n"
+
+                ;;
+            esac
+        done
+
+    fi
 }
 
 ingreso_usuario(){
@@ -327,7 +338,6 @@ gestion_usuarios(){
                 read -rp "Ingrese la ruta del archivo a procesar (no ingresar nada para cancelar): " archivo
                 if [ -n "$archivo" ]; then
                     archivo_procesar "$archivo"
-                    return 0
                 fi
             ;;
             
@@ -339,13 +349,12 @@ gestion_usuarios(){
                     if [[ "$nombre" =~ ^[A-Za-z]+$  && "$apellido" =~ ^[A-Za-z]+$ ]]
                     then
                         ingreso_usuario "$nombre" "$apellido"
-                        return 0
                     elif [ -z "$nombre" ] && [ -z "$apellido" ]
                     then
                         :
                         #una forma de decir no hacer nada
                     else
-                        read -n1 -t1 -rsp "Error: formato de nombres incorrecto"
+                        read -n1 -t1 -rsp "ERROR: formato de nombres incorrecto"
                     fi
                 ;;  
             3)
@@ -365,7 +374,7 @@ gestion_usuarios(){
                 read -n 1 -srp "------Presione cualquier tecla para continuar------"
             ;;
             *)
-                read -t2 -n1 -rsp "Error: opción incorrecta" 
+                read -t2 -n1 -rsp "ERROR: opción incorrecta" 
                 clear
             ;;
         esac
