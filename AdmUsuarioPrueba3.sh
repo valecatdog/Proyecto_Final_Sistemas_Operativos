@@ -78,6 +78,7 @@ archivo_procesar(){
                 generar_usuario "$nombre" "$apellido"
                 #se envia a la funcion que devuelve toda la data del usuario
                 listaUsuarios+=("$usuario")
+                echo "${listaUsuarios[@]}"
                 #y se agrega a la lista de usuarios que contenia la funcion
             fi
         done
