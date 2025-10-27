@@ -127,7 +127,7 @@ del_usuario(){
     fi
 }
 
-#VER ACA QUE HICE CAMBIOS. NO COMENTADO
+#CORREGIDO NO COMENTADO
 verificar_archivo(){
     valido="false"
     #variable para el untill
@@ -149,7 +149,6 @@ verificar_archivo(){
             read -n1 -t1 -rsp "Archivo valido"
         elif [ -z "$archivo" ]
         then    
-            read -n1 -t1 -rsp "Saliendo..."  
             break
         else
             echo "Error: archivo invalido o no encontrado"
@@ -160,21 +159,33 @@ verificar_archivo(){
     #fin del until
 }
 
-#NO CORREGIDO NI COMENTADO
+#CORREGIDO NO COMENTADO
 archivo_procesar(){
 
     if ! verificar_archivo "$1"; then
+    #si el archivo que se le pasa no devuelve 0 (error) te lleva al menu (pasa cuando se ingresa un archivo vacio)
         gestion_usuarios
     else
         listaUsuarios=()
-        for ((i = 1 ; i < $(wc -l < "$archivo") ; i+=2))
+        #si no, se crea esta lista
+        for ((i = 1 ; i < $(wc -l < "$archivo") ; i++))
+        #y por cada linea del archivo (el for va de 1 hasta la cantidad de lineas que tenga el archivo)
         do
-            nombre="$(cat "$archivo" | cut -d" " -f$i)"
-            apellido="$(cat "$archivo" | cut -d" " -f$((i+1)))"
-            generar_usuario "$nombre" "$apellido"
-            listaUsuarios+=("$usuario")
-            #lo añade al array de usuario
-            # si sobra un nombre (queda fuera de los pares que se van formando), simplemente no se usa
+            if [ "$(sed -n "${i}p" "$archivo" | wc -w)" -ge 2 ]
+            : 'se verifica que tenga por lo menos dos palabras. sed -n no imprime nada a menos que se especifique 
+            porque sino imprimiria todo el ccontenido y al final la linea "$ {i}p" imprime la linea i del
+             archivo, se cuenta con wc -l (lines) y si es mayor o igual a 2 se trabaja con la linea. 
+            '
+            then
+                nombre=$(sed -n "${i}p" "$archivo" | awk '{print $1}')
+                #y si sí se toma la primera como nombre
+                apellido=$(sed -n "${i}p" "$archivo" | awk '{print $2}')
+                #y la segunda como apellido
+                generar_usuario "$nombre" "$apellido"
+                #se envia a la funcion que devuelve toda la data del usuario
+                listaUsuarios+=("$usuario")
+                #y se agrega a la lista de usuarios que contenia la funcion
+            fi
         done
 
         valido=false
