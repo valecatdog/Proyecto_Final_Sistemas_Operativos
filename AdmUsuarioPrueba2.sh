@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/bin/bash
 #espacio para probar casos individuales
 #TRABAJANDO EN:
 : '
@@ -20,6 +20,7 @@ ayuda no me da la cabeza para mas
 '
 #COMIENZO DEL ESPACIO PARA FUNCIONES
 
+#CORREGIDO Y COMENTADO
 generar_usuario() {
     local nombre
     local apellido
@@ -28,26 +29,24 @@ generar_usuario() {
     #se hace por separado porque al ponerle local de una se pierde el valor de retorno ($?, si es 0, 1 etc)
 
     nombre="$1"
+    #la variable nombre toma el valor del primer parametro 
     apellido="$2"
     primeraLetra=$(echo "$nombre" | cut -c1)
+    #no se puede hacer cut -c1 $nombre poruqe cut no trabaja con el valor de las variables, por eso se usa un pipe
     user="$primeraLetra$apellido"
+    #creamos el user del usuario con la primera letra del nombre y el apellido
     usuario="${nombre}:${apellido}:$user"
-    #parece qeu no se usa, pero mas adelante si se usa
+    #usamos el formato nombre:apellido:user porque es lo mas comodo para trababarlo en el resto del script
 }
 
+#CORREGIDO Y COMENTADO
 add_usuario(){
-    #verifico la salida de la funcion, si es distinta a 0 entonces actua
-    local usuario
-    local nombre
-    local apellido
-    #datos del usuario (almacenados como nombre:apellido:usuario)
-    nombre="$(echo "$1" | cut -d: -f1)"
-    apellido="$(echo "$1" | cut -d: -f2)"
-    usuario="$(echo "$1" | cut -d: -f3)"
-    
+
+    #verifico la salida de la funcion, si es distinta a 0 (no se encontró en /etc/passwd asi que no existe) actua
+    #le pasamos el primer parametro que se le paso a la funcion actual
     if ! usuario_existe "$1"
     then
-        #creo las variables y las hago locales (solo existen para esta funcion)
+        #creamos las variables y las hacemos locales (solo existen para esta funcion)
         local usuario
         local nombre
         local apellido
@@ -55,41 +54,61 @@ add_usuario(){
         local letraApellido
         local passwd
 
-        #datos del usuario (almacenados como nombre:apellido:usuario)
+        # extraemos los datos del usuario (almacenados como nombre:apellido:usuario)
         nombre="$(echo "$1" | cut -d: -f1)"
         apellido="$(echo "$1" | cut -d: -f2)"
         usuario="$(echo "$1" | cut -d: -f3)"
 
         #generar contraseña
         letraNombre=$(echo "$nombre" | cut -c1 | tr '[:lower:]' '[:upper:]')
+        #extraemos la primera letra del nombre (como antes) y si esta en minuscula la pasamos a mayuscula
         letraApellido=$(echo "$apellido" | cut -c1 | tr '[:upper:]' '[:lower:]')
+        #extraemos la primera letra del apellido (como antes) y si esta en mayuscula la pasamos a minuscula
         passwd="$letraNombre${letraApellido}#123456"
+        #la contraseña va a se la letraNombre+letraApellido+#123456 (como pide la consigna)
 
         #ingresar usuario
         sudo useradd -mc "$nombre $apellido" "$usuario"
+        : 'aniadimos el usuario con useradd. -m crea el directorio del usuario si no existe y
+        -c agrema un comentario (nombre apellido). aunque el script deberia ser ejecutado con sudo, en caso
+        de olvido, lo agregamos de todas formas 
+        '
         echo "$usuario":"$passwd" | sudo chpasswd 
-        #chpasswd espera recibir parametros por entrada estandar, por eso el pipe
+        #chpasswd, que asigna contrasenias, espera recibir parametros por entrada estandar. por eso el pipe
         sudo chage -d 0 "$usuario"
-        #hace ruqe la contraseña expire inmediatamente
+        #chage -d establece a fecha del ultimo cambio de la contrasenia, y 0 hace qeu expire inmediatamente
 
         echo "Usuario $usuario creado correctamente. Contraseña: $passwd"
+        #mensaje para informar que el usuario se creo exitosamente
         
     else
-        echo "Error: el usuario $usuario ($nombre $apellido) ya existe en el sistema"
+        read -n1 -t1 -rsp "Error: el usuario $usuario ($nombre $apellido) ya existe en el sistema"
+        : 'informa que el usuario ya existe, no se puede crear
+        -n1: acepta un caracter. sirve para que la proxima vez qeu se haga un read, lo que se escribe en este no
+        "contamine" el otro (limpia el buffer). -t1: tiempo de espera de un segundo, -r: no interpreta lo que
+        escribe el usuario. -s: no muestra lo que se escribe. -p: para mosrtar el mensaje. Como no nos interesa
+        si el usuario escribe algo no especificamos una variable para que se guarde
+        '
         echo "$1" >> cre_usuarios.log 
+        #pasamos la informacion del usuario (prierm parametro de la funcion) al log 
     fi
 } 
 
+#CORREGIDO Y COMENTADO
 usuario_existe() {
         local usuario
         usuario="$(echo "$1" | cut -d: -f3)"
         # -q = quiet (no imprime mada) # ^ inicio de linea 
         #habra que escapar el $
         getent passwd "$usuario" >/dev/null
-        : 'verifica si existe el usuario en passwd, si existe te imprime su info. como no qeuremos eso, lo mandamos a 
-        /dev/null'
+        : 'verifica si existe el usuario en passwd, si existe te imprime su info. como no qeuremos eso, lo redirigimos 
+        a /dev/null'
 }
 
+#-----------------------------------HASTA ACA ESTA BIEN-----------------------------------
+
+
+#CORREGIDO NO COMENTADO
 del_usuario(){
     local nombre
         local apellido
@@ -102,13 +121,13 @@ del_usuario(){
     if usuario_existe "$1"
     then
         sudo userdel -r "$usuario"
-        echo "Usuario $usuario ($nombre $apellido) eliminado correctamente del sistema"
+        read -n1 -t1 -rsp "Usuario $usuario ($nombre $apellido) eliminado correctamente del sistema"
     else
-        echo "Error: el usuario $usuario ($nombre $apellido) no existe en el sistema"
+         read -n1 -t1 -rsp "Error: el usuario $usuario ($nombre $apellido) no existe en el sistema"
     fi
 }
 
-#VER ACA QUE HICE CAMBIOS
+#VER ACA QUE HICE CAMBIOS. NO COMENTADO
 verificar_archivo(){
     valido="false"
     #variable para el untill
@@ -123,7 +142,7 @@ verificar_archivo(){
     #empezando con el valor de la variable en falso, hace lo siguiente hasta que valido sea true
     until [ "$valido" = "true" ]
     do
-        if [ -f "$archivo" ] && [ -r "$archivo" ] && [ "$(wc -w < "$archivo")" -gt 2 ]
+        if [ -f "$archivo" ] && [ -r "$archivo" ] &&  grep -qE '^[[:alpha:]]+[[:space:]]+[[:alpha:]]+' "$archivo" 
         #velifica que "archivo" sea un archivo valido (existente, legible y que contenga 2 o mas palabras (nomb y apell))
         then
             valido=true
@@ -138,17 +157,17 @@ verificar_archivo(){
             clear
         fi
     done
-    echo "----------------------------------"
     #fin del until
 }
 
+#NO CORREGIDO NI COMENTADO
 archivo_procesar(){
 
     if ! verificar_archivo "$1"; then
         gestion_usuarios
     else
         listaUsuarios=()
-        for ((i = 1 ; i < $(wc -w < "$archivo") ; i+=2))
+        for ((i = 1 ; i < $(wc -l < "$archivo") ; i+=2))
         do
             nombre="$(cat "$archivo" | cut -d" " -f$i)"
             apellido="$(cat "$archivo" | cut -d" " -f$((i+1)))"
@@ -281,6 +300,7 @@ archivo_procesar(){
     fi
 }
 
+#NO CORREGIDO NI COMENTADO
 ingreso_usuario(){
     valido=false
     until [ "$valido" = true ]
@@ -307,6 +327,7 @@ ingreso_usuario(){
     done
 }
 
+#NO CORREGIDO NI COMENTADO
 gestion_usuarios(){
     while true; do
         clear
@@ -382,7 +403,7 @@ gestion_usuarios(){
 }
 
 
-
+#NO CORREGIDO NI COEMTNADO
 gestion_grupos(){
     clear
     echo "==GESTION DE GRUPOS=="
@@ -441,6 +462,7 @@ gestion_grupos(){
     esac
 }
 
+#NO ANDA
 crear_grupo(){
     local grupo
     grupo="$1"
@@ -453,6 +475,7 @@ crear_grupo(){
     fi
 }
 
+#NO ANDA
 eliminar_grupo(){
     local grupo
     grupo="$1"
@@ -465,6 +488,7 @@ eliminar_grupo(){
     fi
 }
 
+#NO ANDA
 menu_usuarios_grupos(){
     while true 
     do
@@ -511,13 +535,12 @@ menu_usuarios_grupos(){
     done
 }
 
-
+#CORREGIDO NO COMENTADO
 menu_principal(){
     valido="false"
     while [ "$valido" = false ]
         do
             clear
-            #0 NO ANDA
             echo "==ELIJA UN MODO== "
             printf "\n"
             echo "CTRL+C. Salir"
