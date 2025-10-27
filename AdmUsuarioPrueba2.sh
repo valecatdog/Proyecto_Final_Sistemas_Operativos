@@ -161,6 +161,7 @@ verificar_archivo(){
 
 #CORREGIDO NO COMENTADO
 archivo_procesar(){
+    echo "por que carajo no haces nada"
     listaUsuarios=()
     #definimos una lista para almacenar usuarios
 
