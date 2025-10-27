@@ -48,6 +48,7 @@ verificar_archivo(){
             break
         else
             echo "Error: archivo invalido o no encontrado"
+            break
         fi
     done
     #fin del until
