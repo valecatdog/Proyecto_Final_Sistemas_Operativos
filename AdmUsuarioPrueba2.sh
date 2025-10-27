@@ -161,11 +161,11 @@ verificar_archivo(){
 
 #CORREGIDO NO COMENTADO
 archivo_procesar(){
-    echo "por que carajo no haces nada"
     listaUsuarios=()
+    archivo=$1
     #definimos una lista para almacenar usuarios
 
-    if ! verificar_archivo "$1"; then
+    if ! verificar_archivo "$archivo"; then
     #si el archivo que se le pasa no devuelve 0 (error) te lleva al menu (pasa cuando se ingresa un archivo vacio)
         gestion_usuarios
     else
