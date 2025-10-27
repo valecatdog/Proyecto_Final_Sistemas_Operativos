@@ -58,8 +58,9 @@ archivo_procesar(){
 
     if ! verificar_archivo "$1"; then
     #si el archivo que se le pasa no devuelve 0 te lleva al menu (se ingreso un archivo vacio)
-        echo "Archivo mal"
+        echo "Archivo mal!!!!!!!!!"
     else
+        echo "HOLA!!!!!!!!!!!"
         listaUsuarios=()
         #si no, se crea esta lista
         for ((i = 1 ; i < $(wc -l < "$archivo") ; i++))
