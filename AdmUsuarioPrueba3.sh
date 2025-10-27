@@ -42,10 +42,11 @@ verificar_archivo(){
         then
             valido=true
             read -n1 -t1 -rsp "Archivo valido"
+            return 0
         elif [ -z "$archivo" ]
         then    
             read -n1 -t1 -rsp "Saliendo..."  
-            break
+            return 1
         else
             echo "Error: archivo invalido o no encontrado"
             break

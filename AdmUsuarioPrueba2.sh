@@ -140,16 +140,16 @@ verificar_archivo(){
     #ALGO PARA ROMPER EL BUCLE SI TE ARREPENTISTE!!!
 
     #empezando con el valor de la variable en falso, hace lo siguiente hasta que valido sea true
-    until [ "$valido" = "true" ]
+    until false
     do
         if [ -f "$archivo" ] && [ -r "$archivo" ] &&  grep -qE '^[[:alpha:]]+[[:space:]]+[[:alpha:]]+' "$archivo" 
         #velifica que "archivo" sea un archivo valido (existente, legible y que contenga 2 o mas palabras (nomb y apell))
         then
-            valido=true
             read -n1 -t1 -rsp "Archivo valido"
+            return 0
         elif [ -z "$archivo" ]
         then    
-            break
+            return 1
         else
             echo "Error: archivo invalido o no encontrado"
             read -rp "Ingrese una ruta válida (no ingresar nada para cancelar): " archivo
