@@ -169,7 +169,8 @@ archivo_procesar(){
     #si el archivo que se le pasa no devuelve 0 (error) te lleva al menu (pasa cuando se ingresa un archivo vacio)
         gestion_usuarios
     else
-        for ((i = 1 ; i < $(wc -l < "$archivo") ; i++))
+        read -n1 -srp "BREAKPOINT 0: ENTES DEL FOR---------------------"
+        for ((i = 1 ; i < $(wc -l <= "$archivo") ; i++))
         #si no, por cada linea del archivo (el for va de 1 hasta la cantidad de lineas que tenga el archivo)
         do
             read -n1 -srp "BREAKPOINT 1: ENTRO AL FOR (VALOR DE I= $i)---------------------"
