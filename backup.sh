@@ -7,6 +7,43 @@ dir_backup="/var/users_backups"
 # tambien podriamos usar la direccion actual del script y ya, pero esto le da mas flexibilidad
 Delta=$(realpath "$0")
 
+
+#**investigar mas a detalle
+cleanup() {
+    echo "Ejecutando limpieza..."
+    # Eliminar lockfile si existe
+    if [ -f "$lockfile" ]; then
+        rm -f "$lockfile"
+        echo "Lockfile removido"
+    fi
+    # Eliminar directorio temporal si existe
+    if [ -n "$temp_dir" ] && [ -d "$temp_dir" ]; then
+        rm -rf "$temp_dir"
+        echo "Directorio temporal removido"
+    fi
+}
+
+trap cleanup EXIT INT TERM
+
+check_user() {
+    if [ "$(whoami)" != "root" ]; then
+        echo "ERROR: Este script debe ejecutarse con sudo o como root"
+        echo "Uso: sudo $0"
+        exit 1
+    fi
+}
+
+check_lock() {
+    if [ -f "$lockfile" ]; then
+        echo "ERROR: El script ya se está ejecutando en otro proceso"
+        echo "Lockfile encontrado: $lockfile"
+        exit 1
+    else
+        touch "$lockfile"
+        echo "Lockfile creado: $lockfile"
+    fi
+}
+
 #funcion para crear el directorio dir_backup si no existe
 crear_dir_backup(){
     # si no existe un directorio (dir_backup) entonces lo crea
@@ -16,6 +53,11 @@ crear_dir_backup(){
     sudo mkdir -p "$dir_backup"
     sudo chmod 700 "$dir_backup"
     echo "Directorio de backups creado: $dir_backup"
+    fi
+
+    if [ ! -f "/var/log/backups.log" ]; then
+        touch "/var/log/backups.log"
+        chmod 644 "/var/log/backups.log"
     fi
 }
 
@@ -44,9 +86,10 @@ menu_alpha(){
 
 # bubbles burried in this jungle
 # lo mismo que hicimos en admUsuario
-usuario_existe() {
-    local usuario="$1"  
-    grep -q "^${usuario}:" /etc/passwd
+# **investigar id, tambien se pueda hacer con grep -q "^${usuario}:" /etc/passwd
+usuario_existe() { 
+    local usuario="$1"
+    id "$usuario" &>/dev/null
 }
 
 crear_backup(){
@@ -71,12 +114,16 @@ crear_backup(){
         # Creando el backup
         # tar empaqueta lo que esta en la var archivo_backup, crea un nuevo arch con -c, con j lo comprimimos con bzip2, y -f le decimos el nombre del arch 
         echo "Creando backup de $home_dir"
-        tar -cjf "$archivo_backup" "$home_dir"
-        
-        echo "Backup creado: $archivo_backup"
-
+        if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
+            echo "Backup creado: $archivo_backup"
+            echo "$(date): Backup manual de $usuario - $archivo_backup" >> /var/log/backups.log
+        else
+            echo "Error al crear el backup"
+            return 1
+        fi
     else 
-    echo "el usuario no existe."
+        echo "El usuario $usuario no existe."
+        return 1
     fi
 }
 
@@ -204,8 +251,8 @@ restaurar_backup(){
         # aca copiamos los archivos al origen real
         # primero copiamos las carpetas y archivos visivles y luego hacemos lo mismo con las invisibles
         echo "copiando archivos a $home_destino..."
-        sudo cp -r "$dir_origen"/* "$home_destino"/ 2>/dev/null
-        sudo cp -r "$dir_origen"/.* "$home_destino"/ 2>/dev/null 2>&1
+        #**investigar en mayor Profundidad 
+        rsync -av "$dir_origen/" "$home_destino"/ 2>/dev/null
 
         # reparamos los permisos con un change owner recursivo en todo el directorio
         sudo chown -R "$usuario:$usuario" "$home_destino"
