@@ -161,15 +161,15 @@ verificar_archivo(){
 
 #CORREGIDO NO COMENTADO
 archivo_procesar(){
+    listaUsuarios=()
+    #definimos una lista para almacenar usuarios
 
     if ! verificar_archivo "$1"; then
     #si el archivo que se le pasa no devuelve 0 (error) te lleva al menu (pasa cuando se ingresa un archivo vacio)
         gestion_usuarios
     else
-        listaUsuarios=()
-        #si no, se crea esta lista
         for ((i = 1 ; i < $(wc -l < "$archivo") ; i++))
-        #y por cada linea del archivo (el for va de 1 hasta la cantidad de lineas que tenga el archivo)
+        #si no, por cada linea del archivo (el for va de 1 hasta la cantidad de lineas que tenga el archivo)
         do
             if [ "$(sed -n "${i}p" "$archivo" | wc -w)" -ge 2 ]
             : 'se verifica que tenga por lo menos dos palabras. sed -n no imprime nada a menos que se especifique 
