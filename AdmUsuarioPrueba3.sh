@@ -44,7 +44,7 @@ if ! usuario_existe "$usuario"
 then
     echo "el usuario no existe"
 else 
-    echo "el usuario no existe"
+    echo "el usuario existe"
 fi
 
 
