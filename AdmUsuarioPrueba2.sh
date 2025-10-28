@@ -159,7 +159,7 @@ verificar_archivo(){
     #fin del until
 }
 
-#NO CORREGIDO NO COMENTADO
+#CORREGIDO NO COMENTADO, SE PUEDE MEJORAR EL DESPLIEGUE DE USUARIOS
 archivo_procesar(){
     listaUsuarios=()
     archivo=$1
@@ -181,7 +181,11 @@ archivo_procesar(){
         while [ "$valido" = false ]
         do
             #CAPAZ QUE HABRIA UQE HACER ALGO PARA RETROCEDER? 0?
+            clear
+            echo "==PROCESAR UN ARCHIVO==" 
+            printf "\n"
             echo "Que desea hacer?"
+            echo "0. Volver al menu de gestion de usuarios"
             echo "1. Crear usuarios"
             echo "2. Eliminar usuarios del sistema"
             read -rp "Opcion: " opcion
@@ -189,13 +193,22 @@ archivo_procesar(){
             #el echo no expande el \n, printf si
 
             case $opcion in
+                0)
+                    gestion_usuarios
+                    return 
+                ;;
                 1)
+                    clear
+                    echo "==PROCESAR UN ARCHIVO==" 
+                    printf "\n"
                     echo "Elegido: 1. Crear usuarios"
 
                     echo "Con qué usuarios desea trabajar? (ingrese sus numeros separados por espacios):"
                     #despliega todos los usuarios
                     for((i = 0 ; i < ${#listaUsuarios[*]} ; i++))
                     do
+                    #MEJORAR
+                    #awk 'F: {print "${i}. " $3 "(" $1 $2 ")" }' "${#listaUsuarios["$i"]}"
                         nombre="$(echo "$1" | cut -d: -f1)"
                         apellido="$(echo "$1" | cut -d: -f2)"
                         usuario="$(echo "$1" | cut -d: -f3)"
@@ -242,6 +255,9 @@ archivo_procesar(){
 
                 ;;
                 2)
+                    clear
+                    echo "==PROCESAR UN ARCHIVO==" 
+                    printf "\n"
                     echo "Elegido: 2. Eliminar usuarios del sistema"
 
                     echo "Con qué usuarios desea trabajar? (ingrese sus numeros separados por espacios):"
@@ -291,7 +307,6 @@ archivo_procesar(){
                 ;;
                 *)
                     echo "Asegurese de elegir un valor válido"
-                    printf "\n--------------------------------\n"
 
                 ;;
             esac
@@ -300,13 +315,16 @@ archivo_procesar(){
     fi
 }
 
-#NO CORREGIDO NI COMENTADO
+#CORREGIDO NO COMENTADO
 ingreso_usuario(){
     valido=false
     until [ "$valido" = true ]
     do
         generar_usuario "$1" "$2"
 
+        clear
+        echo "==PROCESAR UN ARCHIVO==" 
+        printf "\n"
         echo "Que desea hacer?"
         echo "1. Crear usuario"
         printf "2. Eliminar usuario del sistema\n"
@@ -320,14 +338,14 @@ ingreso_usuario(){
             valido="true"
             del_usuario "$usuario"
         else
-            printf "\n----------------------------\n\n"
+            printf "\n"
             echo "Error: opcion invalida"
-            printf "\n----------------------------\n"
+
         fi
     done
 }
 
-#NO CORREGIDO NI COMENTADO
+#CORREGIDO NO COMENTADO
 gestion_usuarios(){
     while true; do
         clear
@@ -339,7 +357,6 @@ gestion_usuarios(){
         echo "0. Volver a menu anterior" 
         echo "1. Ingresar un archivo para procesar"
         echo "2. Ingresar un usuario"
-        #NO ANDA
         echo "3. Listar usuarios existentes"
         printf "\n"
         read -rp "Opcion: " opcionCase11
@@ -402,7 +419,7 @@ gestion_usuarios(){
 
 }
 
-
+#NADA ANDA DE ACA------------------------------------------
 #NO CORREGIDO NI COEMTNADO
 gestion_grupos(){
     clear
@@ -534,6 +551,8 @@ menu_usuarios_grupos(){
 
     done
 }
+
+#HASTA ACA NO ANDA-------------------------------------
 
 #CORREGIDO NO COMENTADO
 menu_principal(){
