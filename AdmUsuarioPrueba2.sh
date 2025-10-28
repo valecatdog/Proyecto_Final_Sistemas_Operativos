@@ -105,7 +105,7 @@ usuario_existe() {
         a /dev/null'
 }
 
-#-----------------------------------HASTA ACA ESTA BIEN-----------------------------------
+#-----------------------------------HASTA ACA ESTA PRONTO-----------------------------------
 
 
 #CORREGIDO NO COMENTADO
@@ -158,6 +158,8 @@ verificar_archivo(){
     done
     #fin del until
 }
+
+#------------------------------HASTA ACA NO ESTA COMENTADO------------------
 
 #NO PROBADO NO COMENTADO
 archivo_procesar_addDel(){
@@ -366,9 +368,12 @@ gestion_usuarios(){
                     then
                         gestion_usuarios
                         return
-                    else
-                        gestion_usuarios "$nombre" "$apellido"
+                    elif [ -n "$nombre" ] && [ -n "$apellido" ]
+                    then
+                        ingreso_usuario "$nombre" "$apellido"
                         return
+                    else
+                        read -n1 -t1 -rsp "ERROR: procure escribir el nombre y el apellido del usuario"
                     fi
                 ;;  
             3)
