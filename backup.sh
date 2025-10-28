@@ -6,7 +6,7 @@ dir_backup="/var/users_backups"
 # Delta es el valor actual de este scrit, lo conseguimos con realpath
 # tambien podriamos usar la direccion actual del script y ya, pero esto le da mas flexibilidad
 Delta=$(realpath "$0")
-
+lockfile="/var/lock/backup-script.lock"
 
 #**investigar mas a detalle
 cleanup() {
@@ -24,6 +24,7 @@ cleanup() {
 }
 
 trap cleanup EXIT INT TERM
+
 
 check_user() {
     if [ "$(whoami)" != "root" ]; then
@@ -271,8 +272,14 @@ restaurar_backup(){
 
 crear_dir_backup
 
+
+
+
 while true
 do
+
+check_user
+check_lock
 
 menu_alpha
 
