@@ -35,7 +35,7 @@ generar_usuario() {
     #no se puede hacer cut -c1 $nombre poruqe cut no trabaja con el valor de las variables, por eso se usa un pipe
     user="$primeraLetra$apellido"
     #creamos el user del usuario con la primera letra del nombre y el apellido
-    usuario="${nombre}:${apellido}:$user"
+    echo "${nombre}:${apellido}:$user"
     #usamos el formato nombre:apellido:user porque es lo mas comodo para trababarlo en el resto del script
 }
 
@@ -133,6 +133,52 @@ del_usuario(){
          ingreso_usuario "$nombre" "$apellido"
          return
     fi
+}
+
+#NO CORREGIDO NO COMENTADO
+ingreso_usuario(){
+    local nombre
+    local apellido
+    nombre="$1"
+    apellido="$2"
+    if [[ "$nombre" =~ ^[A-Za-z]+$  && "$apellido" =~ ^[A-Za-z]+$ ]]
+    then
+        until false 
+        do
+            local usuario
+            usuario=$(generar_usuario "$nombre" "$apellido")
+            clear
+            echo "==INGRESAR UN USUARIO==" 
+            printf "\n"
+            echo "Que desea hacer?"
+            echo "0. Volver al menu de gestion usuarios"
+            echo "1. Crear usuario"
+            echo "2. Eliminar usuario del sistema"
+            printf "\n"
+            read -rp "Elija una opción: " opcion
+
+            if(( "$opcion" == 0 )) 2>/dev/null; then
+                gestion_usuarios
+                return
+            elif(( "$opcion" == 1 )) 2>/dev/null; then
+            #mando el error a /dev/null porque pode ingresar cosas no numericas y te tira error, pero funciona bien
+                add_usuario "$usuario"
+                return
+            elif (( "$opcion" == 2 )) 2>/dev/null; then
+                del_usuario "$usuario"
+                return
+            else
+                printf "\n"
+                read -n1 -t1 -srp "Error: opcion invalida"
+                ingreso_usuario "$nombre" "$apellido"
+                return
+            fi
+        done                          
+    else
+        read -n1 -t1 -rsp "ERROR: formato de nombres incorrecto"
+        gestion_usuarios
+        return
+    fi  
 }
 
 #CORREGIDO NO COMENTADO
@@ -297,50 +343,6 @@ archivo_procesar(){
     fi
 }
 
-#NO CORREGIDO NO COMENTADO
-ingreso_usuario(){
-    local nombre
-    local apellido
-    nombre="$1"
-    apellido="$2"
-    if [[ "$nombre" =~ ^[A-Za-z]+$  && "$apellido" =~ ^[A-Za-z]+$ ]]
-    then
-        until false 
-        do
-            generar_usuario "$nombre" "$apellido"
-            clear
-            echo "==INGRESAR UN USUARIO==" 
-            printf "\n"
-            echo "Que desea hacer?"
-            echo "0. Volver al menu de gestion usuarios"
-            echo "1. Crear usuario"
-            echo "2. Eliminar usuario del sistema"
-            printf "\n"
-            read -rp "Elija una opción: " opcion
-
-            if(( "$opcion" == 0 )) 2>/dev/null; then
-                gestion_usuarios
-                return
-            elif(( "$opcion" == 1 )) 2>/dev/null; then
-            #mando el error a /dev/null porque pode ingresar cosas no numericas y te tira error, pero funciona bien
-                add_usuario "$usuario"
-                return
-            elif (( "$opcion" == 2 )) 2>/dev/null; then
-                del_usuario "$usuario"
-                return
-            else
-                printf "\n"
-                read -n1 -t1 -srp "Error: opcion invalida"
-                ingreso_usuario "$nombre" "$apellido"
-                return
-            fi
-        done                          
-    else
-        read -n1 -t1 -rsp "ERROR: formato de nombres incorrecto"
-        gestion_usuarios
-        return
-    fi  
-}
 
 #NO CORREGIDO NO COMENTADO
 gestion_usuarios(){
