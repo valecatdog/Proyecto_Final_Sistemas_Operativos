@@ -28,7 +28,7 @@ usuario_existe() {
         user="$(echo "$1" | cut -d: -f3)"
         echo "esto es usuario $usuario"
         echo "eso es user $user"
-        grep -q "$user" /etc/passd
+        grep -q "$user" /etc/passwd
 }
 
 add_usuario(){
