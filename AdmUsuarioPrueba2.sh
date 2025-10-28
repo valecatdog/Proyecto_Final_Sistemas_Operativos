@@ -143,8 +143,7 @@ ingreso_usuario(){
     nombre="$1"
     apellido="$2"
 
-    echo "$1"
-    echo "$2"
+    echo " DEBUG nombre : $1 apellido: $2"
 
 
     if [[ "$nombre" =~ ^[A-Za-z]+$  && "$apellido" =~ ^[A-Za-z]+$ ]]
@@ -152,6 +151,7 @@ ingreso_usuario(){
         until false 
         do
             generar_usuario "$nombre" "$apellido"
+            echo "DEBUG usuairo completo $usuario_completo"
             clear
             echo "==INGRESAR UN USUARIO==" 
             printf "\n"
@@ -396,8 +396,7 @@ gestion_usuarios(){
                         return
                     elif [ -n "$nombre" ] && [ -n "$apellido" ]
                     then
-                        generar_usuario "$nombre" "$apellido"
-                        ingreso_usuario "$usuario_completo"
+                        ingreso_usuario "$nombre" "$apellido"
                         return
                     else
                         read -n1 -t1 -rsp "ERROR: procure escribir el nombre y el apellido del usuario"
