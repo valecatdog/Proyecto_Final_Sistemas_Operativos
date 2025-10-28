@@ -1,4 +1,37 @@
 #! /bin/bash
+# FUNCION PARA GENERAR NOMBRES ####################################################################
+generar_username() {
+        local nombre="$1"
+        local apellido="$2"
+        local primera_letra=$(cut -c1 " $nombre") # agarra la primera letra del nombre de nuestro usuario
+        local usuario="${primera_letra}${apellido}" #se guarda el nombre y el apellido de usuario en una variable usuario
+        echo "$usuario" | tr "A-Z" "a-z" #como bash es case sensitive me parece que esto no va, pueden haber 2
+        #usuarios con el mismo nombre pero con mayusculas distintas
+}
+
+
+#FUNCION PARA COMPROBAR SI EXISTE UN USUARIO ES PASSWD ################################################################
+# compara en passwd para ver si hay un usuario con la misma inicial + apellido
+usuario_existe() {
+        local usuario="$1" # $1 es el primer parámetro DE LA FUNCIÓN
+        # -q = quiet (no imprime mada) # ^ inicio de linea 
+        grep -q "^${usuario}:" /etc/passwd
+}
+#añade el usuario como nuevo system user junto con su directorio de usuario 
+        # -c para comment, para poder dividir nombre y apellido en diferentes campos (para luego compararlos con lo del nombre + apellido)
+add_usuario(){
+    local usuario="$1"
+    local nombre="$2"
+    local apellido="$3"
+    sudo useradd -m -c "$nombre $apellido" "$usuario"
+    echo "usuario '$usuario' creado correctamente"
+} 
+#para borrar el usuario 
+del_usuario(){
+    local usuario="$1"
+    sudo userdel -r "$usuario"
+    echo "Usuario '$usuario' eliminado correctamente"
+}
 
 #SI NO SE INGRESAN PARAMETROS######################################################################################
 if (($# == 0))
@@ -174,38 +207,5 @@ else
 fi
 #-----------------------------------------FIN DEL IF Y COMIENZO DE FUNCIONES---------------------------------------
 
-# FUNCION PARA GENERAR NOMBRES ####################################################################
-generar_username() {
-        local nombre="$1"
-        local apellido="$2"
-        local primera_letra=$(cut -c1 " $nombre") # agarra la primera letra del nombre de nuestro usuario
-        local usuario="${primera_letra}${apellido}" #se guarda el nombre y el apellido de usuario en una variable usuario
-        echo "$usuario" | tr "A-Z" "a-z" #como bash es case sensitive me parece que esto no va, pueden haber 2
-        #usuarios con el mismo nombre pero con mayusculas distintas
-}
-
-
-#FUNCION PARA COMPROBAR SI EXISTE UN USUARIO ES PASSWD ################################################################
-# compara en passwd para ver si hay un usuario con la misma inicial + apellido
-usuario_existe() {
-        local usuario="$1" # $1 es el primer parámetro DE LA FUNCIÓN
-        # -q = quiet (no imprime mada) # ^ inicio de linea 
-        grep -q "^${usuario}:" /etc/passwd
-}
-#añade el usuario como nuevo system user junto con su directorio de usuario 
-        # -c para comment, para poder dividir nombre y apellido en diferentes campos (para luego compararlos con lo del nombre + apellido)
-add_usuario(){
-    local usuario="$1"
-    local nombre="$2"
-    local apellido="$3"
-    sudo useradd -m -c "$nombre $apellido" "$usuario"
-    echo "usuario '$usuario' creado correctamente"
-} 
-#para borrar el usuario 
-del_usuario(){
-    local usuario="$1"
-    sudo userdel -r "$usuario"
-    echo "Usuario '$usuario' eliminado correctamente"
-}
 
  
