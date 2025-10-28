@@ -318,6 +318,8 @@ ingreso_usuario(){
         done                          
     else
         read -n1 -t1 -rsp "ERROR: formato de nombres incorrecto"
+        gestion_usuarios
+        return
     fi  
 }
 
@@ -374,6 +376,7 @@ gestion_usuarios(){
                         return
                     else
                         read -n1 -t1 -rsp "ERROR: procure escribir el nombre y el apellido del usuario"
+                        return
                     fi
                 ;;  
             3)
