@@ -137,15 +137,14 @@ del_usuario(){
 
 #CORREGIDO NO COMENTADO
 verificar_archivo(){
-    valido="false"
-    #variable para el untill
+    clear
     archivo="$1"
     #guardo en la variable archivo  el valor del primer parametro ingresado (su ruta)
     : 'le puse comillas porque el valor de la variable puede contener espacios (no deberia) o caracteres especiales (*$?etc). Lo preciso para poder 
     #trabajar con la variable aunque hagan eso que dije'
    
     #verifica que se haya pasado un archivo valido. En otro caso, te sigue preguntando hasta que se lo ingreses
-    #ALGO PARA ROMPER EL BUCLE SI TE ARREPENTISTE!!!
+
 
     #empezando con el valor de la variable en falso, hace lo siguiente hasta que valido sea true
     until false
@@ -153,12 +152,13 @@ verificar_archivo(){
         if [ -f "$archivo" ] && [ -r "$archivo" ] &&  grep -qE '^[[:alpha:]]+[[:space:]]+[[:alpha:]]+' "$archivo" 
         #velifica que "archivo" sea un archivo valido (existente, legible y que contenga 2 o mas palabras (nomb y apell))
         then
-            read -n1 -t1 -rsp "Archivo valido"
             return 0
         elif [ -z "$archivo" ]
         then    
             return 1
         else
+            echo "==PROCESAR UN ARCHIVO=="
+            printf "\n"
             echo "Error: archivo invalido o no encontrado"
             read -rp "Ingrese una ruta válida (no ingresar nada para cancelar): " archivo
             clear
@@ -171,6 +171,9 @@ verificar_archivo(){
 
 #NO PROBADO NO COMENTADO
 archivo_procesar_addDel(){
+    local usuariosTrabajar=()
+    local ind
+    ind=0
     clear
     echo "==PROCESAR UN ARCHIVO==" 
     printf "\n"
@@ -190,21 +193,23 @@ archivo_procesar_addDel(){
 
         if ! getent passwd "$usuario" > /dev/null && [ "$1" = add ]
         then
-            echo "$i. $usuario ($nombre $apellido)"
+            echo "$ind. $usuario ($nombre $apellido)"
             usuariosTrabajar+=("${listaUsuarios["$i"]}")
+            ind=$((ind+1))
         elif getent passwd "$usuario" > /dev/null && [ "$1" = del ]
         then
-            echo "$i. $usuario ($nombre $apellido)"
+            echo "$ind. $usuario ($nombre $apellido)"
             usuariosTrabajar+=("${listaUsuarios["$i"]}")
+            ind=$((ind+1))
         fi
     done
 
-    read -rp "opcion/es: " opciones
+    read -rp "opcion/es (no ingrese nada para retroceder): " opciones
     
     #Si no se ingreso nada (te devuelve al menu)
     if [ -z "$opciones" ]
     then   
-        archivo_procesar
+        archivo_procesar "$archivo"
         return
     else
     #Si sí se ingresaron usuarios
@@ -233,6 +238,9 @@ archivo_procesar_addDel(){
         fi
         
     fi
+
+    archivo_procesar "$archivo"
+    return
 }
 
 
@@ -246,7 +254,6 @@ archivo_procesar(){
     #si el archivo que se le pasa no devuelve 0 (error) te lleva al menu (pasa cuando se ingresa un archivo vacio)
         gestion_usuarios
     else
-
         #explicar
         while read -r nombre apellido _
         do
@@ -258,6 +265,7 @@ archivo_procesar(){
             #CAPAZ QUE HABRIA UQE HACER ALGO PARA RETROCEDER? 0?
             clear
             echo "==PROCESAR UN ARCHIVO==" 
+            echo "*archivo: $archivo"
             printf "\n"
             echo "Que desea hacer?"
             echo "0. Volver al menu de gestion de usuarios"
@@ -273,16 +281,14 @@ archivo_procesar(){
                 ;;
                 1)
                     archivo_procesar_addDel "add"
-                    archivo_procesar "$archivo"
                     return
                 ;;
                 2)
                     archivo_procesar_addDel "del"
-                    archivo_procesar "$archivo"
                     return
                 ;;
                 *)
-                    echo "Asegurese de elegir un valor válido"
+                    read -n1 -t1 -srp "Asegurese de elegir un valor válido"
 
                 ;;
             esac
