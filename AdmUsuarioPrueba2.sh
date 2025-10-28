@@ -225,25 +225,17 @@ usuario_existe() {
 #CORREGIDO Y COMENTADO
 #recibe usuario completo
 add_usuario(){
-    echo "DEBUG: parametro que le llego (toda la info): $1"
-    #creamos las variables y las hacemos locales (solo existen para esta funcion y se resetean cada vez que actua)
     local user
     local nombre
     local apellido
-    local letraNombre
-    local letraApellido
-    local passwd
-
-    # extraemos los datos del usuario (almacenados como nombre:apellido:usuario)
+    
     nombre="$(echo "$1" | cut -d: -f1)"
     apellido="$(echo "$1" | cut -d: -f2)"
     user="$(echo "$1" | cut -d: -f3)"
-    read -rt3 -n1 -p "DEBUG: nombre $nombre apellido $apellido user $user "
-
-    #verifico la salida de la funcion, si es distinta a 0 (no se encontró en /etc/passwd asi que no existe) actua
-    #le pasamos el primer parametro que se le paso a la funcion actual
-    if ! usuario_existe "$1" #probar cambiar esto
-    then
+    
+    
+    if ! usuario_existe "$1"; then
+        echo "DEBUG: usuario_existe devolvió FALSE - procediendo a crear usuario"
         #generar contraseña
         letraNombre=$(echo "$nombre" | cut -c1 | tr '[:lower:]' '[:upper:]')
         #extraemos la primera letra del nombre (como antes) y si esta en minuscula la pasamos a mayuscula
@@ -264,11 +256,11 @@ add_usuario(){
         #chage -d establece a fecha del ultimo cambio de la contrasenia, y 0 hace qeu expire inmediatamente
 
         read -n1 -t2 -rsp "Usuario $user creado correctamente. Contraseña: $passwd"
-        ingreso_usuario "$nombre" "$apellido"
-        return
+        #ingreso_usuario "$nombre" "$apellido"
+        #return
         #mensaje para informar que el usuario se creo exitosamente
-        
     else
+        echo "DEBUG: usuario_existe devolvió TRUE - usuario ya existe"
         read -n1 -t3 -rsp "Error: el usuario $user ($nombre $apellido) ya existe en el sistema"
         : 'informa que el usuario ya existe, no se puede crear
         -n1: acepta un caracter. sirve para que la proxima vez qeu se haga un read, lo que se escribe en este no
@@ -279,9 +271,8 @@ add_usuario(){
         echo "$1" >> cre_usuarios.log 
         ingreso_usuario "$nombre" "$apellido"
         return
-        #pasamos la informacion del usuario (prierm parametro de la funcion) al log 
     fi
-} 
+}
 
 #CORREGIDO NO COMENTADO
 #recibe usuario completo
