@@ -269,6 +269,11 @@ restaurar_backup(){
     fi
 }
 
+# Cambiar todas las salidas exit 0 por:
+exit_func() {
+    rm -f "$lockfile"
+    exit 0
+}
 
 crear_dir_backup
 
@@ -298,9 +303,9 @@ read opcion
             ;;
             
         0)
-            echo "cerrando programa"
-            exit 0
-            ;;
+         echo "cerrando programa"
+         exit_func
+         ;;
         *)
             echo "Opción inválida"
             ;;
