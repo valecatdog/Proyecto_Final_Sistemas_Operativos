@@ -24,13 +24,9 @@ usuario_existe() {
     local user
     user="$(echo "$1" | cut -d: -f3)"
     
-    echo "DEBUG usuario_existe: Verificando usuario '$user'"
-    
     if getent passwd "$user" >/dev/null ; then
-        echo "DEBUG usuario_existe: getent encontró al usuario '$user' - return 0"
         return 0
     else 
-        echo "DEBUG usuario_existe: getent NO encontró al usuario '$user' - return 1"
         return 1
     fi
 }

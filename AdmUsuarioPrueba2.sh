@@ -156,7 +156,6 @@ gestion_usuarios(){
                         return
                     elif [ -n "$nombre" ] && [ -n "$apellido" ]
                     then
-                        read -n1 -t1 -rsp "DEBUG: nombre $nombre apellido $apellido"
                         ingreso_usuario "$nombre" "$apellido"
                         return
                     else
@@ -298,8 +297,6 @@ del_usuario(){
     fi
 }
 
-
-
 #PARA USUARIOS INDIVIDUALES----------------------------
 #NO CORREGIDO NO COMENTADO
 #recibe nombre y apellido
@@ -309,15 +306,11 @@ ingreso_usuario(){
     nombre="$1"
     apellido="$2"
 
-    read -pt1  " DEBUG nombre : $1 apellido: $2"
-
-
     if [[ "$nombre" =~ ^[A-Za-z]+$  && "$apellido" =~ ^[A-Za-z]+$ ]]
     then
         until false 
         do
             generar_usuario "$nombre" "$apellido"
-            read -pt1  "DEBUG usuairo completo $usuario_completo"
             clear
             echo "==INGRESAR UN USUARIO==" 
             printf "\n"
