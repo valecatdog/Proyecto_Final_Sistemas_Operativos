@@ -84,7 +84,7 @@ add_usuario(){
         #mensaje para informar que el usuario se creo exitosamente
         
     else
-        read -n1 -t1 -rsp "Error: el usuario $usuario ($nombre $apellido) ya existe en el sistema"
+        read -n1 -t3 -rsp "Error: el usuario $usuario ($nombre $apellido) ya existe en el sistema"
         : 'informa que el usuario ya existe, no se puede crear
         -n1: acepta un caracter. sirve para que la proxima vez qeu se haga un read, lo que se escribe en este no
         "contamine" el otro (limpia el buffer). -t1: tiempo de espera de un segundo, -r: no interpreta lo que
