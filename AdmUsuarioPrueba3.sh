@@ -23,12 +23,27 @@ generar_usuario() {
     #usamos el formato nombre:apellido:user porque es lo mas comodo para trababarlo en el resto del script
 }
 
+usuario_existe() {
+        local usuario
+        usuario="$(echo "$1" | cut -d: -f3)"
+        # -q = quiet (no imprime mada) # ^ inicio de linea 
+        #habra que escapar el $
+        getent passwd "$usuario" >/dev/null
+        : 'verifica si existe el usuario en passwd, si existe te imprime su info. como no qeuremos eso, lo redirigimos 
+        a /dev/null'
+}
 
 #FIN FUNCIONES"#######################################################3
 
-read -rp "ingresa nombre y apellido: " nombre apellido
+read -r "ingresa nombre y apellido: " nombre apellido
 generar_usuario "$nombre" "$apellido"
 echo "$usuario"
+if ! usuario_existe "$usuario"
+then
+    echo "el usuario no existe"
+else 
+    echo "el usuario no existe"
+fi
 
 
 
