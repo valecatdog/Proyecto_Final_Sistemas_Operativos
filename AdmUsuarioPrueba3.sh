@@ -20,7 +20,7 @@ ayuda no me da la cabeza para mas
 '
 
 add_usuario(){
-    echo "DEBUG: parametro que le llego (toda la info): $1"
+
     #creamos las variables y las hacemos locales (solo existen para esta funcion y se resetean cada vez que actua)
     local user
     local nombre
@@ -33,7 +33,6 @@ add_usuario(){
     nombre="$(echo "$1" | cut -d: -f1)"
     apellido="$(echo "$1" | cut -d: -f2)"
     user="$(echo "$1" | cut -d: -f3)"
-    read -rt3 -n1 -p "DEBUG: nombre $nombre apellido $apellido user $user "
 
     #verifico la salida de la funcion, si es distinta a 0 (no se encontró en /etc/passwd asi que no existe) actua
     #le pasamos el primer parametro que se le paso a la funcion actual
@@ -62,7 +61,6 @@ add_usuario(){
         ingreso_usuario "$nombre" "$apellido"
         return
         #mensaje para informar que el usuario se creo exitosamente
-        
     else
         read -n1 -t3 -rsp "Error: el usuario $user ($nombre $apellido) ya existe en el sistema"
         : 'informa que el usuario ya existe, no se puede crear
