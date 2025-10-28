@@ -44,7 +44,7 @@ add_usuario(){
 
     #verifico la salida de la funcion, si es distinta a 0 (no se encontró en /etc/passwd asi que no existe) actua
     #le pasamos el primer parametro que se le paso a la funcion actual
-    if usuario_existe "$1"
+    if ! usuario_existe "$1"
     then
         #creamos las variables y las hacemos locales (solo existen para esta funcion)
         local usuario
