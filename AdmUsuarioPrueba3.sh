@@ -94,7 +94,7 @@ add_usuario(){
 } 
 
 #FIN FUNCIONES"#######################################################3
-
+clear
 read -rp "ingresa nombre y apellido: " nombre apellido
 generar_usuario "$nombre" "$apellido"
 echo "$usuario"
@@ -105,6 +105,5 @@ else
     echo "el usuario existe"
 fi
 
-add_usuario "$usuario"
 
 
