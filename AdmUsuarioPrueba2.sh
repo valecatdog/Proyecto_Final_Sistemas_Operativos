@@ -234,7 +234,6 @@ add_usuario(){
     
     
     if ! usuario_existe "$1"; then
-        echo "DEBUG: usuario_existe devolvió FALSE - procediendo a crear usuario"
         #generar contraseña
         letraNombre=$(echo "$nombre" | cut -c1 | tr '[:lower:]' '[:upper:]')
         #extraemos la primera letra del nombre (como antes) y si esta en minuscula la pasamos a mayuscula
@@ -259,7 +258,6 @@ add_usuario(){
         #return
         #mensaje para informar que el usuario se creo exitosamente
     else
-        echo "DEBUG: usuario_existe devolvió TRUE - usuario ya existe"
         read -n1 -t3 -rsp "Error: el usuario $user ($nombre $apellido) ya existe en el sistema"
         : 'informa que el usuario ya existe, no se puede crear
         -n1: acepta un caracter. sirve para que la proxima vez qeu se haga un read, lo que se escribe en este no
