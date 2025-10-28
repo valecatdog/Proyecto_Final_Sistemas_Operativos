@@ -299,17 +299,15 @@ ingreso_usuario(){
             printf "\n"
             read -rp "Elija una opción: " opcion
 
-            if(( "$opcion" == 1 )) 2>/dev/null; then
+            if(( "$opcion" == 0 )) 2>/dev/null; then
                 gestion_usuarios
                 return
             elif(( "$opcion" == 1 )) 2>/dev/null; then
             #mando el error a /dev/null porque pode ingresar cosas no numericas y te tira error, pero funciona bien
                 add_usuario "$usuario"
-                gestion_usuarios
                 return
             elif (( "$opcion" == 2 )) 2>/dev/null; then
                 del_usuario "$usuario"
-                gestion_usuarios
                 return
             else
                 printf "\n"
@@ -351,6 +349,10 @@ gestion_usuarios(){
                 read -rp "Ingrese la ruta del archivo a procesar (no ingresar nada para cancelar): " archivo
                 if [ -n "$archivo" ]; then
                     archivo_procesar "$archivo"
+                    return
+                else
+                    gestion_usuarios
+                    return
                 fi
             ;;
             
@@ -363,9 +365,10 @@ gestion_usuarios(){
                     if [ -z "$nombre" ] && [ -z "$apellido" ]
                     then
                         gestion_usuarios
-                        break
+                        return
                     else
                         gestion_usuarios "$nombre" "$apellido"
+                        return
                     fi
                 ;;  
             3)
