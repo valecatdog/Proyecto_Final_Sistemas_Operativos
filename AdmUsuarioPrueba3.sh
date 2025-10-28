@@ -35,7 +35,7 @@ usuario_existe() {
 
 #FIN FUNCIONES"#######################################################3
 
-read -r "ingresa nombre y apellido: " nombre apellido
+read -rp "ingresa nombre y apellido: " nombre apellido
 generar_usuario "$nombre" "$apellido"
 echo "$usuario"
 if ! usuario_existe "$usuario"
