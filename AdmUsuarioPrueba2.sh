@@ -169,35 +169,13 @@ archivo_procesar(){
     #si el archivo que se le pasa no devuelve 0 (error) te lleva al menu (pasa cuando se ingresa un archivo vacio)
         gestion_usuarios
     else
-        echo "DEBUG: cantidad de líneas: $(wc -l < "$archivo")"
-        for ((i = 1 ; i < $(wc -l <= "$archivo") ; i++))
-        #si no, por cada linea del archivo (el for va de 1 hasta la cantidad de lineas que tenga el archivo)
-        do
-            read -n1 -srp "BREAKPOINT 1: ENTRO AL FOR (VALOR DE I= $i)---------------------"
-            if [ "$(sed -n "${i}p" "$archivo" | wc -w)" -ge 2 ]
-            : 'se verifica que tenga por lo menos dos palabras. sed -n no imprime nada a menos que se especifique 
-            porque sino imprimiria todo el ccontenido y al final la linea "$ {i}p" imprime la linea i del
-             archivo, se cuenta con wc -l (lines) y si es mayor o igual a 2 se trabaja con la linea. 
-            '
-            then
-            read -n1 -srp "BREAKPOINT 2: ENTRO AL IF (LINEA: $(sed -n "${i}p" "$archivo" | wc -w) )-------------------"
-                nombre=$(sed -n "${i}p" "$archivo" | awk '{print $1}')
-                read -n1 -srp "BREAKPOINT 3: NOMBRE=$nombre---------------------"
-                #y si sí se toma la primera como nombre
-                apellido=$(sed -n "${i}p" "$archivo" | awk '{print $2}')
-                read -n1 -srp "BREAKPOINT 4: APELLIDO=$apellido---------------------"
-                #y la segunda como apellido
-                generar_usuario "$nombre" "$apellido"
-                read -n1 -srp "BREAKPOINT 5: usuario=$usuario---------------------"
-                #se envia a la funcion que devuelve toda la data del usuario
-                listaUsuarios+=("$usuario")
-                echo "BREAKPOINT 6: USUARIOS= ${listaUsuarios[*]} "
-                #y se agrega a la lista de usuarios que contenia la funcion
-            else
-            read -n1 -srp "BREAKPOINT 0: LA LINEA NO APLICABA (LINEA: )--------------------"
-            fi
 
-        done
+            #explicar
+            while read -r nombre apellido _
+            do
+                generar_usuario "$nombre" "$apellido"
+                listaUsuarios+=("$usuario")
+            done< <(awk 'NF >= 2 {print $1, $2}' "$archivo")
 
         valido=false
         while [ "$valido" = false ]
