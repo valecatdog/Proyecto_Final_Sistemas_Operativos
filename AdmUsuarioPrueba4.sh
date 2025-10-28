@@ -93,13 +93,6 @@ add_usuario(){
 clear
 read -rp "ingresa nombre y apellido: " nombre apellido
 generar_usuario "$nombre" "$apellido"
-echo "$usuario"
-if ! usuario_existe "$usuario"
-then
-    echo "el usuario no existe"
-else 
-    echo "el usuario existe"
-fi
-
+add_usuario "$usuario"
 
 
