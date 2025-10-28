@@ -28,11 +28,7 @@ usuario_existe() {
         user="$(echo "$1" | cut -d: -f3)"
         echo "esto es usuario $usuario"
         echo "eso es user $user"
-        # -q = quiet (no imprime mada) # ^ inicio de linea 
-        #habra que escapar el $
-        getent passwd "$user" > /dev/null
-        : 'verifica si existe el usuario en passwd, si existe te imprime su info. como no qeuremos eso, lo redirigimos 
-        a /dev/null'
+        grep -q "$user" /etc/passd
 }
 
 add_usuario(){
