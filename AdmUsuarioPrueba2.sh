@@ -99,10 +99,6 @@ add_usuario(){
     fi
 } 
 
-
-#CAMBIAR USUARIO POR USUARIO_COMPLETO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
 #CORREGIDO Y COMENTADO
 usuario_existe() {
         local user
@@ -115,26 +111,26 @@ usuario_existe() {
 }
 
 #-----------------------------------HASTA ACA ESTA PRONTO-----------------------------------
-
+usuario
 
 #CORREGIDO NO COMENTADO
 del_usuario(){
     local nombre
         local apellido
-        local usuario
+        local user
         
         nombre=$(echo "$1" | cut -d: -f1)
         apellido=$(echo "$1" | cut -d: -f2)
-        usuario=$(echo "$1" | cut -d: -f3)
+        user=$(echo "$1" | cut -d: -f3)
 
     if usuario_existe "$1"
     then
-        sudo userdel -r "$usuario"
-        read -n1 -t2 -rsp "Usuario $usuario ($nombre $apellido) eliminado correctamente del sistema"
+        sudo userdel -r "$user"
+        read -n1 -t2 -rsp "Usuario $user ($nombre $apellido) eliminado correctamente del sistema"
         ingreso_usuario "$nombre" "$apellido"
         return
     else
-         read -n1 -t2 -rsp "ERROR: el usuario $usuario ($nombre $apellido) no existe en el sistema"
+         read -n1 -t2 -rsp "ERROR: el usuario $user ($nombre $apellido) no existe en el sistema"
          ingreso_usuario "$nombre" "$apellido"
          return
     fi
@@ -166,10 +162,10 @@ ingreso_usuario(){
                 return
             elif(( "$opcion" == 1 )) 2>/dev/null; then
             #mando el error a /dev/null porque pode ingresar cosas no numericas y te tira error, pero funciona bien
-                add_usuario "$usuario"
+                add_usuario "$usuario_completo"
                 return
             elif (( "$opcion" == 2 )) 2>/dev/null; then
-                del_usuario "$usuario"
+                del_usuario "$usuario_completo"
                 return
             else
                 printf "\n"
@@ -239,16 +235,16 @@ archivo_procesar_addDel(){
     usuariosTrabajar=()
 
     for ((i = 0; i < ${#listaUsuarios[@]}; i++)); do
-        IFS=':' read -r nombre apellido usuario <<< "${listaUsuarios[i]}"
+        IFS=':' read -r nombre apellido user <<< "${listaUsuarios[i]}"
 
-        if ! getent passwd "$usuario" > /dev/null && [ "$1" = add ]
+        if ! getent passwd "$user" > /dev/null && [ "$1" = add ]
         then
-            echo "$ind. $usuario ($nombre $apellido)"
+            echo "$ind. $user ($nombre $apellido)"
             usuariosTrabajar+=("${listaUsuarios["$i"]}")
             ind=$((ind+1))
-        elif getent passwd "$usuario" > /dev/null && [ "$1" = del ]
+        elif getent passwd "$user" > /dev/null && [ "$1" = del ]
         then
-            echo "$ind. $usuario ($nombre $apellido)"
+            echo "$ind. $user ($nombre $apellido)"
             usuariosTrabajar+=("${listaUsuarios["$i"]}")
             ind=$((ind+1))
         fi
@@ -293,7 +289,6 @@ archivo_procesar_addDel(){
     return
 }
 
-
 #NO CORREGIDO NO COMENTADO, TIENE LA FUNCION archivo_procesar_addDel QUE NO SE SI ANDA
 archivo_procesar(){
     listaUsuarios=()
@@ -308,7 +303,7 @@ archivo_procesar(){
         while read -r nombre apellido _
         do
             generar_usuario "$nombre" "$apellido"
-            listaUsuarios+=("$usuario")
+            listaUsuarios+=("$usuario_completo")
         done< <(awk 'NF >= 2 {print $1, $2}' "$archivo")
 
         while  true; do
@@ -346,7 +341,6 @@ archivo_procesar(){
 
     fi
 }
-
 
 #NO CORREGIDO NO COMENTADO
 gestion_usuarios(){
@@ -397,7 +391,8 @@ gestion_usuarios(){
                         return
                     elif [ -n "$nombre" ] && [ -n "$apellido" ]
                     then
-                        ingreso_usuario "$nombre" "$apellido"
+                        generar_usuario "$nombre" "$apellido"
+                        ingreso_usuario "$usuario_completo"
                         return
                     else
                         read -n1 -t1 -rsp "ERROR: procure escribir el nombre y el apellido del usuario"
