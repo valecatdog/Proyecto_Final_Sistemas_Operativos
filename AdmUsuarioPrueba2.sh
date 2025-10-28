@@ -214,15 +214,9 @@ generar_usuario() {
 usuario_existe() {
     local user
     user="$(echo "$1" | cut -d: -f3)"
-    echo "DEBUG: usuario_existe: user = $user"
-    sleep 2
     if getent passwd "$user" >/dev/null; then
-        echo "DEBUG: getent encontró al usuario, return 0"
-        sleep 2
         return 0
     else 
-        echo "DEBUG: getent NO encontró al usuario, return 1"
-        sleep 2
         return 1
     fi
 }
@@ -238,11 +232,7 @@ add_usuario(){
     apellido="$(echo "$1" | cut -d: -f2)"
     user="$(echo "$1" | cut -d: -f3)"
 
-    echo "DEBUG: user = $user"
-    sleep 2
     if ! usuario_existe "$1"; then
-        echo "DEBUG: El usuario NO existe, creando..."
-        sleep 2
         #generar contraseña
         letraNombre=$(echo "$nombre" | cut -c1 | tr '[:lower:]' '[:upper:]')
         #extraemos la primera letra del nombre (como antes) y si esta en minuscula la pasamos a mayuscula
@@ -266,8 +256,6 @@ add_usuario(){
         ingreso_usuario "$nombre" "$apellido"
         return
     else
-        echo "DEBUG: El usuario SÍ existe, no se crea."
-        sleep 2
         read -n1 -t3 -rsp "Error: el usuario $user ($nombre $apellido) ya existe en el sistema"
         : 'informa que el usuario ya existe, no se puede crear
         -n1: acepta un caracter. sirve para que la proxima vez qeu se haga un read, lo que se escribe en este no
