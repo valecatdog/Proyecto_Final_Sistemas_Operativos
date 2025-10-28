@@ -70,7 +70,7 @@ add_usuario(){
         #chage -d establece a fecha del ultimo cambio de la contrasenia, y 0 hace qeu expire inmediatamente
 
         read -n1 -t2 -rsp "Usuario $usuario creado correctamente. Contraseña: $passwd"
-        ingreso_usuario "$nombre" "$apellido"
+        #ingreso_usuario "$nombre" "$apellido"
         return
         #mensaje para informar que el usuario se creo exitosamente
         

@@ -100,11 +100,11 @@ add_usuario(){
 
 #CORREGIDO Y COMENTADO
 usuario_existe() {
-        local usuario
-        usuario="$(echo "$1" | cut -d: -f3)"
+        local user
+        user="$(echo "$1" | cut -d: -f3)"
         # -q = quiet (no imprime mada) # ^ inicio de linea 
         #habra que escapar el $
-        getent passwd "$usuario" >/dev/null
+        getent passwd "$user" >/dev/null
         : 'verifica si existe el usuario en passwd, si existe te imprime su info. como no qeuremos eso, lo redirigimos 
         a /dev/null'
 }
