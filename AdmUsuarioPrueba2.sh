@@ -78,7 +78,7 @@ add_usuario(){
         sudo chage -d 0 "$usuario"
         #chage -d establece a fecha del ultimo cambio de la contrasenia, y 0 hace qeu expire inmediatamente
 
-        echo "Usuario $usuario creado correctamente. Contraseña: $passwd"
+        read -n1 -t1 -rsp "Usuario $usuario creado correctamente. Contraseña: $passwd"
         ingreso_usuario "$nombre" "$apellido"
         return
         #mensaje para informar que el usuario se creo exitosamente
