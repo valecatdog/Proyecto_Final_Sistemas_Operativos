@@ -326,7 +326,7 @@ while true; do
             ;;
         0)
              echo "cerrando programa"
-             false
+             exit 0 
             ;;
         *)
             echo "Opción inválida"
