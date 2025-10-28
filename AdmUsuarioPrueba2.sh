@@ -79,6 +79,8 @@ add_usuario(){
         #chage -d establece a fecha del ultimo cambio de la contrasenia, y 0 hace qeu expire inmediatamente
 
         echo "Usuario $usuario creado correctamente. Contraseña: $passwd"
+        ingreso_usuario "$nombre" "$apellido"
+        return
         #mensaje para informar que el usuario se creo exitosamente
         
     else
@@ -90,6 +92,8 @@ add_usuario(){
         si el usuario escribe algo no especificamos una variable para que se guarde
         '
         echo "$1" >> cre_usuarios.log 
+        ingreso_usuario "$nombre" "$apellido"
+        return
         #pasamos la informacion del usuario (prierm parametro de la funcion) al log 
     fi
 } 
@@ -122,8 +126,10 @@ del_usuario(){
     then
         sudo userdel -r "$usuario"
         read -n1 -t1 -rsp "Usuario $usuario ($nombre $apellido) eliminado correctamente del sistema"
+         ingreso_usuario "$nombre" "$apellido"
     else
          read -n1 -t1 -rsp "Error: el usuario $usuario ($nombre $apellido) no existe en el sistema"
+         ingreso_usuario "$nombre" "$apellido"
     fi
 }
 
@@ -285,12 +291,15 @@ archivo_procesar(){
 
 #NO CORREGIDO NO COMENTADO
 ingreso_usuario(){
-    #no se si andara bien esta condicion
+    local nombre
+    local apellido
+    nombre="$1"
+    apellido="$2"
     if [[ "$nombre" =~ ^[A-Za-z]+$  && "$apellido" =~ ^[A-Za-z]+$ ]]
     then
         until false 
         do
-            generar_usuario "$1" "$2"
+            generar_usuario "$nombre" "$apellido"
             clear
             echo "==INGRESAR UN USUARIO==" 
             printf "\n"
@@ -314,6 +323,8 @@ ingreso_usuario(){
             else
                 printf "\n"
                 echo "Error: opcion invalida"
+                ingreso_usuario "$nombre" "$apellido"
+                return
             fi
         done                          
     else
@@ -376,6 +387,7 @@ gestion_usuarios(){
                         return
                     else
                         read -n1 -t1 -rsp "ERROR: procure escribir el nombre y el apellido del usuario"
+                        gestion_usuarios
                         return
                     fi
                 ;;  
