@@ -191,6 +191,7 @@ gestion_usuarios(){
 }
 
 #CORREGIDO Y COMENTADO
+#recibe nombre y apellido
 generar_usuario() {
     local nombre
     local apellido
@@ -210,6 +211,7 @@ generar_usuario() {
 }
 
 #CORREGIDO Y COMENTADO
+#recibe usuario completo
 usuario_existe() {
         local user
         user="$(echo "$1" | cut -d: -f3)"
@@ -221,6 +223,7 @@ usuario_existe() {
 }
 
 #CORREGIDO Y COMENTADO
+#recibe usuario completo
 add_usuario(){
     echo "DEBUG: parametro que le llego (toda la info): $1"
     #creamos las variables y las hacemos locales (solo existen para esta funcion y se resetean cada vez que actua)
@@ -281,6 +284,7 @@ add_usuario(){
 } 
 
 #CORREGIDO NO COMENTADO
+#recibe usuario completo
 del_usuario(){
     local nombre
         local apellido
@@ -307,6 +311,7 @@ del_usuario(){
 
 #PARA USUARIOS INDIVIDUALES----------------------------
 #NO CORREGIDO NO COMENTADO
+#recibe nombre y apellido
 ingreso_usuario(){
     local nombre
     local apellido

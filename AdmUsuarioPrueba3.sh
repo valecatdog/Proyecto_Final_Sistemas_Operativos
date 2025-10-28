@@ -81,9 +81,14 @@ usuario_existe() {
         user="$(echo "$1" | cut -d: -f3)"
         # -q = quiet (no imprime mada) # ^ inicio de linea 
         #habra que escapar el $
-        getent passwd "$user" >/dev/null
+        if getent passwd "$user" >/dev/null
         : 'verifica si existe el usuario en passwd, si existe te imprime su info. como no qeuremos eso, lo redirigimos 
         a /dev/null'
+        then
+            return 0
+        else 
+            return 1 
+        fi
 }
 
 

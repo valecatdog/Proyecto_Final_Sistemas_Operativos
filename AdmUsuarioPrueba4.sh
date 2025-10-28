@@ -45,7 +45,9 @@ gestion_grupos(){
 }
 
 del_grupo(){
-    listaGruposgetent group | awk -F: '$3 >= 1000 && $3 < 60000 {print $1}' 
+    listaGrupos=$(getent group | awk -F: '$3 >= 1000 && $3 < 60000 {print $1}')
+
+    print
     nombre=$(echo "$1" | cut -d: -f1)
     apellido=$(echo "$1" | cut -d: -f2)
     user=$(echo "$1" | cut -d: -f3)
