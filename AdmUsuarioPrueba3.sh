@@ -24,11 +24,13 @@ generar_usuario() {
 }
 
 usuario_existe() {
-        local usuario
-        usuario="$(echo "$1" | cut -d: -f3)"
+        local user
+        user="$(echo "$1" | cut -d: -f3)"
+        echo "esto es usuario $usuario"
+        echo "eso es user $user"
         # -q = quiet (no imprime mada) # ^ inicio de linea 
         #habra que escapar el $
-        getent passwd "$usuario" >/dev/null
+        getent passwd "$user" > /dev/null
         : 'verifica si existe el usuario en passwd, si existe te imprime su info. como no qeuremos eso, lo redirigimos 
         a /dev/null'
 }
