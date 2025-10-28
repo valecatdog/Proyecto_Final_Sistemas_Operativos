@@ -35,7 +35,7 @@ generar_usuario() {
     #no se puede hacer cut -c1 $nombre poruqe cut no trabaja con el valor de las variables, por eso se usa un pipe
     user="$primeraLetra$apellido"
     #creamos el user del usuario con la primera letra del nombre y el apellido
-    echo "${nombre}:${apellido}:$user"
+    usuario="${nombre}:${apellido}:$user"
     #usamos el formato nombre:apellido:user porque es lo mas comodo para trababarlo en el resto del script
 }
 
@@ -145,8 +145,7 @@ ingreso_usuario(){
     then
         until false 
         do
-            local usuario
-            usuario=$(generar_usuario "$nombre" "$apellido")
+            generar_usuario "$nombre" "$apellido"
             clear
             echo "==INGRESAR UN USUARIO==" 
             printf "\n"
