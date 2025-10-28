@@ -20,6 +20,176 @@ ayuda no me da la cabeza para mas
 '
 #COMIENZO DEL ESPACIO PARA FUNCIONES
 
+#NO CORREGIDO NO COMENTADO
+#CORREGIDO NO COMENTADO
+menu_principal(){
+    valido="false"
+    while [ "$valido" = false ]
+        do
+            clear
+            echo "==ELIJA UN MODO== "
+            printf "\n"
+            echo "CTRL+C. Salir"
+            echo "1. Gestion de usuarios y grupos"
+            echo "2. Gestion de backups"
+            printf "\n"
+            read -rp "Opcion: " opcion
+            printf "\n--------------------------------\n\n"
+            #el echo no expande el \n, printf si
+
+            case $opcion in
+                1)
+                    menu_usuarios_grupos
+                ;;
+                
+                2)
+                #MODO GESTION DE BACKUPS,  LO HACER ARU
+                    valido="true"
+                    echo "te extraño"
+                ;;
+                
+                *)
+                    read -t2 -n1 -rsp "Error: opción incorrecta" 
+                    : 't (timeout): tiempo de espera; -n (num. of char.): permite escribir sol un caracter. es util porque si el usuario
+                    toca una tecla puede terminar el tiempo de espera antes, y previene que lo que el usuario escriba
+                    se quede guardado para el proximo read (o sea ue limpia la entrada y previene errores); -s (secret/
+                    silent): no muestra lo que escribe el usuario; -r (raw): no interpreta; -p (prompt): muestra el texto
+                    '
+                ;;
+        esac    
+
+     done
+
+}
+
+#NO ANDA
+menu_usuarios_grupos(){
+    while true 
+    do
+        clear
+        echo "==GESTION DE USUARIOS Y GRUPOS=="
+        printf "\n\n"
+        #0  NO ANDA
+        echo "Que desea hacer?"
+        printf "\n"
+        echo "0. Volver al menu anterior"
+        echo "1. Crear o eliminar usuarios"
+        echo "2. Crear o eliminar grupos"
+        echo "3. Incorporar o remover usuarios de grupos"
+        #evitamos palabras con enie a toda costa para prevenir errores
+        printf "\n"
+        read -rp "Opcion: " opcionCase1
+        
+        case $opcionCase1 in
+            0)
+                menu_principal
+                break
+            ;;
+            1)
+                #crear/eliminar users
+                gestion_usuarios
+            ;;
+
+            2)
+                #crear/eliminar grupos
+                gestion_grupos
+            ;;
+
+            3)
+            #usuarios&grupos
+                
+
+            ;;
+
+            *)
+                read -t2 -n1 -rsp "Error: opción incorrecta"
+            ;;
+        esac
+
+    done
+}
+
+gestion_usuarios(){
+    while true; do
+        clear
+        echo "==GESTION DE USUARIOS=="
+        printf "\n\n"
+
+        echo "Desea ingresar un usuario o un archivo para procesar?"
+        printf "\n"
+        echo "0. Volver a menu anterior" 
+        echo "1. Ingresar un archivo para procesar"
+        echo "2. Ingresar un usuario"
+        echo "3. Listar usuarios existentes"
+        printf "\n"
+        read -rp "Opcion: " opcionCase11
+
+    
+        case $opcionCase11 in
+            0)
+                menu_usuarios_grupos 
+                return 0
+            ;;
+
+            1)
+                clear
+                echo "==PROCESAR UN ARCHIVO=="
+                printf "\n"
+                read -rp "Ingrese la ruta del archivo a procesar (no ingresar nada para cancelar): " archivo
+                if [ -n "$archivo" ]; then
+                    archivo_procesar "$archivo"
+                    return
+                else
+                    gestion_usuarios
+                    return
+                fi
+            ;;
+            
+            2)
+                clear
+                echo "==INGRESAR UN USUARIO=="
+                printf "\n"
+                    read -rp "Ingrese el nombre y apellido del usuario (no ingresar nada para cancelar): " nombre apellido
+                    if [ -z "$nombre" ] && [ -z "$apellido" ]
+                    then
+                        gestion_usuarios
+                        return
+                    elif [ -n "$nombre" ] && [ -n "$apellido" ]
+                    then
+                        read -n1 -t1 -rsp "DEBUG: nombre $nombre apellido $apellido"
+                        ingreso_usuario "$nombre" "$apellido"
+                        return
+                    else
+                        read -n1 -t1 -rsp "ERROR: procure escribir el nombre y el apellido del usuario"
+                        gestion_usuarios
+                        return
+                    fi
+                ;;  
+            3)
+                clear
+                echo "==LISTADO DE USUARIOS=="
+                echo "*este listado solo contiene usuarios estandar"
+                printf "\n"
+
+                getent passwd | awk -F: '$3 >= 1000 && $3 <= 60000 { print $3 ". " $1 }'
+                : ' getent passwd es lo mismo que cat /etc/passwd
+                -F: funciona como un cut -d: 
+                $ 3 es el 3er campo (tiene los uid). verifica que sea  >= 1000 (ahi empiezan los usuarios normales)
+                60000 es aproximadamente el numero donde terminan los usuarios normales 
+                { print $ 1 } imprime el primer campo (el nombre de usuario)
+                '
+                printf "\n"
+                read -n 1 -srp "------Presione cualquier tecla para continuar------"
+            ;;
+            *)
+                read -t2 -n1 -rsp "ERROR: opción incorrecta" 
+                clear
+            ;;
+        esac
+    done
+
+}
+
 #CORREGIDO Y COMENTADO
 generar_usuario() {
     local nombre
@@ -40,6 +210,17 @@ generar_usuario() {
 }
 
 #CORREGIDO Y COMENTADO
+usuario_existe() {
+        local user
+        user="$(echo "$1" | cut -d: -f3)"
+        # -q = quiet (no imprime mada) # ^ inicio de linea 
+        #habra que escapar el $
+        getent passwd "$user" >/dev/null
+        : 'verifica si existe el usuario en passwd, si existe te imprime su info. como no qeuremos eso, lo redirigimos 
+        a /dev/null'
+}
+
+#CORREGIDO Y COMENTADO
 add_usuario(){
     echo "DEBUG: parametro que le llego (toda la info): $1"
     #creamos las variables y las hacemos locales (solo existen para esta funcion y se resetean cada vez que actua)
@@ -54,11 +235,11 @@ add_usuario(){
     nombre="$(echo "$1" | cut -d: -f1)"
     apellido="$(echo "$1" | cut -d: -f2)"
     user="$(echo "$1" | cut -d: -f3)"
-    echo "DEBUG: nombre $nombre apellido $apellido user $user "
+    read -rt3 -n1 -p "DEBUG: nombre $nombre apellido $apellido user $user "
 
     #verifico la salida de la funcion, si es distinta a 0 (no se encontró en /etc/passwd asi que no existe) actua
     #le pasamos el primer parametro que se le paso a la funcion actual
-    if ! usuario_existe "$1"
+    if ! usuario_existe "$1" #probar cambiar esto
     then
         #generar contraseña
         letraNombre=$(echo "$nombre" | cut -c1 | tr '[:lower:]' '[:upper:]')
@@ -99,20 +280,6 @@ add_usuario(){
     fi
 } 
 
-#CORREGIDO Y COMENTADO
-usuario_existe() {
-        local user
-        user="$(echo "$1" | cut -d: -f3)"
-        # -q = quiet (no imprime mada) # ^ inicio de linea 
-        #habra que escapar el $
-        getent passwd "$user" >/dev/null
-        : 'verifica si existe el usuario en passwd, si existe te imprime su info. como no qeuremos eso, lo redirigimos 
-        a /dev/null'
-}
-
-#-----------------------------------HASTA ACA ESTA PRONTO-----------------------------------
-usuario
-
 #CORREGIDO NO COMENTADO
 del_usuario(){
     local nombre
@@ -136,6 +303,9 @@ del_usuario(){
     fi
 }
 
+
+
+#PARA USUARIOS INDIVIDUALES----------------------------
 #NO CORREGIDO NO COMENTADO
 ingreso_usuario(){
     local nombre
@@ -143,7 +313,7 @@ ingreso_usuario(){
     nombre="$1"
     apellido="$2"
 
-    echo " DEBUG nombre : $1 apellido: $2"
+    read -pt1  " DEBUG nombre : $1 apellido: $2"
 
 
     if [[ "$nombre" =~ ^[A-Za-z]+$  && "$apellido" =~ ^[A-Za-z]+$ ]]
@@ -151,7 +321,7 @@ ingreso_usuario(){
         until false 
         do
             generar_usuario "$nombre" "$apellido"
-            echo "DEBUG usuairo completo $usuario_completo"
+            read -pt1  "DEBUG usuairo completo $usuario_completo"
             clear
             echo "==INGRESAR UN USUARIO==" 
             printf "\n"
@@ -185,7 +355,12 @@ ingreso_usuario(){
         return
     fi  
 }
+#-------------------------------------------------------
 
+
+
+
+#PARA ARCHIVOS-------------------------------------------
 #CORREGIDO NO COMENTADO
 verificar_archivo(){
     clear
@@ -218,7 +393,58 @@ verificar_archivo(){
     #fin del until
 }
 
-#------------------------------HASTA ACA NO ESTA COMENTADO------------------
+#NO CORREGIDO NO COMENTADO, TIENE LA FUNCION archivo_procesar_addDel QUE NO SE SI ANDA
+archivo_procesar(){
+    listaUsuarios=()
+    archivo=$1
+    #definimos una lista para almacenar usuarios
+
+    if ! verificar_archivo "$archivo"; then
+    #si el archivo que se le pasa no devuelve 0 (error) te lleva al menu (pasa cuando se ingresa un archivo vacio)
+        gestion_usuarios
+    else
+        #explicar
+        while read -r nombre apellido _
+        do
+            generar_usuario "$nombre" "$apellido"
+            listaUsuarios+=("$usuario_completo")
+        done< <(awk 'NF >= 2 {print $1, $2}' "$archivo")
+
+        while  true; do
+            #CAPAZ QUE HABRIA UQE HACER ALGO PARA RETROCEDER? 0?
+            clear
+            echo "==PROCESAR UN ARCHIVO==" 
+            echo "*archivo: $archivo"
+            printf "\n"
+            echo "Que desea hacer?"
+            echo "0. Volver al menu de gestion de usuarios"
+            echo "1. Crear usuarios"
+            echo "2. Eliminar usuarios del sistema"
+            read -rp "Opcion: " opcion
+            #el echo no expande el \n, printf si
+
+            case $opcion in
+                0)
+                    gestion_usuarios
+                    return 
+                ;;
+                1)
+                    archivo_procesar_addDel "add"
+                    return
+                ;;
+                2)
+                    archivo_procesar_addDel "del"
+                    return
+                ;;
+                *)
+                    read -n1 -t1 -srp "Asegurese de elegir un valor válido"
+
+                ;;
+            esac
+        done
+
+    fi
+}
 
 #NO PROBADO NO COMENTADO
 archivo_procesar_addDel(){
@@ -293,143 +519,10 @@ archivo_procesar_addDel(){
     archivo_procesar "$archivo"
     return
 }
+#-----------------------------------------------------
 
-#NO CORREGIDO NO COMENTADO, TIENE LA FUNCION archivo_procesar_addDel QUE NO SE SI ANDA
-archivo_procesar(){
-    listaUsuarios=()
-    archivo=$1
-    #definimos una lista para almacenar usuarios
 
-    if ! verificar_archivo "$archivo"; then
-    #si el archivo que se le pasa no devuelve 0 (error) te lleva al menu (pasa cuando se ingresa un archivo vacio)
-        gestion_usuarios
-    else
-        #explicar
-        while read -r nombre apellido _
-        do
-            generar_usuario "$nombre" "$apellido"
-            listaUsuarios+=("$usuario_completo")
-        done< <(awk 'NF >= 2 {print $1, $2}' "$archivo")
 
-        while  true; do
-            #CAPAZ QUE HABRIA UQE HACER ALGO PARA RETROCEDER? 0?
-            clear
-            echo "==PROCESAR UN ARCHIVO==" 
-            echo "*archivo: $archivo"
-            printf "\n"
-            echo "Que desea hacer?"
-            echo "0. Volver al menu de gestion de usuarios"
-            echo "1. Crear usuarios"
-            echo "2. Eliminar usuarios del sistema"
-            read -rp "Opcion: " opcion
-            #el echo no expande el \n, printf si
-
-            case $opcion in
-                0)
-                    gestion_usuarios
-                    return 
-                ;;
-                1)
-                    archivo_procesar_addDel "add"
-                    return
-                ;;
-                2)
-                    archivo_procesar_addDel "del"
-                    return
-                ;;
-                *)
-                    read -n1 -t1 -srp "Asegurese de elegir un valor válido"
-
-                ;;
-            esac
-        done
-
-    fi
-}
-
-#NO CORREGIDO NO COMENTADO
-gestion_usuarios(){
-    while true; do
-        clear
-        echo "==GESTION DE USUARIOS=="
-        printf "\n\n"
-
-        echo "Desea ingresar un usuario o un archivo para procesar?"
-        printf "\n"
-        echo "0. Volver a menu anterior" 
-        echo "1. Ingresar un archivo para procesar"
-        echo "2. Ingresar un usuario"
-        echo "3. Listar usuarios existentes"
-        printf "\n"
-        read -rp "Opcion: " opcionCase11
-
-    
-        case $opcionCase11 in
-            0)
-                menu_usuarios_grupos 
-                return 0
-            ;;
-
-            1)
-                clear
-                echo "==PROCESAR UN ARCHIVO=="
-                printf "\n"
-                read -rp "Ingrese la ruta del archivo a procesar (no ingresar nada para cancelar): " archivo
-                if [ -n "$archivo" ]; then
-                    archivo_procesar "$archivo"
-                    return
-                else
-                    gestion_usuarios
-                    return
-                fi
-            ;;
-            
-            2)
-                clear
-                echo "==INGRESAR UN USUARIO=="
-                printf "\n"
-                #esta funcion la cambie, hay que ver si anda ahora
-                    read -rp "Ingrese el nombre y apellido del usuario (no ingresar nada para cancelar): " nombre apellido
-                    if [ -z "$nombre" ] && [ -z "$apellido" ]
-                    then
-                        gestion_usuarios
-                        return
-                    elif [ -n "$nombre" ] && [ -n "$apellido" ]
-                    then
-                        ingreso_usuario "$nombre" "$apellido"
-                        return
-                    else
-                        read -n1 -t1 -rsp "ERROR: procure escribir el nombre y el apellido del usuario"
-                        gestion_usuarios
-                        return
-                    fi
-                ;;  
-            3)
-                clear
-                echo "==LISTADO DE USUARIOS=="
-                echo "*este listado solo contiene usuarios estandar"
-                printf "\n"
-
-                getent passwd | awk -F: '$3 >= 1000 && $3 <= 60000 { print $3 ". " $1 }'
-                : ' getent passwd es lo mismo que cat /etc/passwd
-                -F: funciona como un cut -d: 
-                $ 3 es el 3er campo (tiene los uid). verifica que sea  >= 1000 (ahi empiezan los usuarios normales)
-                60000 es aproximadamente el numero donde terminan los usuarios normales 
-                { print $ 1 } imprime el primer campo (el nombre de usuario)
-                '
-                printf "\n"
-                read -n 1 -srp "------Presione cualquier tecla para continuar------"
-            ;;
-            *)
-                read -t2 -n1 -rsp "ERROR: opción incorrecta" 
-                clear
-            ;;
-        esac
-    done
-
-}
-
-#NADA ANDA DE ACA------------------------------------------
 #NO CORREGIDO NI COEMTNADO
 gestion_grupos(){
     clear
@@ -515,95 +608,9 @@ eliminar_grupo(){
     fi
 }
 
-#NO ANDA
-menu_usuarios_grupos(){
-    while true 
-    do
-        clear
-        echo "==GESTION DE USUARIOS Y GRUPOS=="
-        printf "\n\n"
-        #0  NO ANDA
-        echo "Que desea hacer?"
-        printf "\n"
-        echo "0. Volver al menu anterior"
-        echo "1. Crear o eliminar usuarios"
-        echo "2. Crear o eliminar grupos"
-        echo "3. Incorporar o remover usuarios de grupos"
-        #evitamos palabras con enie a toda costa para prevenir errores
-        printf "\n"
-        read -rp "Opcion: " opcionCase1
-        
-        case $opcionCase1 in
-            0)
-                menu_principal
-                break
-            ;;
-            1)
-                #crear/eliminar users
-                gestion_usuarios
-            ;;
-
-            2)
-                #crear/eliminar grupos
-                gestion_grupos
-            ;;
-
-            3)
-            #usuarios&grupos
-                
-
-            ;;
-
-            *)
-                read -t2 -n1 -rsp "Error: opción incorrecta"
-            ;;
-        esac
-
-    done
-}
 
 #HASTA ACA NO ANDA-------------------------------------
 
-#CORREGIDO NO COMENTADO
-menu_principal(){
-    valido="false"
-    while [ "$valido" = false ]
-        do
-            clear
-            echo "==ELIJA UN MODO== "
-            printf "\n"
-            echo "CTRL+C. Salir"
-            echo "1. Gestion de usuarios y grupos"
-            echo "2. Gestion de backups"
-            printf "\n"
-            read -rp "Opcion: " opcion
-            printf "\n--------------------------------\n\n"
-            #el echo no expande el \n, printf si
-
-            case $opcion in
-                1)
-                    menu_usuarios_grupos
-                ;;
-                
-                2)
-                #MODO GESTION DE BACKUPS,  LO HACER ARU
-                    valido="true"
-                    echo "te extraño"
-                ;;
-                
-                *)
-                    read -t2 -n1 -rsp "Error: opción incorrecta" 
-                    : 't (timeout): tiempo de espera; -n (num. of char.): permite escribir sol un caracter. es util porque si el usuario
-                    toca una tecla puede terminar el tiempo de espera antes, y previene que lo que el usuario escriba
-                    se quede guardado para el proximo read (o sea ue limpia la entrada y previene errores); -s (secret/
-                    silent): no muestra lo que escribe el usuario; -r (raw): no interpreta; -p (prompt): muestra el texto
-                    '
-                ;;
-        esac    
-
-     done
-
-}
 
 
 #FIN DEL ESPACIO PARA FUNCIONES 
