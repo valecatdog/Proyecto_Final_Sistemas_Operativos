@@ -265,7 +265,7 @@ add_usuario(){
         read -n1 -t2 -rsp "Usuario $user creado correctamente. Contraseña: $passwd"
         ingreso_usuario "$nombre" "$apellido"
         return
-    elif usuario_existe "$1"; then
+    else
         echo "DEBUG: El usuario SÍ existe, no se crea."
         sleep 2
         read -n1 -t3 -rsp "Error: el usuario $user ($nombre $apellido) ya existe en el sistema"
