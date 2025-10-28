@@ -125,11 +125,13 @@ del_usuario(){
     if usuario_existe "$1"
     then
         sudo userdel -r "$usuario"
-        read -n1 -t1 -rsp "Usuario $usuario ($nombre $apellido) eliminado correctamente del sistema"
-         ingreso_usuario "$nombre" "$apellido"
+        read -n1 -t2 -rsp "Usuario $usuario ($nombre $apellido) eliminado correctamente del sistema"
+        ingreso_usuario "$nombre" "$apellido"
+        return
     else
-         read -n1 -t1 -rsp "Error: el usuario $usuario ($nombre $apellido) no existe en el sistema"
+         read -n1 -t2 -rsp "ERROR: el usuario $usuario ($nombre $apellido) no existe en el sistema"
          ingreso_usuario "$nombre" "$apellido"
+         return
     fi
 }
 
@@ -322,7 +324,7 @@ ingreso_usuario(){
                 return
             else
                 printf "\n"
-                echo "Error: opcion invalida"
+                read -n1 -t1 -srp "Error: opcion invalida"
                 ingreso_usuario "$nombre" "$apellido"
                 return
             fi
