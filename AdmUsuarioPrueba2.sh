@@ -142,6 +142,11 @@ ingreso_usuario(){
     local apellido
     nombre="$1"
     apellido="$2"
+
+    echo "$1"
+    echo "$2"
+
+
     if [[ "$nombre" =~ ^[A-Za-z]+$  && "$apellido" =~ ^[A-Za-z]+$ ]]
     then
         until false 
@@ -175,7 +180,7 @@ ingreso_usuario(){
             fi
         done                          
     else
-        read -n1 -t1 -rsp "ERROR: formato de nombres incorrecto"
+        read -n1 -t6 -rsp "ERROR: formato de nombres incorrecto"
         gestion_usuarios
         return
     fi  
