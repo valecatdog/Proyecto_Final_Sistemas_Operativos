@@ -310,10 +310,9 @@ add_usuario(){
         #chage -d establece a fecha del ultimo cambio de la contrasenia, y 0 hace qeu expire inmediatamente
 
         read -n1 -t2 -rsp "Usuario $user creado correctamente. Contraseña: $passwd"
-        #ingreso_usuario "$nombre" "$apellido"
-        #return
-        #mensaje para informar que el usuario se creo exitosamente
-    else
+        ingreso_usuario "$nombre" "$apellido"
+        return
+s    else
         echo "DEBUG: El usuario SÍ existe, no se crea."
         sleep 2
         read -n1 -t3 -rsp "Error: el usuario $user ($nombre $apellido) ya existe en el sistema"
