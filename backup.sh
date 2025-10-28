@@ -34,15 +34,43 @@ check_user() {
     fi
 }
 
-check_lock() {
+acquire_lock() {
     if [ -f "$lockfile" ]; then
-        echo "ERROR: El script ya se está ejecutando en otro proceso"
-        echo "Lockfile encontrado: $lockfile"
-        exit 1
-    else
-        touch "$lockfile"
-        echo "Lockfile creado: $lockfile"
+        local lock_pid=$(cat "$lockfile" 2>/dev/null)
+        if [ -n "$lock_pid" ] && ps -p "$lock_pid" > /dev/null 2>&1; then
+            echo "ERROR: El script ya se está ejecutando en otro proceso (PID: $lock_pid)"
+            echo "Lockfile encontrado: $lockfile"
+            return 1
+        else
+            # Lockfile obsoleto, eliminarlo
+            rm -f "$lockfile"
+        fi
     fi
+    
+    # Crear nuevo lockfile
+    echo $$ > "$lockfile"
+    return 0
+}
+
+release_lock() {
+    if [ -f "$lockfile" ]; then
+        rm -f "$lockfile"
+    fi
+}
+
+execute_with_lock() {
+    if ! acquire_lock; then
+        return 1
+    fi
+    
+    # Ejecutar la función pasada como parámetro
+    "$@"
+    local result=$?
+    
+    # Liberar lock después de la operación
+    release_lock
+    
+    return $result
 }
 
 #funcion para crear el directorio dir_backup si no existe
@@ -100,9 +128,9 @@ crear_backup(){
     if usuario_existe "$usuario" 
     then
 
-    #**analizar mas en profundidad
+
     #getent (get entry) te da las entradas de datos del sistema
-    #segun deepseek lo deberiamos usar por el tema de backups entre maquinas (el getent), si no se deberia usar grep 
+    #lo deberiamos usar por el tema de backups entre maquinas (el getent), si no se deberia usar grep 
     #
     home_dir=$(getent passwd "$usuario" | cut -d: -f6)
         
@@ -132,6 +160,11 @@ crear_backup(){
 # se guardan separados de los respaldos manuales
 # se guardan la hora de los backups (siempre van a ser la misma pero para mantener registro) y el nombre de lo usuarios que hagan backup
 backup_diario(){
+
+    if ! acquire_lock; then
+        echo "No se pudo adquirir lock, backup automático omitido" >> /var/log/backups.log
+        return 1
+    fi
     fecha=$(date '+%Y%m%d')
 
     # le hacemos un for para cada usuario que tenemos en home 
@@ -151,6 +184,8 @@ backup_diario(){
         echo "$(date): Respaldo automatico: $nombre_u" >> /var/log/backups.log
         fi
     done
+    release_lock
+    return 0
 }
 
 toggle_backup_automatico(){
@@ -269,43 +304,29 @@ restaurar_backup(){
     fi
 }
 
-# Cambiar todas las salidas exit 0 por:
-exit_func() {
-    rm -f "$lockfile"
-    exit 0
-}
 
-crear_dir_backup
-
-
-
-
-while true
-do
 
 check_user
-check_lock
+crear_dir_backup
 
-menu_alpha
+while true; do
+    menu_alpha
+    read opcion
 
-read opcion
-
-   case $opcion in
+    case $opcion in
         1)
-            crear_backup
+            execute_with_lock crear_backup
             ;;
         2)
-            toggle_backup_automatico  
+            # No necesita lock porque solo modifica crontab
+            toggle_backup_automatico
             ;;
-            
         3)
-            restaurar_backup  
+            execute_with_lock restaurar_backup
             ;;
-            
         0)
-         echo "cerrando programa"
-         exit_func
-         ;;
+             echo "cerrando programa"
+            ;;
         *)
             echo "Opción inválida"
             ;;
