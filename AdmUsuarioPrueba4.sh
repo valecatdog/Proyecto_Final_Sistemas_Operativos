@@ -55,16 +55,13 @@ del_grupo(){
     listaGrupos=$(getent group | awk -F: '$3 >= 1000 && $3 < 60000 {print $1}')
     #muestro la lista con el indice
     echo "Que grupos desea eliminar? (ingrese sus numeros separados por espacios):"
-    i=0
     echo "DEBIG. GRUPOS: ${listaGrupos[*]}"
 
     #es como un for each de java, desplegamos grupos
-    for opcion in "${listaGrupos[@]}"
-    do  
-        echo "$i. $opcion"
-        i=$((i+1))
-        echo "DEBUG: i = $i"
+    for ((i=0; i<${#listaGrupos[@]}; i++)); do
+        echo "$((i+1)). ${listaGrupos[$i]}"
     done
+    
     printf "\n"
     read -rp "opcion/es (no ingrese nada para retroceder): " opciones
     
