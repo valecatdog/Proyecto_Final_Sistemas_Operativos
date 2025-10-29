@@ -6,7 +6,6 @@ el menu de gestion de grupos
 NO PROBE NADA!!!
 mañana lo arreglo 10 min y queda pronto para meter a la funcion de vuelta
 '
-set 
 gestion_grupos(){
     while true
     do
