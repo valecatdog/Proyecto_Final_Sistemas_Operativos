@@ -6,17 +6,8 @@ modo sin parametros
 actualmente estoy trabajando en gestion de usuarios, crear usuarios, crear usuarios por consola
 
 HACER:
--que ande la lista de usuarios
--qeu se pueda crear grupos
--que se pueda borrar grupos
--que se vea la lista de grupos
--que se puedan añadir y dacar usuarios de grupos
-
-y ta eso es todo lo qeu queda. despues se le pueden agregar mas cosas para hacerlo mas robusto
-se le podria agregar la opcion de ponerle contraseña a un gruó
-
-
-ayuda no me da la cabeza para mas
+-que no se puedan tocar usuarios ni grupos del sistema
+-que si no hay usuarios para crear/borrar que no te deje entrar a la opcion
 '
 #COMIENZO DEL ESPACIO PARA FUNCIONES
 
@@ -253,9 +244,11 @@ add_usuario(){
         #chage -d establece a fecha del ultimo cambio de la contrasenia, y 0 hace qeu expire inmediatamente
 
         read -n1 -t2 -rsp "Usuario $user creado correctamente. Contraseña: $passwd"
+        printf "\n"
         return
     else
         read -n1 -t3 -rsp "Error: el usuario $user ($nombre $apellido) ya existe en el sistema"
+        printf "\n"
         : 'informa que el usuario ya existe, no se puede crear
         -n1: acepta un caracter. sirve para que la proxima vez qeu se haga un read, lo que se escribe en este no
         "contamine" el otro (limpia el buffer). -t1: tiempo de espera de un segundo, -r: no interpreta lo que
@@ -282,9 +275,11 @@ del_usuario(){
     then
         sudo userdel -r "$user"
         read -n1 -t2 -rsp "Usuario $user ($nombre $apellido) eliminado correctamente del sistema"
+        printf "\n"
         return
     else
          read -n1 -t2 -rsp "ERROR: el usuario $user ($nombre $apellido) no existe en el sistema"
+         printf "\n"
          return
     fi
 }
@@ -318,11 +313,11 @@ ingreso_usuario(){
                 return
             elif(( "$opcion" == 1 )) 2>/dev/null; then
             #mando el error a /dev/null porque pode ingresar cosas no numericas y te tira error, pero funciona bien
-                add_usuario "$usuario_completo"
+                add_usuario "$usuario_completo" > /dev/null
                 ingreso_usuario "$nombre" "$apellido"
                 return
             elif (( "$opcion" == 2 )) 2>/dev/null; then
-                del_usuario "$usuario_completo"
+                del_usuario "$usuario_completo" > /dev/null
                 ingreso_usuario "$nombre" "$apellido"
                 return
             else
