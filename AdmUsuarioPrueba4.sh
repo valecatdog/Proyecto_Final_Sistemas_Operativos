@@ -89,8 +89,12 @@ del_grupo(){
         done
         if [ -n "$opcionesInvalidas" ]
         then
+            set -f
+            # desactivo la expansion de comdines por ahora, proque si  no al mostrar opciones incorrectas los expande
             read -n1 -t1 -rsp "Las opciones invalidas ingresadas fueron: $(echo "$opcionesInvalidas" | sort | uniq 2>/dev/null)"
             opcionesInvalidas=""
+            #activo expansion de comodines
+            set +f
         fi
         
     fi
