@@ -61,7 +61,7 @@ del_grupo(){
         echo "${i}. $opcion"
         i=$((i+1))
     done
-
+    printf "\n"
     read -rp "opcion/es (no ingrese nada para retroceder): " opciones
     
     #Si no se ingreso nada (te devuelve al menu)
@@ -76,7 +76,7 @@ del_grupo(){
         for opcion in $opciones; do
             if (( opcion >= 0 && opcion < ${#listaGrupos[@]})); then
                 sudo groupdel "$opcion"
-                print -n1 -t1 -srp "Se ha eliminado el grupo $opcion con exito"
+                read -n1 -t1 -srp "Se ha eliminado el grupo $opcion con exito"
                 opcionesInvalidas+=" $opcion"
             fi
         done
@@ -111,15 +111,15 @@ add_grupo(){
             #los nombres pueden empezar con letras o guiones bajos, y el resto puede ser letras, nuemros o guiones -_
             if [[ "$nombre" =~ ^[a-zA-Z_][a-zA-Z0-9_-]+$ ]]; then
                 sudo groupadd "$nombre"
-                print -n1 -t1 -srp "El grupo $nombre fue creado con exito"
+                read -n1 -t1 -srp "El grupo $nombre fue creado con exito"
+                break
             else
-                print -n1 -t1 -srp "ERROR: nombre invalido. Use letras, numeros y guiones (sin empezar por los dos ultimos)"
+                read -n1 -t1 -srp "ERROR: nombre invalido. Use letras, numeros y guiones (sin empezar por los dos ultimos)"
             fi
         fi
-
-
     done
 
+    gestion_grupos
 }
 
 gestion_grupos
