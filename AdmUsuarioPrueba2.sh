@@ -523,6 +523,11 @@ gestion_grupos(){
         read -rp "Opcion: " opcionCase12
 
         case "$opcionCase12" in
+        
+        0)
+            menu_usuarios_grupos
+            return
+        ;;
         1)
             add_grupo
         ;;
