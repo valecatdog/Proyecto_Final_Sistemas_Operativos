@@ -4,6 +4,7 @@
 : '
 el menu de gestion de grupos
 NO PROBE NADA!!!
+mañana lo arreglo 10 min y queda pronto para meter a la funcion de vuelta
 '
 
 gestion_grupos(){
@@ -55,11 +56,15 @@ del_grupo(){
     #muestro la lista con el indice
     echo "Que grupos desea eliminar? (ingrese sus numeros separados por espacios):"
     i=0
+    echo "DEBIG. GRUPOS: ${listaGrupos[*]}"
+
     #es como un for each de java, desplegamos grupos
     for opcion in "${listaGrupos[@]}"
     do  
         echo "${i}. $opcion"
         i=$((i+1))
+        echo "DEBUG: i = $i"
+
     done
     printf "\n"
     read -rp "opcion/es (no ingrese nada para retroceder): " opciones
