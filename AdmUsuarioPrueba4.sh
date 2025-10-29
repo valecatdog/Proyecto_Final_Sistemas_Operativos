@@ -61,10 +61,9 @@ del_grupo(){
     #es como un for each de java, desplegamos grupos
     for opcion in "${listaGrupos[@]}"
     do  
-        echo "${i}. $opcion"
+        echo "$i. $opcion"
         i=$((i+1))
         echo "DEBUG: i = $i"
-
     done
     printf "\n"
     read -rp "opcion/es (no ingrese nada para retroceder): " opciones
