@@ -3,6 +3,7 @@
 #TRABAJANDO EN:
 : '
 el menu de gestion de grupos
+NO PROBE NADA!!!
 '
 
 gestion_grupos(){
@@ -22,10 +23,10 @@ gestion_grupos(){
 
         case "$opcionCase12" in
         1)
-
+            addDel_grupo "add"
         ;;
         2)
-            del_grupo
+            addDel_grupo "del"
             return
         ;;
         3)
@@ -45,22 +46,80 @@ gestion_grupos(){
 }
 
 del_grupo(){
+    clear
+    echo "==GESTION DE GRUPOS=="
+    echo "Eliminar un grupo"
+    printf "\n\n"
+    #obtengo todos los grupos de usuarios y los guardo en una lista
     listaGrupos=$(getent group | awk -F: '$3 >= 1000 && $3 < 60000 {print $1}')
+    #muestro la lista con el indice
+    echo "Que grupos desea eliminar? (ingrese sus numeros separados por espacios):"
+    i=0
+    #es como un for each de java, desplegamos grupos
+    for opcion in "${listaGrupos[@]}"
+    do  
+        echo "${i}. $opcion"
+        i=$((i+1))
+    done
 
-    print
-    nombre=$(echo "$1" | cut -d: -f1)
-    apellido=$(echo "$1" | cut -d: -f2)
-    user=$(echo "$1" | cut -d: -f3)
-
-    if usuario_existe "$1"
-    then
-        sudo userdel -r "$user"
-        read -n1 -t2 -rsp "Usuario $user ($nombre $apellido) eliminado correctamente del sistema"
-        ingreso_usuario "$nombre" "$apellido"
+    read -rp "opcion/es (no ingrese nada para retroceder): " opciones
+    
+    #Si no se ingreso nada (te devuelve al menu)
+    if [ -z "$opciones" ]
+    then   
+        gestion_grupos
         return
     else
-         read -n1 -t2 -rsp "ERROR: el usuario $user ($nombre $apellido) no existe en el sistema"
-         ingreso_usuario "$nombre" "$apellido"
-         return
+    #Si sí se ingresaron grupos
+        opciones=$(echo "$opciones" | tr -s ' ')
+        #si hay varios espacion en blanco seguidos los convertimos en uno para evitar errores
+        for opcion in $opciones; do
+            if (( opcion >= 0 && opcion < ${#listaGrupos[@]})); then
+                sudo groupdel "$opcion"
+                print -n1 -t1 -srp "Se ha eliminado el grupo $opcion con exito"
+                opcionesInvalidas+=" $opcion"
+            fi
+        done
+
+        if [ -n "$opcionesInvalidas" ]
+        then
+        #NO SE SI ESTO DE DEV NULL ESTA BIEN ASI
+            read -n1 -t1 -rsp "Las opciones invalidas ingresadas fueron: $(sort "$opcionesInvalidas" | uniq 2>/dev/null)"
+            opcionesInvalidas=""
+        fi
+        
     fi
+
+    gestion_grupos
 }
+
+add_grupo(){
+    while true
+    do
+        clear
+        echo "==GESTION DE GRUPOS=="
+        echo "Crear un grupo"
+        printf "\n\n"
+
+        read -rp "Nombre del grupo (no ingrese nada para rertoceder): " nombre
+
+        if [ -z "$nombre" ]
+        then
+            gestion_grupos
+            return
+        else
+            #los nombres pueden empezar con letras o guiones bajos, y el resto puede ser letras, nuemros o guiones -_
+            if [[ "$nombre" =~ ^[a-zA-Z_][a-zA-Z0-9_-]+$ ]]; then
+                sudo groupadd "$nombre"
+                print -n1 -t1 -srp "El grupo $nombre fue creado con exito"
+            else
+                print -n1 -t1 -srp "ERROR: nombre invalido. Use letras, numeros y guiones (sin empezar por los dos ultimos)"
+            fi
+        fi
+
+
+    done
+
+}
+
+gestion_grupos

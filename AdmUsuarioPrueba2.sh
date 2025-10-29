@@ -8,6 +8,12 @@ actualmente estoy trabajando en gestion de usuarios, crear usuarios, crear usuar
 HACER:
 -que no se puedan tocar usuarios ni grupos del sistema
 -que si no hay usuarios para crear/borrar que no te deje entrar a la opcion
+-los grupos que se borren no pueden ser de usuario
+-lo de las opciones incorrectas ingresadas no anda en ningun lado 
+-confirmar si se quiere realmente borrar o crear el usuairo/grupo
+-longitud de los nombres
+-se podrian hacer mas customizables los rupos (contraseñas, cambiar nombres)
+-FALTA LO DE AÑADIR USUARIOS A GRUPOS
 '
 #COMIENZO DEL ESPACIO PARA FUNCIONES
 
@@ -423,7 +429,7 @@ archivo_procesar(){
 
     fi
 }
-
+#LAS OPCIONES INCORRECTAS NO SE MUESRTAN
 #NO PROBADO NO COMENTADO
 archivo_procesar_addDel(){
     local usuariosTrabajar=()
@@ -487,9 +493,9 @@ archivo_procesar_addDel(){
 
         if [ -n "$opcionesInvalidas" ]
         then
-            read -n1 -t1 -rsp "Las opciones invalidas ingresadas fueron: $(sort "$opcionesInvalidas" | uniq)"
+        #NO SE SI ESTO DE DEV NULL ESTA BIEN ASI
+            read -n1 -t1 -rsp "Las opciones invalidas ingresadas fueron: $(sort "$opcionesInvalidas" | uniq 2>/dev/null)"
             opcionesInvalidas=""
-
         fi
         
     fi
@@ -498,97 +504,6 @@ archivo_procesar_addDel(){
     return
 }
 #-----------------------------------------------------
-
-
-
-#NO CORREGIDO NI COEMTNADO
-gestion_grupos(){
-    clear
-    echo "==GESTION DE GRUPOS=="
-    printf "\n\n"
-    echo "Desea ingresar un grupo o un archivo para procesar?"
-    printf "\n"
-
-    echo "0. Volver a menu anterior" 
-    echo "1. Ingresar un archivo para procesar"
-    echo "2. Ingresar un grupo"
-    #NO ANDA
-    echo "3. Listar grupos"
-    printf "\n"
-    read -rp "Opcion: " opcionCase11
-
-    case $opcionCase11 in
-        0)
-            menu_usuarios_grupos
-        ;;
-        1)
-            clear
-            echo "==PROCESAR UN ARCHIVO=="
-            printf "\n"
-            read -rp "Ingrese la ruta del archivo a procesar (no ingresar nada para cancelar): " archivo
-            #AGREGAR 0 PARA CANCELAR EN LA OTRA FUNCION    
-            #archivo_procesar "$archivo"
-
-            return 0
-        ;;
-        
-        2)
-            clear
-            echo "==INGRESAR UN GRUPO=="
-            printf "\n"
-            validoOpcion112=false
-            while [ "$validoOpcion112" = false ]
-            do
-                read -rp "Ingrese el nombre del grupo (no ingresar nada para cancelar): " grupo
-                crear_grupo "$grupo"
-            done
-
-            return 0
-        ;;
-
-        3)
-            echo "==LISTA DE GRUPOS=="
-            #reminder: grupos del 1000 en adelante
-            return 0
-        ;;
-
-        *)
-            read -t2 -n1 -rsp "Error: opción incorrecta" 
-            clear
-            return 1
-        ;;
-    esac
-}
-
-#NO ANDA
-crear_grupo(){
-    local grupo
-    grupo="$1"
-
-    if getent group "$grupo" >/dev/null; then
-        echo "El grupo '$grupo' ya existe"
-    else
-        groupadd "$grupo"
-        echo "Grupo '$grupo' creado correctamente"
-    fi
-}
-
-#NO ANDA
-eliminar_grupo(){
-    local grupo
-    grupo="$1"
-
-    if getent group "$grupo" >/dev/null; then
-        groupdel "$grupo"
-        echo "Grupo '$grupo' eliminado correctamente"
-    else
-        echo "El grupo '$grupo' no existe"
-    fi
-}
-
-
-#HASTA ACA NO ANDA-------------------------------------
-
 
 
 #FIN DEL ESPACIO PARA FUNCIONES 
