@@ -23,10 +23,10 @@ gestion_grupos(){
 
         case "$opcionCase12" in
         1)
-            addDel_grupo "add"
+            add_grupo
         ;;
         2)
-            addDel_grupo "del"
+            del_grupo 
             return
         ;;
         3)
