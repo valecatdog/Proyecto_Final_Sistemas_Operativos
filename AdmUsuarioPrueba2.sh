@@ -253,7 +253,6 @@ add_usuario(){
         #chage -d establece a fecha del ultimo cambio de la contrasenia, y 0 hace qeu expire inmediatamente
 
         read -n1 -t2 -rsp "Usuario $user creado correctamente. Contraseña: $passwd"
-        ingreso_usuario "$nombre" "$apellido"
         return
     else
         read -n1 -t3 -rsp "Error: el usuario $user ($nombre $apellido) ya existe en el sistema"
@@ -264,7 +263,6 @@ add_usuario(){
         si el usuario escribe algo no especificamos una variable para que se guarde
         '
         echo "$1" >> cre_usuarios.log 
-        ingreso_usuario "$nombre" "$apellido"
         return
     fi
 }
@@ -284,11 +282,9 @@ del_usuario(){
     then
         sudo userdel -r "$user"
         read -n1 -t2 -rsp "Usuario $user ($nombre $apellido) eliminado correctamente del sistema"
-        ingreso_usuario "$nombre" "$apellido"
         return
     else
          read -n1 -t2 -rsp "ERROR: el usuario $user ($nombre $apellido) no existe en el sistema"
-         ingreso_usuario "$nombre" "$apellido"
          return
     fi
 }
@@ -323,9 +319,11 @@ ingreso_usuario(){
             elif(( "$opcion" == 1 )) 2>/dev/null; then
             #mando el error a /dev/null porque pode ingresar cosas no numericas y te tira error, pero funciona bien
                 add_usuario "$usuario_completo"
+                ingreso_usuario "$nombre" "$apellido"
                 return
             elif (( "$opcion" == 2 )) 2>/dev/null; then
                 del_usuario "$usuario_completo"
+                ingreso_usuario "$nombre" "$apellido"
                 return
             else
                 printf "\n"
@@ -341,8 +339,6 @@ ingreso_usuario(){
     fi  
 }
 #-------------------------------------------------------
-
-
 
 
 #PARA ARCHIVOS-------------------------------------------
@@ -415,10 +411,12 @@ archivo_procesar(){
                 ;;
                 1)
                     archivo_procesar_addDel "add"
+                    archivo_procesar "$1"
                     return
                 ;;
                 2)
                     archivo_procesar_addDel "del"
+                    archivo_procesar "$1"
                     return
                 ;;
                 *)
