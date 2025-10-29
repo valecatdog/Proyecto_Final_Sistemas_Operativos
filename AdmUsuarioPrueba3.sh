@@ -6,6 +6,6 @@ probar una cosita
 '
 
 mapfile -t listaGrupos < <(getent group | awk -F: '$3 >= 1000 && $3 < 60000 {print $1}')
-echo "${listaGrupos[@]}"
+echo "${listaGrupos[4]}"
 mapfile listaGrupos < <(getent group | awk -F: '$3 >= 1000 && $3 < 60000 {print $1}')
-echo "${listaGrupos[@]}"
+echo "${listaGrupos[4]}"
