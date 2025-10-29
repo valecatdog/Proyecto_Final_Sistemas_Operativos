@@ -59,11 +59,11 @@ del_grupo(){
     '
     #muestro la lista con el indice
     echo "Que grupos desea eliminar? (ingrese sus numeros separados por espacios):"
-    echo "DEBIG. GRUPOS: ${listaGrupos[*]}"
+
 
     #es como un for each de java, desplegamos grupos
     for ((i=0; i<${#listaGrupos[@]}; i++)); do
-        echo "$((i+1)). ${listaGrupos[$i]}"
+        echo "${i}. ${listaGrupos[$i]}"
     done
     
     printf "\n"
@@ -82,13 +82,12 @@ del_grupo(){
             if (( opcion >= 0 && opcion < ${#listaGrupos[@]})); then
                 sudo groupdel "$opcion"
                 read -n1 -t1 -srp "Se ha eliminado el grupo $opcion con exito"
+            else
                 opcionesInvalidas+=" $opcion"
             fi
         done
-
         if [ -n "$opcionesInvalidas" ]
         then
-        #NO SE SI ESTO DE DEV NULL ESTA BIEN ASI
             read -n1 -t1 -rsp "Las opciones invalidas ingresadas fueron: $(sort "$opcionesInvalidas" | uniq 2>/dev/null)"
             opcionesInvalidas=""
         fi
