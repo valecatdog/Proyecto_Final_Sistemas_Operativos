@@ -89,7 +89,7 @@ del_grupo(){
         done
         if [ -n "$opcionesInvalidas" ]
         then
-            read -n1 -t1 -rsp "Las opciones invalidas ingresadas fueron: $(sort "$opcionesInvalidas" | uniq 2>/dev/null)"
+            read -n1 -t1 -rsp "Las opciones invalidas ingresadas fueron: $(echo "$opcionesInvalidas" | sort | uniq 2>/dev/null)"
             opcionesInvalidas=""
         fi
         
