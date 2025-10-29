@@ -80,8 +80,8 @@ del_grupo(){
         #si hay varios espacion en blanco seguidos los convertimos en uno para evitar errores
         for opcion in $opciones; do
             if  (( "$opcion" >= 0 && "$opcion" < ${#listaGrupos[@]})) > /dev/null; then 
-                sudo groupdel "$opcion"
-                read -n1 -t1 -srp "Se ha eliminado el grupo $opcion con exito"
+                sudo groupdel "${listaGrupos["$opcion"]}"
+                read -n1 -t2 -srp "Se ha eliminado el grupo $opcion con exito"
             else
                 opcionesInvalidas+=" $opcion"
             fi
