@@ -6,7 +6,7 @@ el menu de gestion de grupos
 NO PROBE NADA!!!
 mañana lo arreglo 10 min y queda pronto para meter a la funcion de vuelta
 '
-
+set 
 gestion_grupos(){
     while true
     do
@@ -67,6 +67,7 @@ del_grupo(){
     done
     
     printf "\n"
+    set -f
     read -rp "opcion/es (no ingrese nada para retroceder): " opciones
     
     #Si no se ingreso nada (te devuelve al menu)
@@ -89,16 +90,14 @@ del_grupo(){
         done
         if [ -n "$opcionesInvalidas" ]
         then
-            set -f
             # desactivo la expansion de comdines por ahora, proque si  no al mostrar opciones incorrectas los expande
             read -n1 -t1 -rsp "Las opciones invalidas ingresadas fueron: $(echo "$opcionesInvalidas" | sort | uniq 2>/dev/null)"
             opcionesInvalidas=""
             #activo expansion de comodines
-            set +f
         fi
         
     fi
-
+    set +f
     gestion_grupos
 }
 
