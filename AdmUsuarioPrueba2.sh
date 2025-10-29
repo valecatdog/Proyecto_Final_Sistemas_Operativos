@@ -530,6 +530,7 @@ gestion_grupos(){
         ;;
         1)
             add_grupo
+            return
         ;;
         2)
             del_grupo 
