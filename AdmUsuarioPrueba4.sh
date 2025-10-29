@@ -79,7 +79,7 @@ del_grupo(){
         opciones=$(echo "$opciones" | tr -s ' ')
         #si hay varios espacion en blanco seguidos los convertimos en uno para evitar errores
         for opcion in $opciones; do
-            if (( opcion >= 0 && opcion < ${#listaGrupos[@]})); then
+            if  (( "$opcion" >= 0 && "$opcion" < ${#listaGrupos[@]})) > /dev/null; then 
                 sudo groupdel "$opcion"
                 read -n1 -t1 -srp "Se ha eliminado el grupo $opcion con exito"
             else

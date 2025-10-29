@@ -5,7 +5,8 @@
 probar una cosita
 '
 
-mapfile -t listaGrupos < <(getent group | awk -F: '$3 >= 1000 && $3 < 60000 {print $1}')
-echo "${listaGrupos[4]}"
-mapfile listaGrupos < <(getent group | awk -F: '$3 >= 1000 && $3 < 60000 {print $1}')
-echo "${listaGrupos[4]}"
+if sudo groupdel esteseborra; then
+    echo "se borro"
+else
+    echo "no se borro"
+fi
