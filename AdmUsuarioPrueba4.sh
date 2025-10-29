@@ -52,7 +52,11 @@ del_grupo(){
     echo "Eliminar un grupo"
     printf "\n\n"
     #obtengo todos los grupos de usuarios y los guardo en una lista
-    listaGrupos=$(getent group | awk -F: '$3 >= 1000 && $3 < 60000 {print $1}')
+    mapfile -t listaGrupos < <(getent group | awk -F: '$3 >= 1000 && $3 < 60000 {print $1}')
+    : 'tambien conocido como readarray, s un comando que lee lineas de texto y las guarda en un array. con awk
+    lo qeu hacemos es filtrar la lista de gruops (getent group), haciendo qeu solo muestre el nombre de los grupos
+    de usuario. -t le agrega saltos de linea al final a cada elemento
+    '
     #muestro la lista con el indice
     echo "Que grupos desea eliminar? (ingrese sus numeros separados por espacios):"
     echo "DEBIG. GRUPOS: ${listaGrupos[*]}"
