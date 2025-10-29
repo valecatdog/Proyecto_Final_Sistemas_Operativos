@@ -40,7 +40,7 @@ gestion_grupos(){
             read -n 1 -srp "------Presione cualquier tecla para continuar------"
         ;;
         *)
-            print -n1 -t1 -srp "ERROR: opcion incorrecta"
+            read -n1 -t1 -srp "ERROR: opcion incorrecta"
         ;;
         esac
     done
