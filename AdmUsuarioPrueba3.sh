@@ -5,7 +5,7 @@
 probar una cosita
 '
 
-if sudo groupdel esteseborra; then
+if sudo groupdel frf; then
     echo "se borro"
 else
     echo "no se borro"
