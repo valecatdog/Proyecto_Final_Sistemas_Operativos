@@ -52,12 +52,12 @@ admin_usergroup_manual_user(){
         
         if [ -z "$usuario" ]
         then
-            gestion_usuarios
+            gestion_usuarios_grupos
             return
         elif [[ $usuario =~ ^[A-Za-z]+$ ]]
         then
         #hay 2 ifs en vez de uno para poder indicarle especificamente al usuario que error hay
-            if usuario_existe "$usuario"; then
+            if usuario_existe_user "$usuario"; then
                 admin_usergroup_manual_grupo
                 return
             else
