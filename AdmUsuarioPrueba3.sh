@@ -120,9 +120,9 @@ aniadir_quitar_usergrupo(){
         
             1)
                 if ! sudo gpasswd -a "$1" "$2" 2>/dev/null; then
-                    read -n1 -t2 -srp "Usuario agregado correctamente" 
-                else
                     read -n1 -t2 -srp "ERROR: no se pudo agregar el usuario al grupo" 
+                else
+                    read -n1 -t2 -srp "Usuario agregado correctamente" 
                 fi
                 gestion_usuarios_grupos
                 return
@@ -144,13 +144,25 @@ aniadir_quitar_usergrupo(){
         esac
     done
 }
-: '
+
 admin_usergroup_archivo(){
+    while true
+    do
+        clear
+        echo "==AGREAGAR USUARIOS A GRUPOS CON ARCHIVO=="
+        printf "\n\n"
+        read -rp "Ingrese la ruta del archivo (enter para regresar): " archivo
+        if ! verificar_archivo "$archivo"; then
+            gestion_usuarios_grupos
+        else
+
+        fi
+    done
 }
 
 archivo_grupo_verificar(){
 }
-'
+
 
 usuario_existe_user(){
     local user
