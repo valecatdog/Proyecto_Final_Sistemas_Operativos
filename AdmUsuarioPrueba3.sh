@@ -144,7 +144,7 @@ aniadir_quitar_usergrupo(){
         esac
     done
 }
-
+: '
 admin_usergroup_archivo(){
     while true
     do
@@ -163,7 +163,7 @@ admin_usergroup_archivo(){
 archivo_grupo_verificar(){
 }
 
-
+'
 usuario_existe_user(){
     local user
     user="$1"
