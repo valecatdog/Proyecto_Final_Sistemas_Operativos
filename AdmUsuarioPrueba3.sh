@@ -171,3 +171,5 @@ grupo_existe(){
         return 1
     fi   
 }
+
+gestion_usuarios_grupos
