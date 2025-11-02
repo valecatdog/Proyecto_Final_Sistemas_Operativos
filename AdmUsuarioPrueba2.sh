@@ -85,17 +85,19 @@ menu_usuarios_grupos(){
             1)
                 #crear/eliminar users
                 gestion_usuarios
+                return
             ;;
 
             2)
                 #crear/eliminar grupos
                 gestion_grupos
+                return
             ;;
 
             3)
             #usuarios&grupos
-                
-
+                gestion_usuarios_grupos
+                return
             ;;
 
             *)
@@ -209,6 +211,7 @@ generar_usuario() {
 #CORREGIDO Y COMENTADO
 #recibe usuario completo
 usuario_existe() {
+    +
     local user
     user="$(echo "$1" | cut -d: -f3)"
     if getent passwd "$user" >/dev/null; then
@@ -623,7 +626,7 @@ add_grupo(){
             return
         else
             #los nombres pueden empezar con letras o guiones bajos, y el resto puede ser letras, nuemros o guiones -_
-            if [[ "$nombre" =~ ^[a-zA-Z_][a-zA-Z0-9_-]+$ ]]; then
+            if [[ "$nombre" =~ ^[a-zA-Z_][a-zA-Z0-9_-]+$ ]] && ! grupo_existe "$nombre"; then
                 sudo groupadd "$nombre"
                 read -n1 -t1 -srp "El grupo $nombre fue creado con exito"
                 break
