@@ -28,7 +28,7 @@ gestion_usuarios_grupos(){
             return
         ;;
         1)
-            admin_usergroup_manual
+            admin_usergroup_manual_user
             return
         ;;
         2)
