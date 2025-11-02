@@ -1,6 +1,5 @@
 #! /bin/bash
 
-
 #en esta variable guardamos la direccion de donde se van a guardar los backups
 dir_backup="/var/users_backups"
 # Delta es el valor actual de este scrit, lo conseguimos con realpath
@@ -22,10 +21,9 @@ cleanup() {
         echo "Directorio temporal removido"
     fi
 }
-
+#****** trap se encarga de ejecutar cleanup cuando el script termina (EXIT) o recibe señales (INT, TERM)
 trap cleanup EXIT INT TERM
-
-
+#**** funcion para verificar que el script se ejecute como root
 check_user() {
     if [ "$(whoami)" != "root" ]; then
         echo "ERROR: Este script debe ejecutarse con sudo o como root"
@@ -33,7 +31,7 @@ check_user() {
         exit 1
     fi
 }
-
+# funcion para adquirir el lock y evitar ejecuciones simultaneas
 acquire_lock() {
     if [ -f "$lockfile" ]; then
         local lock_pid=$(cat "$lockfile" 2>/dev/null)
@@ -51,13 +49,13 @@ acquire_lock() {
     echo $$ > "$lockfile"
     return 0
 }
-
+#**** funcion para liberar el lock
 release_lock() {
     if [ -f "$lockfile" ]; then
         rm -f "$lockfile"
     fi
 }
-
+#***** funcion que ejecuta cualquier comando con lock para evitar races
 execute_with_lock() {
     if ! acquire_lock; then
         return 1
@@ -84,6 +82,7 @@ crear_dir_backup(){
     echo "Directorio de backups creado: $dir_backup"
     fi
 
+ #***** si no existe el archivo de log, lo creamo
     if [ ! -f "/var/log/backups.log" ]; then
         touch "/var/log/backups.log"
         chmod 644 "/var/log/backups.log"
@@ -121,39 +120,111 @@ usuario_existe() {
     id "$usuario" &>/dev/null
 }
 
+# Función para verificar si un grupo existe
+# usa getent group que busca en la base de datos de grupos del sistema
+grupo_existe() {
+    local grupo="$1"
+    getent group "$grupo" &>/dev/null
+}
+
+# Función para obtener los usuarios de un grupo
+obtener_usuarios_de_grupo() {
+    local grupo="$1"
+    # getent group grupo | cut -d: -f4 te da la lista de usuarios separados por comas
+    # tr ',' '\n' convierte las comas en saltos de linea para tener un usuario por linea
+    getent group "$grupo" | cut -d: -f4 | tr ',' '\n'
+}
+
 crear_backup(){
-    echo "ingrese nombre de usuario del usuario que quiera hacer backup."
-    read usuario
+    echo "¿Qué tipo de backup desea crear?"
+    echo "1. Backup de usuario individual"
+    echo "2. Backup de grupo"
+    read -p "Seleccione opción (1/2): " tipo_backup
 
-    if usuario_existe "$usuario" 
-    then
+    case $tipo_backup in
+        1)
+            echo "Ingrese nombre de usuario del usuario que quiera hacer backup."
+            read usuario
 
-
-    #getent (get entry) te da las entradas de datos del sistema
-    #lo deberiamos usar por el tema de backups entre maquinas (el getent), si no se deberia usar grep 
-    #
-    home_dir=$(getent passwd "$usuario" | cut -d: -f6)
-        
-        #Creamos el nombre del archivo de backup
-        #Guardamos una personalizacion del comando date en una variable fecha 
-        #Lo guardamos sin espacios 
-        fecha=$(date '+%Y%m%d_%H%M%S')
-        archivo_backup="/var/users_backups/backup_${usuario}_${fecha}.tar.bz2"
-        
-        # Creando el backup
-        # tar empaqueta lo que esta en la var archivo_backup, crea un nuevo arch con -c, con j lo comprimimos con bzip2, y -f le decimos el nombre del arch 
-        echo "Creando backup de $home_dir"
-        if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
-            echo "Backup creado: $archivo_backup"
-            echo "$(date): Backup manual de $usuario - $archivo_backup" >> /var/log/backups.log
-        else
-            echo "Error al crear el backup"
+            if usuario_existe "$usuario" 
+            then
+                #getent (get entry) te da las entradas de datos del sistema
+                #lo deberiamos usar por el tema de backups entre maquinas (el getent), si no se deberia usar grep 
+                #
+                home_dir=$(getent passwd "$usuario" | cut -d: -f6)
+                
+                #Creamos el nombre del archivo de backup
+                #Guardamos una personalizacion del comando date en una variable fecha 
+                #Lo guardamos sin espacios 
+                fecha=$(date '+%Y%m%d_%H%M%S')
+                archivo_backup="/var/users_backups/backup_${usuario}_${fecha}.tar.bz2"
+                
+                # Creando el backup
+                # tar empaqueta lo que esta en la var archivo_backup, crea un nuevo arch con -c, con j lo comprimimos con bzip2, y -f le decimos el nombre del arch 
+                echo "Creando backup de $home_dir"
+                if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
+                    echo "Backup creado: $archivo_backup"
+                    echo "$(date): Backup manual de $usuario - $archivo_backup" >> /var/log/backups.log
+                else
+                    echo "Error al crear el backup"
+                    return 1
+                fi
+            else 
+                echo "El usuario $usuario no existe."
+                return 1
+            fi
+            ;;
+        2)
+            echo "Ingrese nombre del grupo:"
+            read grupo
+            if grupo_existe "$grupo"; then
+                # misma logica de fecha para el nombre del archivo
+                fecha=$(date '+%Y%m%d_%H%M%S')
+                archivo_backup="${dir_backup}/backup_grupo_${grupo}_${fecha}.tar.bz2"
+                
+                # Directorio temporal para agrupar los backups
+                temp_backup_dir=$(mktemp -d)
+                
+                echo "Creando backup del grupo: $grupo"
+                echo "Usuarios en el grupo:"
+                
+                # Obtener usuarios del grupo y crear backup de cada uno
+                # el while read procesa cada usuario del grupo
+                obtener_usuarios_de_grupo "$grupo" | while read usuario; do
+                    if usuario_existe "$usuario"; then
+                        home_dir=$(getent passwd "$usuario" | cut -d: -f6)
+                        if [ -d "$home_dir" ]; then
+                            echo "  - Agregando usuario: $usuario"
+                            # Copiar estructura de directorios manteniendo permisos
+                            # -a preserva atributos, -r recursivo
+                            sudo cp -ra "$home_dir" "$temp_backup_dir/" 2>/dev/null
+                        fi
+                    fi
+                done
+                
+                # Crear archivo comprimido con todos los usuarios del grupo
+                # -C cambia al directorio temporal antes de comprimir
+                if tar -cjf "$archivo_backup" -C "$temp_backup_dir" . 2>/dev/null; then
+                    echo "Backup de grupo creado: $archivo_backup"
+                    echo "$(date): Backup manual de grupo $grupo - $archivo_backup" >> /var/log/backups.log
+                else
+                    echo "Error al crear el backup del grupo"
+                    return 1
+                fi
+                
+                # Limpiar directorio temporal
+                rm -rf "$temp_backup_dir"
+                
+            else
+                echo "El grupo $grupo no existe."
+                return 1
+            fi
+            ;;
+        *)
+            echo "Opción inválida"
             return 1
-        fi
-    else 
-        echo "El usuario $usuario no existe."
-        return 1
-    fi
+            ;;
+    esac
 }
 
 # el script que se encarga de hacer respaldos automaticamente y luego guardarlo en un log, todo silenciosamente
@@ -161,6 +232,8 @@ crear_backup(){
 # se guardan la hora de los backups (siempre van a ser la misma pero para mantener registro) y el nombre de lo usuarios que hagan backup
 backup_diario(){
 
+
+    #***** adquiere lock para evitar ejecuciones simultaneas de backups automaticos
     if ! acquire_lock; then
         echo "No se pudo adquirir lock, backup automático omitido" >> /var/log/backups.log
         return 1
@@ -188,9 +261,11 @@ backup_diario(){
     return 0
 }
 
+# funcion para activar/desactivar el backup automatico en crontab
 toggle_backup_automatico(){
     if backup_automatico_activo; then
         # DESACTIVAR - eliminar de crontab
+        #**** grep -v muestra todo EXCEPTO la linea que contiene nuestro script
         (sudo crontab -l 2>/dev/null | grep -v "$Delta automatico") | sudo crontab -
         echo "Backup automático DESACTIVADO"
     else
@@ -202,7 +277,7 @@ toggle_backup_automatico(){
     fi
 }
 
-
+# funcion para restaurar backups existentes DUH
 restaurar_backup(){
     echo "Backups disponibles:"
     # -1 te lo da en lista, con un archivo por linea 
@@ -224,7 +299,6 @@ restaurar_backup(){
     # sed nos muestra todas las lineas con -n no muestra nada, solo el numero que eligio el usuario (el directorio entero )
     archivo_backup=$(ls -1 "$dir_backup"/*.tar.bz2 | sed -n "${numero}p")
 
-
     # si archivo backup esta vacio o es invalido entonces se termina la ejecucion
     if [ -z "$archivo_backup" ]
     then
@@ -234,78 +308,93 @@ restaurar_backup(){
     
     # usamos basename solo para agarrar el nombre del backup que queremos EJ: backup_user.tar.bz2 envez de la direccion entera
     nombre_archivo=$(basename "$archivo_backup")
-    usuario=$(echo "$nombre_archivo" | cut -d'_' -f2)
+    
+    # Determinar si es backup de usuario individual o de grupo
+    if [[ "$nombre_archivo" == *"grupo_"* ]]; then
+        echo "Este es un backup de grupo."
+        echo "¿Desea extraer el contenido en un directorio temporal para revisarlo? (s/n)"
+        read respuesta
+        if [ "$respuesta" = "s" ]; then
+            #****** crea directorio temporal para extraer el contenido del backup de grupo
+            temp_extract_dir=$(mktemp -d)
+            tar -xjf "$archivo_backup" -C "$temp_extract_dir"
+            echo "Contenido extraído en: $temp_extract_dir"
+            echo "Puede revisar los archivos y copiar manualmente lo que necesite."
+            echo "No olvide eliminar el directorio temporal después: rm -rf $temp_extract_dir"
+        fi
+    else
+    # para backups de usuario individual 
+        usuario=$(echo "$nombre_archivo" | cut -d'_' -f2)
+        echo "usuario del backup: $usuario"
 
-    echo "usuario del backup: $usuario"
-
-
-    # usando la funcion de u_e determina que si dicho usuario no existe se termina la ejecucion 
-    if ! usuario_existe "$usuario"
-    then
-    echo "ERROR: UNF; el usuario $usuario no existe en el sistema"
-    return 1
-    fi
-
-    #home destino es el directorio de usuario de un usuario, lo agarramos haciendole un cut a la linea passwd del usuario en el campo 6 que es donde esta el dir de usuario
-    home_destino=$(getent passwd "$usuario" | cut -d':' -f6)
-
-    echo 
-    echo "¿Restaurar backup de $usuario en $home_destino?"
-    echo "¡ADVERTENCIA: se van a sobreescribir los archivos existentes!"
-    echo -n "desea continuar (s/n):"
-    read confirmacion 
-    sleep 1
-
-    if [ "$confirmacion" != "s" ] 
-    then
-    echo "Restauracion cancelada"
-    return 0
-    fi
-
-    #crea un directorio temporal en /tmp
-    temp_dir=$(mktemp -d)
-
-    echo "Restaurando backup..."
-
-    # extraemos el backup en el directorio temporal
-    if sudo tar -xjf "$archivo_backup" -C "$temp_dir" 2>/dev/null
+        # usando la funcion de usr_exst determina que si dicho usuario no existe se termina la ejecucion 
+        if ! usuario_existe "$usuario"
         then
-        #Buscamos donde estan los archivos de usuario
-        #aca buscamos si esta con /home/y el usuario
-        if [ -d "$temp_dir/home/$usuario" ]
-        then
-        dir_origen="$temp_dir/home/$usuario" 
-        #aca buscamos si esta solo con el usuario
-        elif [ -d "$temp_dir/$usuario" ]
-        then
-        dir_origen="$temp_dir/$usuario"
-        #y aca si esta en archivos sueltos
-        else
-        dir_origen="$temp_dir/$usuario"
+        echo "ERROR: UNF; el usuario $usuario no existe en el sistema"
+        return 1
         fi
 
-        # aca copiamos los archivos al origen real
-        # primero copiamos las carpetas y archivos visivles y luego hacemos lo mismo con las invisibles
-        echo "copiando archivos a $home_destino..."
-        #**investigar en mayor Profundidad 
-        rsync -av "$dir_origen/" "$home_destino"/ 2>/dev/null
+        #home destino es el directorio de usuario de un usuario, lo agarramos haciendole un cut a la linea passwd del usuario en el campo 6 que es donde esta el dir de usuario
+        home_destino=$(getent passwd "$usuario" | cut -d':' -f6)
 
-        # reparamos los permisos con un change owner recursivo en todo el directorio
-        sudo chown -R "$usuario:$usuario" "$home_destino"
+        echo 
+        echo "¿Restaurar backup de $usuario en $home_destino?"
+        echo "¡ADVERTENCIA: se van a sobreescribir los archivos existentes!"
+        echo -n "desea continuar (s/n):"
+        read confirmacion 
+        sleep 1
 
-        echo "Restauración completada"
+        if [ "$confirmacion" != "s" ] 
+        then
+        echo "Restauracion cancelada"
+        return 0
+        fi
 
-        # Limpiamos temp_dir y borramos todo lo que tiene dentro
-        rm -rf "$temp_dir"
+        #crea un directorio temporal en /tmp
+        temp_dir=$(mktemp -d)
 
-         else
-        echo "ERROR: No se pudo extraer el backup"
-        rm -rf "$temp_dir"
+        echo "Restaurando backup..."
+
+        # extraemos el backup en el directorio temporal
+        if sudo tar -xjf "$archivo_backup" -C "$temp_dir" 2>/dev/null
+            then
+            #Buscamos donde estan los archivos de usuario
+            #aca buscamos si esta con /home/y el usuario
+            if [ -d "$temp_dir/home/$usuario" ]
+            then
+            dir_origen="$temp_dir/home/$usuario" 
+            #aca buscamos si esta solo con el usuario
+            elif [ -d "$temp_dir/$usuario" ]
+            then
+            dir_origen="$temp_dir/$usuario"
+            #y aca si esta en archivos sueltos
+            else
+            dir_origen="$temp_dir/$usuario"
+            fi
+
+            # aca copiamos los archivos al origen real
+            # primero copiamos las carpetas y archivos visivles y luego hacemos lo mismo con las invisibles
+            echo "copiando archivos a $home_destino..."
+            #*************investigar en mayor Profundidad 
+            #************************** rsync sincroniza directorios de manera eficiente
+            rsync -av "$dir_origen/" "$home_destino"/ 2>/dev/null
+
+            # reparamos los permisos con un change owner recursivo en todo el directorio
+            sudo chown -R "$usuario:$usuario" "$home_destino"
+
+            echo "Restauración completada"
+
+            # Limpiamos temp_dir y borramos todo lo que tiene dentro
+            rm -rf "$temp_dir"
+
+             else
+            echo "ERROR: No se pudo extraer el backup"
+            rm -rf "$temp_dir"
+        fi
     fi
 }
 
-
-
+# punto de entrada del script - verifica usuario y crea directorios necesarios blablabla
 check_user
 crear_dir_backup
 
@@ -315,6 +404,7 @@ while true; do
 
     case $opcion in
         1)
+        # crear backup con lock para evitar ejecuciones simultaneas again
             execute_with_lock crear_backup
             ;;
         2)
