@@ -135,10 +135,53 @@ obtener_usuarios_de_grupo() {
     getent group "$grupo" | cut -d: -f4 | tr ',' '\n'
 }
 
+crear_backup_grupo(){
+    echo "Ingrese nombre del grupo:"
+    read grupo
+    if grupo_existe "$grupo"; then
+        fecha=$(date '+%Y%m%d_%H%M%S')
+        
+        echo "Creando backup del grupo: $grupo"
+        echo "Usuarios en el grupo:"
+        
+        # Contador para usuarios procesados
+        usuarios_procesados=0
+        
+        # Obtener usuarios del grupo y crear backup INDIVIDUAL para cada uno
+        obtener_usuarios_de_grupo "$grupo" | while read usuario; do
+            if usuario_existe "$usuario"; then
+                home_dir=$(getent passwd "$usuario" | cut -d: -f6)
+                if [ -d "$home_dir" ]; then
+                    echo "  - Creando backup de: $usuario"
+                    archivo_backup="${dir_backup}/backup_grupo_${usuario}_${fecha}.tar.bz2"
+                    
+                    # Crear backup individual del usuario
+                    if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null
+                    then
+                        echo "    Backup creado: $(basename "$archivo_backup")"
+                        echo "$(date): Backup manual de grupo $grupo - usuario $usuario - $archivo_backup" >> /var/log/backups.log
+                        ((usuarios_procesados++))
+                    else
+                        echo "    Error al crear backup de $usuario"
+                    fi
+                fi
+            else
+                echo "  - Usuario $usuario no existe, omitiendo"
+            fi
+        done
+        
+        echo "Backup de grupo completado: $usuarios_procesados usuarios procesados"
+        
+    else
+        echo "El grupo $grupo no existe."
+        return 1
+    fi
+}
+
 crear_backup(){
     echo "¿Qué tipo de backup desea crear?"
     echo "1. Backup de usuario individual"
-    echo "2. Backup de grupo"
+    echo "2. Backup de grupo (backups individuales por usuario)"
     read -p "Seleccione opción (1/2): " tipo_backup
 
     case $tipo_backup in
@@ -175,50 +218,7 @@ crear_backup(){
             fi
             ;;
         2)
-            echo "Ingrese nombre del grupo:"
-            read grupo
-            if grupo_existe "$grupo"; then
-                # misma logica de fecha para el nombre del archivo
-                fecha=$(date '+%Y%m%d_%H%M%S')
-                archivo_backup="${dir_backup}/backup_grupo_${grupo}_${fecha}.tar.bz2"
-                
-                # Directorio temporal para agrupar los backups
-                temp_backup_dir=$(mktemp -d)
-                
-                echo "Creando backup del grupo: $grupo"
-                echo "Usuarios en el grupo:"
-                
-                # Obtener usuarios del grupo y crear backup de cada uno
-                # el while read procesa cada usuario del grupo
-                obtener_usuarios_de_grupo "$grupo" | while read usuario; do
-                    if usuario_existe "$usuario"; then
-                        home_dir=$(getent passwd "$usuario" | cut -d: -f6)
-                        if [ -d "$home_dir" ]; then
-                            echo "  - Agregando usuario: $usuario"
-                            # Copiar estructura de directorios manteniendo permisos
-                            # -a preserva atributos, -r recursivo
-                            sudo cp -ra "$home_dir" "$temp_backup_dir/" 2>/dev/null
-                        fi
-                    fi
-                done
-                
-                # Crear archivo comprimido con todos los usuarios del grupo
-                # -C cambia al directorio temporal antes de comprimir
-                if tar -cjf "$archivo_backup" -C "$temp_backup_dir" . 2>/dev/null; then
-                    echo "Backup de grupo creado: $archivo_backup"
-                    echo "$(date): Backup manual de grupo $grupo - $archivo_backup" >> /var/log/backups.log
-                else
-                    echo "Error al crear el backup del grupo"
-                    return 1
-                fi
-                
-                # Limpiar directorio temporal
-                rm -rf "$temp_backup_dir"
-                
-            else
-                echo "El grupo $grupo no existe."
-                return 1
-            fi
+            crear_backup_grupo
             ;;
         *)
             echo "Opción inválida"
