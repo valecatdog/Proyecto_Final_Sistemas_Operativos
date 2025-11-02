@@ -119,10 +119,10 @@ aniadir_quitar_usergrupo(){
             ;;
         
             1)
-                if ! sudo gpasswd -a "$1" "$2" 2>/dev/null; then
-                    read -n1 -t2 -srp "ERROR: no se pudo agregar el usuario al grupo" 
-                else
+                if sudo gpasswd -a "$1" "$2" 2>/dev/null; then
                     read -n1 -t2 -srp "Usuario agregado correctamente" 
+                else
+                    read -n1 -t2 -srp "ERROR: no se pudo agregar el usuario al grupo" 
                 fi
                 gestion_usuarios_grupos
                 return
@@ -132,7 +132,7 @@ aniadir_quitar_usergrupo(){
                 if sudo gpasswd -d "$1" "$2" 2>/dev/null; then
                     read -n1 -t2 -srp "Usuario eliminado correctamente" 
                 else
-                    read -n1 -t2 -srp "ERROR: no se pudo agregar el usuario al grupo" 
+                    read -n1 -t2 -srp "ERROR: no se pudo eliminar el usuario del grupo" 
                 fi 
                 gestion_usuarios_grupos
                 return
