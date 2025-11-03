@@ -178,20 +178,42 @@ programar_transferencia_remota() {
         return 1
     fi
     
-    local tiempo_at="now + $delay_minutos minutes"
     local nombre_archivo=$(basename "$archivo_backup")
     
-    echo "Programando transferencia remota para $nombre_archivo a $tiempo_at..." >> /var/log/backups.log
+    # Crear script temporal con todas las variables RESUELTAS
+    local temp_script=$(mktemp /tmp/rsync_job_XXXXXX.sh)
     
-    # Usar el método simple del script de referencia
-    if at "$tiempo_at" << EOF 2>/dev/null
-/usr/bin/rsync -avz -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10" \
-"$archivo_backup" \
-"$REMOTE_BACKUP_USER@$REMOTE_BACKUP_HOST:$REMOTE_BACKUP_DIR/" >> /var/log/backups.log 2>&1
+    cat > "$temp_script" << SCRIPT_EOF
+#!/bin/bash
+# Script temporal para transferencia rsync
+# VARIABLES YA EXPANDIDAS - nada depende del entorno
 
-echo "$(date): [AT-TRANSFER] Transferencia completada: $nombre_archivo" >> /var/log/backups.log
-EOF
-    then
+LOG_FILE="/var/log/backups.log"
+BACKUP_FILE="$archivo_backup"
+REMOTE_USER="$REMOTE_BACKUP_USER"
+REMOTE_HOST="$REMOTE_BACKUP_HOST"
+REMOTE_DIR="$REMOTE_BACKUP_DIR"
+SSH_KEY="$SSH_KEY"
+
+echo "\$(date): [AT-TRANSFER] Iniciando transferencia programada de $nombre_archivo" >> "\$LOG_FILE"
+
+if /usr/bin/rsync -avz -e "ssh -i \$SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10" \\
+    "\$BACKUP_FILE" \\
+    "\$REMOTE_USER@\$REMOTE_HOST:\$REMOTE_DIR/" >> "\$LOG_FILE" 2>&1; then
+    echo "\$(date): [AT-TRANSFER] Transferencia exitosa: $nombre_archivo" >> "\$LOG_FILE"
+else
+    echo "\$(date): [AT-TRANSFER] ERROR en transferencia: $nombre_archivo" >> "\$LOG_FILE"
+fi
+
+# Limpiar script temporal
+rm -f "$temp_script"
+SCRIPT_EOF
+    
+    chmod +x "$temp_script"
+    
+    # Programar con at
+    local tiempo_at="now + $delay_minutos minutes"
+    if echo "$temp_script" | at "$tiempo_at" 2>/dev/null; then
         local job_id=$(atq | tail -n 1 | awk '{print $1}')
         echo "Transferencia remota programada con 'at'. Trabajo ID: $job_id"
         echo "$(date): Transferencia programada con at (Job $job_id) para: $nombre_archivo" >> /var/log/backups.log
@@ -199,6 +221,7 @@ EOF
     else
         echo "ERROR: No se pudo programar la transferencia remota con at"
         echo "$(date): ERROR al programar transferencia at para: $nombre_archivo" >> /var/log/backups.log
+        rm -f "$temp_script"
         return 1
     fi
 }
