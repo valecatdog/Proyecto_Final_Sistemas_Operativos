@@ -11,7 +11,7 @@ backup_list="/etc/backup-script/auto-backup-list.conf"
 REMOTE_BACKUP_USER="respaldo_user"
 REMOTE_BACKUP_HOST="192.168.0.93"
 REMOTE_BACKUP_DIR="/backups/usuarios"
-SSH_KEY="$HOME/.ssh/backup_key"
+SSH_KEY="/root/.ssh/backup_key"
 REMOTE_BACKUP_ENABLED=false
 
 #**investigar mas a detalle
