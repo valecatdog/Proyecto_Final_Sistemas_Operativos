@@ -90,15 +90,19 @@ acquire_lock() {
         if [ -n "$lock_pid" ] && ps -p "$lock_pid" > /dev/null 2>&1; then
             echo "ERROR: El script ya se está ejecutando en otro proceso (PID: $lock_pid)"
             echo "Lockfile encontrado: $lockfile"
+            echo "Si estás seguro de que no hay otra ejecución, puedes eliminar manualmente:"
+            echo "sudo rm -f $lockfile"
             return 1
         else
             # Lockfile obsoleto, eliminarlo
+            echo "$(date): [LOCK] Eliminando lockfile obsoleto (PID $lock_pid no existe)" >> /var/log/backups.log
             rm -f "$lockfile"
         fi
     fi
     
     # Crear nuevo lockfile
     echo $$ > "$lockfile"
+    echo "$(date): [LOCK] Lock adquirido por PID $$" >> /var/log/backups.log
     return 0
 }
 
@@ -685,26 +689,30 @@ crear_backup(){
     done
 }
 
-#***** FUNCIÓN BACKUP_DIARIO SIMPLIFICADA Y ROBUSTA
+#***** FUNCIÓN BACKUP_DIARIO CORREGIDA - MEJOR MANEJO DE LOCK
 backup_diario(){
     # Adquirir lock de manera segura
     if ! acquire_lock; then
-        echo "No se pudo adquirir lock, backup automático omitido" >> /var/log/backups.log
+        echo "ERROR: No se pudo adquirir lock, backup automático omitido" >> /var/log/backups.log
         return 1
     fi
     
-    # Asegurar que el lock se libere siempre
-    trap 'release_lock' EXIT
-    
+    # Variable para controlar si debemos liberar el lock
+    local lock_acquired=true
     local fecha=$(date '+%Y%m%d')
     local usuarios_procesados=0
     local archivos_creados=()
 
-    echo "$(date): Iniciando backup automático" >> /var/log/backups.log
+    echo "$(date): [BACKUP-DIARIO] Iniciando backup automático" >> /var/log/backups.log
+
+    # Usar trap para garantizar la liberación del lock en cualquier salida
+    trap 'if [ "$lock_acquired" = "true" ]; then release_lock; fi' EXIT INT TERM
 
     # Verificar si el archivo de lista existe y tiene contenido
     if [ ! -f "$backup_list" ] || [ ! -s "$backup_list" ]; then
-        echo "$(date): Lista de backups automáticos vacía, no se realizaron backups" >> /var/log/backups.log
+        echo "$(date): [BACKUP-DIARIO] Lista de backups automáticos vacía, no se realizaron backups" >> /var/log/backups.log
+        lock_acquired=false
+        release_lock
         return 0
     fi
 
@@ -717,7 +725,7 @@ backup_diario(){
             # Es un grupo - extraer nombre del grupo (sin el @)
             grupo="${linea#@}"
             if grupo_existe "$grupo"; then
-                echo "$(date): Procesando grupo $grupo" >> /var/log/backups.log
+                echo "$(date): [BACKUP-DIARIO] Procesando grupo $grupo" >> /var/log/backups.log
                 # Procesar cada usuario del grupo - CORREGIDO: usar process substitution
                 while IFS= read -r usuario; do
                     if [ -n "$usuario" ] && usuario_existe "$usuario"; then
@@ -725,15 +733,17 @@ backup_diario(){
                         if [ -d "$home_dir" ]; then
                             archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
                             if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
-                                echo "$(date): Backup automático de $usuario (grupo $grupo) - $archivo_backup" >> /var/log/backups.log
+                                echo "$(date): [BACKUP-DIARIO] Backup automático de $usuario (grupo $grupo) - $archivo_backup" >> /var/log/backups.log
                                 ((usuarios_procesados++))
                                 archivos_creados+=("$archivo_backup")
+                            else
+                                echo "$(date): [BACKUP-DIARIO] ERROR al crear backup de $usuario" >> /var/log/backups.log
                             fi
                         fi
                     fi
                 done < <(obtener_usuarios_de_grupo "$grupo")
             else
-                echo "$(date): ERROR: Grupo $grupo no existe" >> /var/log/backups.log
+                echo "$(date): [BACKUP-DIARIO] ERROR: Grupo $grupo no existe" >> /var/log/backups.log
             fi
         else
             # Es un usuario individual
@@ -743,53 +753,37 @@ backup_diario(){
                 if [ -d "$home_dir" ]; then
                     archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
                     if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
-                        echo "$(date): Backup automático de $usuario - $archivo_backup" >> /var/log/backups.log
+                        echo "$(date): [BACKUP-DIARIO] Backup automático de $usuario - $archivo_backup" >> /var/log/backups.log
                         ((usuarios_procesados++))
                         archivos_creados+=("$archivo_backup")
+                    else
+                        echo "$(date): [BACKUP-DIARIO] ERROR al crear backup de $usuario" >> /var/log/backups.log
                     fi
                 fi
             else
-                echo "$(date): ERROR: Usuario $usuario no existe" >> /var/log/backups.log
+                echo "$(date): [BACKUP-DIARIO] ERROR: Usuario $usuario no existe" >> /var/log/backups.log
             fi
         fi
     done < "$backup_list"
 
     # Programar transferencias remotas para todos los archivos creados
     if [ ${#archivos_creados[@]} -gt 0 ] && [ "$REMOTE_BACKUP_ENABLED" = "true" ]; then
-        echo "$(date): Programando transferencias remotas para ${#archivos_creados[@]} archivos" >> /var/log/backups.log
+        echo "$(date): [BACKUP-DIARIO] Programando transferencias remotas para ${#archivos_creados[@]} archivos" >> /var/log/backups.log
         for archivo in "${archivos_creados[@]}"; do
             programar_transferencia_remota "$archivo" "$RSYNC_DELAY_MINUTOS"
         done
     fi
 
-    echo "$(date): Backup automático completado - $usuarios_procesados usuarios procesados" >> /var/log/backups.log
+    echo "$(date): [BACKUP-DIARIO] Backup automático completado - $usuarios_procesados usuarios procesados" >> /var/log/backups.log
+    
+    # Liberar lock explícitamente
+    lock_acquired=false
+    release_lock
+    
+    # Remover el trap
+    trap - EXIT INT TERM
+    
     return 0
-}
-
-# CORREGIDA: función para activar/desactivar el backup automatico en crontab - AHORA DIARIO
-toggle_backup_automatico(){
-    if backup_automatico_activo; then
-        # DESACTIVAR - eliminar de crontab
-        (crontab -l 2>/dev/null | grep -v "$Delta") | crontab -
-        echo "Backup automático DESACTIVADO"
-        echo "$(date): Backup automático desactivado" >> /var/log/backups.log
-    else
-        # Mostrar advertencia si la lista está vacía
-        if [ ! -f "$backup_list" ] || ! grep -v '^#' "$backup_list" | grep -v '^$' | read; then
-            echo "¡ADVERTENCIA: La lista de backups automáticos está vacía!"
-            echo "No se realizarán backups hasta que añada usuarios/grupos."
-            echo "Puede gestionar la lista en la opción 4 del menú principal."
-            echo
-        fi
-        
-        # CORREGIDO: Programar ejecución DIARIA a la hora específica
-        (crontab -l 2>/dev/null; echo "$CRON_MINUTO $CRON_HORA * * * $Delta automatico") | crontab -
-        
-        echo "Backup automático ACTIVADO"
-        echo "Se ejecutará diariamente a las $(get_cron_hora_completa)"
-        echo "Las transferencias remotas se programarán con at para ejecutarse $RSYNC_DELAY_MINUTOS minutos después."
-        echo "$(date): Backup automático activado - programado diariamente a las $(get_cron_hora_completa)" >> /var/log/backups.log
-    fi
 }
 
 # funcion para restaurar backups existentes DUH
@@ -1001,4 +995,6 @@ while true; do
     echo
     echo "Presione Enter para continuar..."
     read
+
+    
 done
