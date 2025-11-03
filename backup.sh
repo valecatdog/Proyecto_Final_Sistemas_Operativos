@@ -619,11 +619,11 @@ toggle_backup_automatico(){
             echo
         fi
         
-        # ⭐⭐ NUEVA SOLUCIÓN: Usar cron + at para mejor entorno de ejecución
-        (sudo crontab -l 2>/dev/null; echo "0 3 * * * echo '$Delta automatico' | at '3:10 AM' 2>/dev/null") | sudo crontab -
+        # ⭐⭐ SOLUCIÓN MEJORADA: Usar cron + at con variables
+        (sudo crontab -l 2>/dev/null; echo "0 $CRON_HORA * * * echo '$Delta automatico' | at '$CRON_HORA:$CRON_MINUTO AM' 2>/dev/null") | sudo crontab -
         
         echo "Backup automático ACTIVADO"
-        echo "Se ejecutará todos los días a las 3:10 AM"
+        echo "Se ejecutará todos los días a las ${CRON_HORA}:${CRON_MINUTO} AM"
         echo "Usando 'at' para mejor entorno de ejecución"
     fi
 }
@@ -850,15 +850,4 @@ while true; do
             configurar_respaldo_remoto
             ;;
         0)
-             echo "cerrando programa"
-             exit 0 
-            ;;
-        *)
-            echo "Opción inválida"
-            ;;
-    esac
-    
-    echo
-    echo "Presione Enter para continuar..."
-    read
-done
+             echo "cerrando
