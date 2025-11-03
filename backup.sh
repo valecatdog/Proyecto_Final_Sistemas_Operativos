@@ -627,6 +627,13 @@ restaurar_backup(){
 check_user
 crear_dir_backup
 
+#***** VERIFICAR SI SE EJECUTA EN MODO AUTOMATICO (desde crontab)
+if [ "$1" = "automatico" ]; then
+    echo "$(date): Ejecutando backup automático desde crontab" >> /var/log/backups.log
+    execute_with_lock backup_diario
+    exit 0
+fi
+
 while true; do
     menu_alpha
     read opcion
