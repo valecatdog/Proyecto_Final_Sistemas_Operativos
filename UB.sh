@@ -38,7 +38,7 @@ echo "🔄 Iniciando actualización..."
 
 # 1. Hacer backup del script actual (por si acaso)
 if [ -f "backup.sh" ]; then
-    backup_name="backup.sh.backup.$(date +%Y%m%d_%H%M%S)"
+    backup_name="backup.sh"
     cp backup.sh "$backup_name"
     echo "✅ Backup creado: $backup_name"
 fi
