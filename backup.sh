@@ -133,7 +133,7 @@ realizar_respaldo_remoto() {
     fi
 }
 
-# Nueva función para programar transferencia remota con at
+# NUEVA FUNCIÓN SIMPLIFICADA basada en el script de referencia
 programar_transferencia_remota() {
     local archivo_backup="$1"
     local delay_minutos="${2:-$RSYNC_DELAY_MINUTOS}"
@@ -142,53 +142,34 @@ programar_transferencia_remota() {
         return 0
     fi
     
-    # Crear script temporal para la transferencia
-    local temp_script=$(mktemp)
-    cat > "$temp_script" << EOF
-#!/bin/bash
-# Script temporal para transferencia remota
-echo "\$(date): [AT-TRANSFER] Iniciando transferencia programada de $(basename "$archivo_backup")" >> /var/log/backups.log
+    if [ ! -f "$archivo_backup" ]; then
+        echo "ERROR: Archivo no encontrado para transferencia: $archivo_backup"
+        return 1
+    fi
+    
+    local tiempo_at="now + $delay_minutos minutes"
+    local nombre_archivo=$(basename "$archivo_backup")
+    
+    echo "Programando transferencia remota para $nombre_archivo a $tiempo_at..." >> /var/log/backups.log
+    
+    # Usar el método simple del script de referencia
+    if at "$tiempo_at" << EOF 2>/dev/null
+/usr/bin/rsync -avz -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10" \
+"$archivo_backup" \
+"$REMOTE_BACKUP_USER@$REMOTE_BACKUP_HOST:$REMOTE_BACKUP_DIR/" >> /var/log/backups.log 2>&1
 
-if "$Delta" transferir-remoto "$archivo_backup"; then
-    echo "\$(date): [AT-TRANSFER] Transferencia completada exitosamente: $(basename "$archivo_backup")" >> /var/log/backups.log
-else
-    echo "\$(date): [AT-TRANSFER] ERROR en transferencia: $(basename "$archivo_backup")" >> /var/log/backups.log
-fi
-
-# Limpiar script temporal
-rm -f "$temp_script"
+echo "$(date): [AT-TRANSFER] Transferencia completada: $nombre_archivo" >> /var/log/backups.log
 EOF
-    
-    chmod +x "$temp_script"
-    
-    # Programar con at
-    if echo "$temp_script" | at now + "$delay_minutos" minutes 2>/dev/null; then
-        echo "$(date): Transferencia remota programada en $delay_minutos minutos para: $(basename "$archivo_backup")" >> /var/log/backups.log
+    then
+        local job_id=$(atq | tail -n 1 | awk '{print $1}')
+        echo "Transferencia remota programada con 'at'. Trabajo ID: $job_id"
+        echo "$(date): Transferencia programada con at (Job $job_id) para: $nombre_archivo" >> /var/log/backups.log
         return 0
     else
         echo "ERROR: No se pudo programar la transferencia remota con at"
-        rm -f "$temp_script"
+        echo "$(date): ERROR al programar transferencia at para: $nombre_archivo" >> /var/log/backups.log
         return 1
     fi
-}
-
-# Nueva función para modo de transferencia remota
-modo_transferir_remoto() {
-    local archivo_backup="$1"
-    
-    if [ -z "$archivo_backup" ]; then
-        echo "ERROR: No se especificó archivo para transferencia remota"
-        return 1
-    fi
-    
-    if [ ! -f "$archivo_backup" ]; then
-        echo "ERROR: Archivo no encontrado: $archivo_backup"
-        return 1
-    fi
-    
-    echo "$(date): [MODO-TRANSFERIR] Ejecutando transferencia remota programada" >> /var/log/backups.log
-    realizar_respaldo_remoto "$archivo_backup"
-    return $?
 }
 
 # Función para probar conexión remota
@@ -541,7 +522,7 @@ crear_backup_grupo(){
                         echo "    Backup creado: $(basename "$archivo_backup")"
                         echo "$(date): Backup manual de grupo $grupo - usuario $usuario - $archivo_backup" >> /var/log/backups.log
                         ((usuarios_procesados++))
-                        # Respaldo remoto programado con at
+                        # Respaldo remoto programado con at (método simplificado)
                         programar_transferencia_remota "$archivo_backup"
                     else
                         echo "    Error al crear backup de $usuario"
@@ -593,7 +574,7 @@ crear_backup(){
                     if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
                         echo "Backup creado: $archivo_backup"
                         echo "$(date): Backup manual de $usuario - $archivo_backup" >> /var/log/backups.log
-                        # Respaldo remoto programado con at
+                        # Respaldo remoto programado con at (método simplificado)
                         programar_transferencia_remota "$archivo_backup"
                     else
                         echo "Error al crear el backup"
@@ -618,23 +599,26 @@ crear_backup(){
     done
 }
 
-#***** MODIFICADA: funcion de backup diario que usa la lista configurada
+#***** FUNCIÓN BACKUP_DIARIO SIMPLIFICADA Y ROBUSTA
 backup_diario(){
+    # Adquirir lock de manera segura
     if ! acquire_lock; then
         echo "No se pudo adquirir lock, backup automático omitido" >> /var/log/backups.log
         return 1
     fi
     
-    fecha=$(date '+%Y%m%d')
-    usuarios_procesados=0
-    archivos_creados=()
+    # Asegurar que el lock se libere siempre
+    trap 'release_lock' EXIT
+    
+    local fecha=$(date '+%Y%m%d')
+    local usuarios_procesados=0
+    local archivos_creados=()
 
     echo "$(date): Iniciando backup automático" >> /var/log/backups.log
 
     # Verificar si el archivo de lista existe y tiene contenido
     if [ ! -f "$backup_list" ] || [ ! -s "$backup_list" ]; then
         echo "$(date): Lista de backups automáticos vacía, no se realizaron backups" >> /var/log/backups.log
-        release_lock
         return 0
     fi
 
@@ -693,7 +677,6 @@ backup_diario(){
     fi
 
     echo "$(date): Backup automático completado - $usuarios_procesados usuarios procesados" >> /var/log/backups.log
-    release_lock
     return 0
 }
 
@@ -888,12 +871,6 @@ if [ "$1" = "automatico" ]; then
         echo "================================================"
     } >> /var/log/backups.log 2>&1
     exit 0
-
-elif [ "$1" = "transferir-remoto" ]; then
-    # Modo transferencia remota desde at
-    archivo_backup="$2"
-    modo_transferir_remoto "$archivo_backup"
-    exit $?
 
 else
     # Modo interactivo normal - verificar si es hora de backup automático
