@@ -168,7 +168,8 @@ crear_backup_grupo(){
                 home_dir=$(getent passwd "$usuario" | cut -d: -f6)
                 if [ -d "$home_dir" ]; then
                     echo "  - Creando backup de: $usuario"
-                    archivo_backup="${dir_backup}/backup_grupo_${usuario}_${fecha}.tar.bz2"
+                    # CORREGIDO: Cambiamos el formato del nombre para que sea consistente
+                    archivo_backup="${dir_backup}/backup_${usuario}_grupo_${fecha}.tar.bz2"
                     
                     # Crear backup individual del usuario
                     if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null
@@ -341,94 +342,83 @@ restaurar_backup(){
         # usamos basename solo para agarrar el nombre del backup que queremos EJ: backup_user.tar.bz2 envez de la direccion entera
         nombre_archivo=$(basename "$archivo_backup")
         
-        # Determinar si es backup de usuario individual o de grupo
-        if [[ "$nombre_archivo" == *"grupo_"* ]]; then
-            echo "Este es un backup de grupo."
-            echo "¿Desea extraer el contenido en un directorio temporal para revisarlo? (s/n/0 para volver)"
-            read respuesta
-            if [ "$respuesta" = "0" ]; then
-                continue
-            elif [ "$respuesta" = "s" ]; then
-                #****** crea directorio temporal para extraer el contenido del backup de grupo
-                temp_extract_dir=$(mktemp -d)
-                tar -xjf "$archivo_backup" -C "$temp_extract_dir"
-                echo "Contenido extraído en: $temp_extract_dir"
-                echo "Puede revisar los archivos y copiar manualmente lo que necesite."
-                echo "No olvide eliminar el directorio temporal después: rm -rf $temp_extract_dir"
-                echo "Presione Enter para continuar..."
-                read
-            fi
+        # CORREGIDO: Extraemos el usuario de manera más inteligente
+        # Para backup individual: backup_alumno_20241210_143022.tar.bz2 -> usuario=alumno
+        # Para backup de grupo: backup_alumno_grupo_20241210_143022.tar.bz2 -> usuario=alumno
+        if [[ "$nombre_archivo" =~ ^backup_([^_]+)_ ]]; then
+            usuario="${BASH_REMATCH[1]}"
         else
-        # para backups de usuario individual 
-            usuario=$(echo "$nombre_archivo" | cut -d'_' -f2)
-            echo "usuario del backup: $usuario"
+            echo "Formato de archivo de backup no reconocido: $nombre_archivo"
+            continue
+        fi
 
-            # usando la funcion de usr_exst determina que si dicho usuario no existe se termina la ejecucion 
-            if ! usuario_existe "$usuario"
+        echo "usuario del backup: $usuario"
+
+        # usando la funcion de usr_exst determina que si dicho usuario no existe se termina la ejecucion 
+        if ! usuario_existe "$usuario"
+        then
+            echo "ERROR: UNF; el usuario $usuario no existe en el sistema"
+            echo "Presione Enter para continuar..."
+            read
+            continue
+        fi
+
+        #home destino es el directorio de usuario de un usuario, lo agarramos haciendole un cut a la linea passwd del usuario en el campo 6 que es donde esta el dir de usuario
+        home_destino=$(getent passwd "$usuario" | cut -d':' -f6)
+
+        echo 
+        echo "¿Restaurar backup de $usuario en $home_destino?"
+        echo "¡ADVERTENCIA: se van a sobreescribir los archivos existentes!"
+        echo -n "desea continuar (s/n/0 para volver): "
+        read confirmacion 
+        
+        if [ "$confirmacion" = "0" ]; then
+            continue
+        elif [ "$confirmacion" != "s" ]; then
+            echo "Restauracion cancelada"
+            continue
+        fi
+
+        #crea un directorio temporal en /tmp
+        temp_dir=$(mktemp -d)
+
+        echo "Restaurando backup..."
+
+        # extraemos el backup en el directorio temporal
+        if sudo tar -xjf "$archivo_backup" -C "$temp_dir" 2>/dev/null
             then
-                echo "ERROR: UNF; el usuario $usuario no existe en el sistema"
-                echo "Presione Enter para continuar..."
-                read
-                continue
+            #Buscamos donde estan los archivos de usuario
+            #aca buscamos si esta con /home/y el usuario
+            if [ -d "$temp_dir/home/$usuario" ]
+            then
+            dir_origen="$temp_dir/home/$usuario" 
+            #aca buscamos si esta solo con el usuario
+            elif [ -d "$temp_dir/$usuario" ]
+            then
+            dir_origen="$temp_dir/$usuario"
+            #y aca si esta en archivos sueltos
+            else
+            dir_origen="$temp_dir/$usuario"
             fi
 
-            #home destino es el directorio de usuario de un usuario, lo agarramos haciendole un cut a la linea passwd del usuario en el campo 6 que es donde esta el dir de usuario
-            home_destino=$(getent passwd "$usuario" | cut -d':' -f6)
+            # aca copiamos los archivos al origen real
+            # primero copiamos las carpetas y archivos visivles y luego hacemos lo mismo con las invisibles
+            echo "copiando archivos a $home_destino..."
+            #*************investigar en mayor Profundidad 
+            #************************** rsync sincroniza directorios de manera eficiente
+            rsync -av "$dir_origen/" "$home_destino"/ 2>/dev/null
 
-            echo 
-            echo "¿Restaurar backup de $usuario en $home_destino?"
-            echo "¡ADVERTENCIA: se van a sobreescribir los archivos existentes!"
-            echo -n "desea continuar (s/n/0 para volver): "
-            read confirmacion 
-            
-            if [ "$confirmacion" = "0" ]; then
-                continue
-            elif [ "$confirmacion" != "s" ]; then
-                echo "Restauracion cancelada"
-                continue
-            fi
+            # reparamos los permisos con un change owner recursivo en todo el directorio
+            sudo chown -R "$usuario:$usuario" "$home_destino"
 
-            #crea un directorio temporal en /tmp
-            temp_dir=$(mktemp -d)
+            echo "Restauración completada"
 
-            echo "Restaurando backup..."
+            # Limpiamos temp_dir y borramos todo lo que tiene dentro
+            rm -rf "$temp_dir"
 
-            # extraemos el backup en el directorio temporal
-            if sudo tar -xjf "$archivo_backup" -C "$temp_dir" 2>/dev/null
-                then
-                #Buscamos donde estan los archivos de usuario
-                #aca buscamos si esta con /home/y el usuario
-                if [ -d "$temp_dir/home/$usuario" ]
-                then
-                dir_origen="$temp_dir/home/$usuario" 
-                #aca buscamos si esta solo con el usuario
-                elif [ -d "$temp_dir/$usuario" ]
-                then
-                dir_origen="$temp_dir/$usuario"
-                #y aca si esta en archivos sueltos
-                else
-                dir_origen="$temp_dir/$usuario"
-                fi
-
-                # aca copiamos los archivos al origen real
-                # primero copiamos las carpetas y archivos visivles y luego hacemos lo mismo con las invisibles
-                echo "copiando archivos a $home_destino..."
-                #*************investigar en mayor Profundidad 
-                #************************** rsync sincroniza directorios de manera eficiente
-                rsync -av "$dir_origen/" "$home_destino"/ 2>/dev/null
-
-                # reparamos los permisos con un change owner recursivo en todo el directorio
-                sudo chown -R "$usuario:$usuario" "$home_destino"
-
-                echo "Restauración completada"
-
-                # Limpiamos temp_dir y borramos todo lo que tiene dentro
-                rm -rf "$temp_dir"
-
-                 else
-                echo "ERROR: No se pudo extraer el backup"
-                rm -rf "$temp_dir"
-            fi
+             else
+            echo "ERROR: No se pudo extraer el backup"
+            rm -rf "$temp_dir"
         fi
         
         echo "Presione Enter para continuar..."
