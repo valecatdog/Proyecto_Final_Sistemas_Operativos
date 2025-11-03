@@ -1,5 +1,8 @@
 #! /bin/bash
 
+# Configurar PATH explícito para cron - SOLUCIÓN AL PROBLEMA
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
 #en esta variable guardamos la direccion de donde se van a guardar los backups
 dir_backup="/var/users_backups"
 # Delta es el valor actual de este scrit, lo conseguimos con realpath
@@ -534,10 +537,14 @@ crear_backup(){
 
 #***** MODIFICADA: funcion de backup diario que usa la lista configurada
 backup_diario(){
+    echo "$(date): [DEBUG] Entrando en backup_diario" >> /var/log/backups.log
+    
     if ! acquire_lock; then
-        echo "No se pudo adquirir lock, backup automático omitido" >> /var/log/backups.log
+        echo "$(date): [DEBUG] No se pudo adquirir lock en backup_diario" >> /var/log/backups.log
         return 1
     fi
+    
+    echo "$(date): [DEBUG] Lock adquirido exitosamente" >> /var/log/backups.log
     
     fecha=$(date '+%Y%m%d')
     usuarios_procesados=0
@@ -619,8 +626,8 @@ toggle_backup_automatico(){
             echo "Puede gestionar la lista en la opción 4 del menú principal."
             echo
         fi
-        # ⭐⭐ MODIFICADO: Usar /bin/bash explícitamente para cron
-        (sudo crontab -l 2>/dev/null; echo "$CRON_MINUTO $CRON_HORA * * * /bin/bash $Delta automatico") | sudo crontab -
+        # ⭐⭐ MODIFICADO: Usar entorno completo para cron - SOLUCIÓN AL PROBLEMA
+        (sudo crontab -l 2>/dev/null; echo "$CRON_MINUTO $CRON_HORA * * * /bin/bash -l -c '$Delta automatico'") | sudo crontab -
         echo "Backup automático ACTIVADO"
         echo "Se ejecutará todos los días a las ${CRON_HORA}:${CRON_MINUTO}"
     fi
@@ -757,33 +764,34 @@ restaurar_backup(){
 check_user
 crear_dir_backup
 
-#***** VERIFICAR SI SE EJECUTA EN MODO AUTOMATICO (desde crontab) - VERSIÓN CON DEBUGGING
+#**+*** VERIFICAR SI SE EJECUTA EN MODO AUTOMATICO (desde crontab) - VERSION CON DEBUG MEJORADO
 if [ "$1" = "automatico" ]; then
     {
         echo "================================================"
-        echo "$(date): [CRON] INICIANDO BACKUP AUTOMÁTICO"
+        echo "$(date): [CRON] INICIANDO BACKUP AUTOMÁTICO - DEBUG MEJORADO"
         echo "================================================"
+        echo "Usuario: $(whoami)"
+        echo "PATH: $PATH"
+        echo "PWD: $(pwd)"
         echo "Delta: $Delta"
-        echo "Lockfile: $lockfile"
-        echo "Backup list: $backup_list"
-        echo "Remote backup enabled: $REMOTE_BACKUP_ENABLED"
         
-        # Verificar que los archivos necesarios existen
-        echo "Verificando archivos necesarios..."
-        if [ ! -f "$backup_list" ]; then
-            echo "ERROR: No existe el archivo de lista: $backup_list"
-            exit 1
-        fi
+        # Verificar comandos críticos
+        echo "Verificando comandos:"
+        which realpath && echo "realpath: OK" || echo "realpath: FALLO"
+        which tar && echo "tar: OK" || echo "tar: FALLO" 
+        which getent && echo "getent: OK" || echo "getent: FALLO"
+        which ssh && echo "ssh: OK" || echo "ssh: FALLO"
+        which rsync && echo "rsync: OK" || echo "rsync: FALLO"
         
-        if [ ! -s "$backup_list" ]; then
-            echo "INFO: Lista de backups vacía, no hay nada que hacer"
-            exit 0
-        fi
+        # Verificar archivos críticos
+        echo "Verificando archivos:"
+        [ -f "$backup_list" ] && echo "backup_list: EXISTE" || echo "backup_list: NO EXISTE"
+        [ -f "$SSH_KEY" ] && echo "SSH_KEY: EXISTE" || echo "SSH_KEY: NO EXISTE"
+        [ -d "$dir_backup" ] && echo "dir_backup: EXISTE" || echo "dir_backup: NO EXISTE"
         
-        echo "Contenido de la lista de backups:"
-        grep -v '^#' "$backup_list" | grep -v '^$' | while read line; do
-            echo "  - $line"
-        done
+        # Verificar contenido de backup_list
+        echo "Contenido de backup_list:"
+        cat "$backup_list"
         
         # Limpieza agresiva de lockfiles obsoletos para cron
         echo "Verificando lockfile..."
