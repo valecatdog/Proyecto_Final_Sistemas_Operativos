@@ -79,7 +79,7 @@ echo "   - backup.sh: $(ls -la backup.sh | awk '{print $1, $5}') bytes"
 echo "   - Última modificación: $(ls -la backup.sh | awk '{print $6, $7, $8}')"
 echo
 
-# Verificar que el script es ejecutable
+# Veri ficar que el script es ejecutable
 if [ -x "backup.sh" ]; then
     echo "🎯 El script es ejecutable"
 else
