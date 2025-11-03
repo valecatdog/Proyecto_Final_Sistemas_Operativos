@@ -284,9 +284,6 @@ aniadir_quitar_usergrupo_archivo(){
     done
 }
 
-
-
-
 usuario_existe_user(){
     local user
     user="$1"
