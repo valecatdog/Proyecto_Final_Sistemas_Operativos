@@ -6,6 +6,8 @@ dir_backup="/var/users_backups"
 # tambien podriamos usar la direccion actual del script y ya, pero esto le da mas flexibilidad
 Delta=$(realpath "$0")
 lockfile="/var/lock/backup-script.lock"
+# Archivo de configuracion para la lista de backups automaticos
+backup_list="/etc/backup-script/auto-backup-list.conf"
 
 #**investigar mas a detalle
 cleanup() {
@@ -87,6 +89,23 @@ crear_dir_backup(){
         touch "/var/log/backups.log"
         chmod 644 "/var/log/backups.log"
     fi
+    
+    #***** crear directorio de configuracion si no existe
+    if [ ! -d "/etc/backup-script" ]; then
+        sudo mkdir -p "/etc/backup-script"
+        sudo chmod 700 "/etc/backup-script"
+    fi
+    
+    #***** crear archivo de lista de backups automaticos si no existe
+    if [ ! -f "$backup_list" ]; then
+        touch "$backup_list"
+        chmod 600 "$backup_list"
+        echo "# Lista de usuarios y grupos para backup automatico" > "$backup_list"
+        echo "# Formato: usuario o @grupo" >> "$backup_list"
+        echo "# Ejemplo:" >> "$backup_list"
+        echo "# usuario1" >> "$backup_list"
+        echo "# @developers" >> "$backup_list"
+    fi
 }
 
 # se encarga de verificar si el backup esta up and running :D, crontab -l te da una lista con las tareas Cron actuales y busca alguna linea que contenga la ruta del script ( grep te devuelve 0 (true) si no la encuentra y 1 (false) si la encuentra)
@@ -106,7 +125,8 @@ menu_alpha(){
     else
         echo "2. ACTIVAR backup diario automático   [INACTIVO]"
     fi
-    echo "3. Restaurar backup"  
+    echo "3. Restaurar backup"
+    echo "4. Gestionar lista de backups automáticos"
     echo "0. Salir"
     echo
     echo -n "Seleccione opción (0 para salir): "
@@ -139,13 +159,148 @@ obtener_usuarios_de_grupo() {
 leer_con_cancelar() {
     local prompt="$1"
     local variable="$2"
-    echo -n "$prompt (0 para volver al menu): "
+    echo -n "$prompt (o '0' para cancelar): "
     read $variable
     if [ "${!variable}" = "0" ]; then
         echo "Operación cancelada."
         return 1
     fi
     return 0
+}
+
+#***** funcion para mostrar menu de gestion de lista automatica
+menu_gestion_backup_auto() {
+    clear
+    echo "=== GESTIÓN DE BACKUPS AUTOMÁTICOS ==="
+    echo "1. Ver lista actual"
+    echo "2. Añadir usuario a la lista"
+    echo "3. Añadir grupo a la lista"
+    echo "4. Eliminar elemento de la lista"
+    echo "0. Volver al menú principal"
+    echo
+    echo -n "Seleccione opción: "
+}
+
+#***** funcion para ver la lista actual de backups automaticos
+ver_lista_backup_auto() {
+    echo "=== LISTA ACTUAL DE BACKUPS AUTOMÁTICOS ==="
+    if [ ! -s "$backup_list" ]; then
+        echo "La lista está vacía."
+        echo "Los backups automáticos no se ejecutarán hasta que añada elementos."
+    else
+        # Mostrar solo lineas que no son comentarios y no están vacías
+        grep -v '^#' "$backup_list" | grep -v '^$' | nl -w 2 -s '. '
+    fi
+    echo
+}
+
+#***** funcion para añadir usuario a la lista de backups automaticos
+añadir_usuario_backup_auto() {
+    if ! leer_con_cancelar "Ingrese nombre de usuario a añadir" usuario; then
+        return 1
+    fi
+    
+    if usuario_existe "$usuario"; then
+        # Verificar si el usuario ya está en la lista
+        if grep -q "^$usuario$" "$backup_list"; then
+            echo "El usuario $usuario ya está en la lista."
+        else
+            echo "$usuario" >> "$backup_list"
+            echo "Usuario $usuario añadido a la lista de backups automáticos."
+        fi
+    else
+        echo "El usuario $usuario no existe."
+    fi
+}
+
+#***** funcion para añadir grupo a la lista de backups automaticos
+añadir_grupo_backup_auto() {
+    if ! leer_con_cancelar "Ingrese nombre del grupo a añadir" grupo; then
+        return 1
+    fi
+    
+    if grupo_existe "$grupo"; then
+        # Verificar si el grupo ya está en la lista
+        grupo_line="@$grupo"
+        if grep -q "^$grupo_line$" "$backup_list"; then
+            echo "El grupo $grupo ya está en la lista."
+        else
+            echo "$grupo_line" >> "$backup_list"
+            echo "Grupo $grupo añadido a la lista de backups automáticos."
+        fi
+    else
+        echo "El grupo $grupo no existe."
+    fi
+}
+
+#***** funcion para eliminar elemento de la lista de backups automaticos
+eliminar_elemento_backup_auto() {
+    ver_lista_backup_auto
+    
+    if [ ! -s "$backup_list" ]; then
+        return 1
+    fi
+    
+    echo
+    if ! leer_con_cancelar "Ingrese el número del elemento a eliminar" numero; then
+        return 1
+    fi
+    
+    # Obtener el elemento a eliminar
+    elemento=$(grep -v '^#' "$backup_list" | grep -v '^$' | sed -n "${numero}p")
+    
+    if [ -z "$elemento" ]; then
+        echo "Número inválido."
+        return 1
+    fi
+    
+    echo "¿Eliminar '$elemento' de la lista?"
+    echo -n "Confirmar (s/n): "
+    read confirmacion
+    
+    if [ "$confirmacion" = "s" ]; then
+        # Crear archivo temporal sin el elemento
+        temp_file=$(mktemp)
+        grep -v "^$elemento$" "$backup_list" > "$temp_file"
+        mv "$temp_file" "$backup_list"
+        echo "Elemento '$elemento' eliminado."
+    else
+        echo "Operación cancelada."
+    fi
+}
+
+#***** funcion para gestionar la lista de backups automaticos
+gestionar_backup_auto() {
+    while true; do
+        menu_gestion_backup_auto
+        read opcion
+        
+        case $opcion in
+            1)
+                ver_lista_backup_auto
+                ;;
+            2)
+                añadir_usuario_backup_auto
+                ;;
+            3)
+                añadir_grupo_backup_auto
+                ;;
+            4)
+                eliminar_elemento_backup_auto
+                ;;
+            0)
+                echo "Volviendo al menú principal..."
+                return 0
+                ;;
+            *)
+                echo "Opción inválida"
+                ;;
+        esac
+        
+        echo
+        echo "Presione Enter para continuar..."
+        read
+    done
 }
 
 crear_backup_grupo(){
@@ -250,36 +405,70 @@ crear_backup(){
     done
 }
 
-# el script que se encarga de hacer respaldos automaticamente y luego guardarlo en un log, todo silenciosamente
-# se guardan separados de los respaldos manuales
-# se guardan la hora de los backups (siempre van a ser la misma pero para mantener registro) y el nombre de lo usuarios que hagan backup
+#***** MODIFICADA: funcion de backup diario que usa la lista configurada
 backup_diario(){
-
-
-    #***** adquiere lock para evitar ejecuciones simultaneas de backups automaticos
     if ! acquire_lock; then
         echo "No se pudo adquirir lock, backup automático omitido" >> /var/log/backups.log
         return 1
     fi
+    
     fecha=$(date '+%Y%m%d')
+    usuarios_procesados=0
 
-    # le hacemos un for para cada usuario que tenemos en home 
-    for usuario in /home/*
-    do
-    # -d check directory para ver si existe, devuelve true si existe
-        if [ -d "$usuario" ]
-        then
-        #basename lo usamos porque necesitamos porque tenemos que agarrar el nombre final de la ruta que esta en usuario (para conseguir el nombre)
-        nombre_u=$(basename "$usuario")
-        archivo_backup="${dir_backup}/diario_${nombre_u}_${fecha}.tar.bz2"
+    echo "$(date): Iniciando backup automático" >> /var/log/backups.log
 
-        #empaquetamos y comprimos igual pero silencioso esta vez 
-        tar -cjf "$archivo_backup" "$usuario" 2>/dev/null
+    # Verificar si el archivo de lista existe y tiene contenido
+    if [ ! -f "$backup_list" ] || [ ! -s "$backup_list" ]; then
+        echo "$(date): Lista de backups automáticos vacía, no se realizaron backups" >> /var/log/backups.log
+        release_lock
+        return 0
+    fi
 
-        #guardamos un .log de respaldos automaticos con hora (siempre van a ser las 4 am)
-        echo "$(date): Respaldo automatico: $nombre_u" >> /var/log/backups.log
+    # Leer la lista de backups automaticos (ignorar comentarios y lineas vacias)
+    while IFS= read -r linea; do
+        # Saltar lineas vacias o comentarios
+        [[ -z "$linea" || "$linea" =~ ^# ]] && continue
+        
+        if [[ "$linea" =~ ^@ ]]; then
+            # Es un grupo - extraer nombre del grupo (sin el @)
+            grupo="${linea#@}"
+            if grupo_existe "$grupo"; then
+                echo "$(date): Procesando grupo $grupo" >> /var/log/backups.log
+                # Procesar cada usuario del grupo
+                obtener_usuarios_de_grupo "$grupo" | while read usuario; do
+                    if usuario_existe "$usuario"; then
+                        home_dir=$(getent passwd "$usuario" | cut -d: -f6)
+                        if [ -d "$home_dir" ]; then
+                            archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
+                            if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
+                                echo "$(date): Backup automático de $usuario (grupo $grupo) - $archivo_backup" >> /var/log/backups.log
+                                ((usuarios_procesados++))
+                            fi
+                        fi
+                    fi
+                done
+            else
+                echo "$(date): ERROR: Grupo $grupo no existe" >> /var/log/backups.log
+            fi
+        else
+            # Es un usuario individual
+            usuario="$linea"
+            if usuario_existe "$usuario"; then
+                home_dir=$(getent passwd "$usuario" | cut -d: -f6)
+                if [ -d "$home_dir" ]; then
+                    archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
+                    if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
+                        echo "$(date): Backup automático de $usuario - $archivo_backup" >> /var/log/backups.log
+                        ((usuarios_procesados++))
+                    fi
+                fi
+            else
+                echo "$(date): ERROR: Usuario $usuario no existe" >> /var/log/backups.log
+            fi
         fi
-    done
+    done < "$backup_list"
+
+    echo "$(date): Backup automático completado - $usuarios_procesados usuarios procesados" >> /var/log/backups.log
     release_lock
     return 0
 }
@@ -292,6 +481,13 @@ toggle_backup_automatico(){
         (sudo crontab -l 2>/dev/null | grep -v "$Delta automatico") | sudo crontab -
         echo "Backup automático DESACTIVADO"
     else
+        # Mostrar advertencia si la lista está vacía
+        if [ ! -f "$backup_list" ] || [ ! -s "$backup_list" ]; then
+            echo "¡ADVERTENCIA: La lista de backups automáticos está vacía!"
+            echo "No se realizarán backups hasta que añada usuarios/grupos."
+            echo "Puede gestionar la lista en la opción 4 del menú principal."
+            echo
+        fi
         # aca le decimos a cron que ejecute este script todos los dias a las 4 am
         # -v invert match, se encarga de mostrar todo Exepto lo que cuencide
         (sudo crontab -l 2>/dev/null; echo "0 4 * * * $Delta automatico") | sudo crontab -
@@ -342,6 +538,7 @@ restaurar_backup(){
         # usamos basename solo para agarrar el nombre del backup que queremos EJ: backup_user.tar.bz2 envez de la direccion entera
         nombre_archivo=$(basename "$archivo_backup")
         
+        # CORREGIDO: Extraemos el usuario de manera más inteligente
         # Para backup individual: backup_alumno_20241210_143022.tar.bz2 -> usuario=alumno
         # Para backup de grupo: backup_alumno_grupo_20241210_143022.tar.bz2 -> usuario=alumno
         if [[ "$nombre_archivo" =~ ^backup_([^_]+)_ ]]; then
@@ -445,6 +642,9 @@ while true; do
             ;;
         3)
             execute_with_lock restaurar_backup
+            ;;
+        4)
+            gestionar_backup_auto
             ;;
         0)
              echo "cerrando programa"
