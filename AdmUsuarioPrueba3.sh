@@ -162,7 +162,7 @@ admin_usergroup_archivo(){
             if [ -f "$archivo" ] && [ -r "$archivo" ]
                 then
                 listaUsuarios=()         
-                read -ra palabras <<< "$(cat "$archivo")"
+                mapfile -t palabras < <(tr -s '[:space:]' '\n' < "$archivo")
 
                 if [ -n "${palabras[*]}" ]
                 then
