@@ -850,4 +850,15 @@ while true; do
             configurar_respaldo_remoto
             ;;
         0)
-             echo "cerrando
+             echo "cerrando programa"
+             exit 0 
+            ;;
+        *)
+            echo "Opción inválida"
+            ;;
+    esac
+    
+    echo
+    echo "Presione Enter para continuar..."
+    read
+done
