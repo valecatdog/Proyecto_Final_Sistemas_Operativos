@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# Configurar PATH explícito para cron - SOLUCIÓN AL PROBLEMA
+# Configurar PATH explícito para cron 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 #en esta variable guardamos la direccion de donde se van a guardar los backups
@@ -627,8 +627,8 @@ toggle_backup_automatico(){
             echo "Puede gestionar la lista en la opción 4 del menú principal."
             echo
         fi
-        # SOLUCIÓN DEFINITIVA: Forzar entorno completo en cron
-        (sudo crontab -l 2>/dev/null; echo "$CRON_MINUTO $CRON_HORA * * * . /etc/profile; cd /root && /bin/bash $Delta automatico") | sudo crontab -
+        # ⭐⭐ SOLUCIÓN SIMPLE: Comando único y directo
+        (sudo crontab -l 2>/dev/null; echo "$CRON_MINUTO $CRON_HORA * * * /bin/bash -c 'cd /root && PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /home/alumno_scriptTest/Proyecto_Final_Sistemas_Operativos_backup.sh automatico'") | sudo crontab -
         echo "Backup automático ACTIVADO"
         echo "Se ejecutará todos los días a las ${CRON_HORA}:${CRON_MINUTO}"
     fi
