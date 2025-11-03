@@ -16,6 +16,11 @@ REMOTE_BACKUP_ENABLED=true
 CRON_HORA="3"
 CRON_MINUTO="10"
 
+# PATH explícito para cron
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+SHELL=/bin/bash
+
 #**investigar mas a detalle
 cleanup() {
     echo "$(date): [CLEANUP] Ejecutando limpieza..." >> /var/log/backups.log
@@ -633,14 +638,12 @@ backup_diario(){
 
 # funcion para activar/desactivar el backup automatico en crontab
 toggle_backup_automatico(){
-    cron_line="$CRON_MINUTO $CRON_HORA * * * /bin/bash $Delta automatico"
+    cron_line="$CRON_MINUTO $CRON_HORA * * * /bin/bash $Delta automatico >> $LOGFILE 2>&1"
 
-    # Si la tarea ya está en crontab -> eliminarla
     if sudo crontab -l 2>/dev/null | grep -F -q "$Delta automatico"; then
         sudo crontab -l 2>/dev/null | grep -F -v "$Delta automatico" | sudo crontab -
         echo "Backup automático DESACTIVADO"
     else
-        # Añadir tarea (si no existe)
         (sudo crontab -l 2>/dev/null; echo "$cron_line") | sudo crontab -
         echo "Backup automático ACTIVADO"
         echo "Se ejecutará todos los días a las $CRON_HORA:$CRON_MINUTO"
