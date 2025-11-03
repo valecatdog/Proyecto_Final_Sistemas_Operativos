@@ -8,6 +8,11 @@ Delta=$(realpath "$0")
 lockfile="/var/lock/backup-script.lock"
 # Archivo de configuracion para la lista de backups automaticos
 backup_list="/etc/backup-script/auto-backup-list.conf"
+REMOTE_BACKUP_USER="respaldo_user"
+REMOTE_BACKUP_HOST="192.168.0.93"
+REMOTE_BACKUP_DIR="/backups/usuarios"
+SSH_KEY="$HOME/.ssh/backup_key"
+REMOTE_BACKUP_ENABLED=false
 
 #**investigar mas a detalle
 cleanup() {
@@ -25,6 +30,7 @@ cleanup() {
 }
 #****** trap se encarga de ejecutar cleanup cuando el script termina (EXIT) o recibe señales (INT, TERM)
 trap cleanup EXIT INT TERM
+
 #**** funcion para verificar que el script se ejecute como root
 check_user() {
     if [ "$(whoami)" != "root" ]; then
@@ -33,6 +39,7 @@ check_user() {
         exit 1
     fi
 }
+
 # funcion para adquirir el lock y evitar ejecuciones simultaneas
 acquire_lock() {
     if [ -f "$lockfile" ]; then
@@ -51,12 +58,14 @@ acquire_lock() {
     echo $$ > "$lockfile"
     return 0
 }
+
 #**** funcion para liberar el lock
 release_lock() {
     if [ -f "$lockfile" ]; then
         rm -f "$lockfile"
     fi
 }
+
 #***** funcion que ejecuta cualquier comando con lock para evitar races
 execute_with_lock() {
     if ! acquire_lock; then
@@ -71,6 +80,109 @@ execute_with_lock() {
     release_lock
     
     return $result
+}
+
+# Función para realizar respaldo remoto
+realizar_respaldo_remoto() {
+    local archivo_backup="$1"
+    local nombre_archivo=$(basename "$archivo_backup")
+    
+    # Verificar si está habilitado el respaldo remoto
+    if [ "$REMOTE_BACKUP_ENABLED" != "true" ]; then
+        return 0
+    fi
+    
+    echo "Iniciando respaldo remoto de $nombre_archivo..."
+    
+    # Verificar si el archivo local existe
+    if [ ! -f "$archivo_backup" ]; then
+        echo "ERROR: El archivo local $archivo_backup no existe"
+        return 1
+    fi
+    
+    # Verificar que la clave SSH existe
+    if [ ! -f "$SSH_KEY" ]; then
+        echo "ERROR: Clave SSH no encontrada en $SSH_KEY"
+        return 1
+    fi
+    
+    # Realizar el rsync
+    if rsync -avz -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10" \
+        "$archivo_backup" \
+        "$REMOTE_BACKUP_USER@$REMOTE_BACKUP_HOST:$REMOTE_BACKUP_DIR/" 2>/dev/null; then
+        
+        echo "Respaldo remoto completado: $nombre_archivo"
+        echo "$(date): Respaldo remoto exitoso: $nombre_archivo" >> /var/log/backups.log
+        return 0
+    else
+        echo "ERROR: Falló el respaldo remoto de $nombre_archivo"
+        echo "$(date): ERROR en respaldo remoto: $nombre_archivo" >> /var/log/backups.log
+        return 1
+    fi
+}
+
+# Función para probar conexión remota
+probar_conexion_remota() {
+    echo "Probando conexión con servidor remoto..."
+    
+    if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
+        "$REMOTE_BACKUP_USER@$REMOTE_BACKUP_HOST" "echo 'Conexión exitosa'" 2>/dev/null; then
+        echo "✅ Conexión remota funcionando correctamente"
+        return 0
+    else
+        echo "❌ Error en conexión remota"
+        return 1
+    fi
+}
+
+# Función para configurar respaldo remoto
+configurar_respaldo_remoto() {
+    while true; do
+        clear
+        echo "=== CONFIGURACIÓN DE RESPALDO REMOTO ==="
+        echo "Estado actual: $REMOTE_BACKUP_ENABLED"
+        echo
+        echo "1. Activar/Desactivar respaldo remoto"
+        echo "2. Probar conexión remota"
+        echo "3. Ver configuración actual"
+        echo "0. Volver al menú principal"
+        echo
+        echo -n "Seleccione opción: "
+        read opcion
+        
+        case $opcion in
+            1)
+                if [ "$REMOTE_BACKUP_ENABLED" = "true" ]; then
+                    REMOTE_BACKUP_ENABLED="false"
+                    echo "Respaldo remoto DESACTIVADO"
+                else
+                    REMOTE_BACKUP_ENABLED="true"
+                    echo "Respaldo remoto ACTIVADO"
+                fi
+                ;;
+            2)
+                probar_conexion_remota
+                ;;
+            3)
+                echo "Configuración actual:"
+                echo "  Usuario remoto: $REMOTE_BACKUP_USER"
+                echo "  Host remoto: $REMOTE_BACKUP_HOST"
+                echo "  Directorio remoto: $REMOTE_BACKUP_DIR"
+                echo "  Clave SSH: $SSH_KEY"
+                echo "  Habilitado: $REMOTE_BACKUP_ENABLED"
+                ;;
+            0)
+                return 0
+                ;;
+            *)
+                echo "Opción inválida"
+                ;;
+        esac
+        
+        echo
+        echo "Presione Enter para continuar..."
+        read
+    done
 }
 
 #funcion para crear el directorio dir_backup si no existe
@@ -127,6 +239,7 @@ menu_alpha(){
     fi
     echo "3. Restaurar backup"
     echo "4. Gestionar lista de backups automáticos"
+    echo "5. Configurar respaldo remoto"
     echo "0. Salir"
     echo
     echo -n "Seleccione opción (0 para salir): "
@@ -332,6 +445,8 @@ crear_backup_grupo(){
                         echo "    Backup creado: $(basename "$archivo_backup")"
                         echo "$(date): Backup manual de grupo $grupo - usuario $usuario - $archivo_backup" >> /var/log/backups.log
                         ((usuarios_procesados++))
+                        # Respaldo remoto automático
+                        realizar_respaldo_remoto "$archivo_backup"
                     else
                         echo "    Error al crear backup de $usuario"
                     fi
@@ -382,6 +497,8 @@ crear_backup(){
                     if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
                         echo "Backup creado: $archivo_backup"
                         echo "$(date): Backup manual de $usuario - $archivo_backup" >> /var/log/backups.log
+                        # Respaldo remoto automático
+                        realizar_respaldo_remoto "$archivo_backup"
                     else
                         echo "Error al crear el backup"
                     fi
@@ -443,6 +560,8 @@ backup_diario(){
                             if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
                                 echo "$(date): Backup automático de $usuario (grupo $grupo) - $archivo_backup" >> /var/log/backups.log
                                 ((usuarios_procesados++))
+                                # Respaldo remoto automático
+                                realizar_respaldo_remoto "$archivo_backup" &
                             fi
                         fi
                     fi
@@ -460,6 +579,8 @@ backup_diario(){
                     if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
                         echo "$(date): Backup automático de $usuario - $archivo_backup" >> /var/log/backups.log
                         ((usuarios_procesados++))
+                        # Respaldo remoto automático
+                        realizar_respaldo_remoto "$archivo_backup" &
                     fi
                 fi
             else
@@ -652,6 +773,9 @@ while true; do
             ;;
         4)
             gestionar_backup_auto
+            ;;
+        5)
+            configurar_respaldo_remoto
             ;;
         0)
              echo "cerrando programa"
