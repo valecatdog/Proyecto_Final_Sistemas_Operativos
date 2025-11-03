@@ -16,6 +16,27 @@ REMOTE_BACKUP_ENABLED=true
 CRON_HORA="3"
 CRON_MINUTO="10"
 
+# Configuración de entorno para ejecución en cron
+setup_cron_environment() {
+    # Establecer PATH completo para cron
+    export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    
+    # Establecer directorio de trabajo
+    cd /tmp  # o el directorio donde tengas permisos
+    
+    # Cargar variables de entorno si existen
+    if [ -f /etc/environment ]; then
+        source /etc/environment
+    fi
+    
+    # Verificar y crear lockfile directory si no existe
+    local lockdir=$(dirname "$lockfile")
+    if [ ! -d "$lockdir" ]; then
+        mkdir -p "$lockdir"
+        chmod 755 "$lockdir"
+    fi
+}
+
 #**investigar mas a detalle
 cleanup() {
     # SOLO eliminar lockfile si es de este proceso - SIN MENSAJES DE SPAM
@@ -48,6 +69,14 @@ check_user() {
 
 # funcion para adquirir el lock y evitar ejecuciones simultaneas
 acquire_lock() {
+    local lockdir=$(dirname "$lockfile")
+    
+    # Asegurar que el directorio del lockfile existe
+    if [ ! -d "$lockdir" ]; then
+        mkdir -p "$lockdir"
+        chmod 755 "$lockdir"
+    fi
+    
     if [ -f "$lockfile" ]; then
         local lock_pid=$(cat "$lockfile" 2>/dev/null)
         if [ -n "$lock_pid" ] && ps -p "$lock_pid" > /dev/null 2>&1; then
@@ -56,12 +85,16 @@ acquire_lock() {
             return 1
         else
             # Lockfile obsoleto, eliminarlo
-            rm -f "$lockfile"
+            rm -f "$lockfile" 2>/dev/null
         fi
     fi
     
     # Crear nuevo lockfile
-    echo $$ > "$lockfile"
+    echo $$ > "$lockfile" 2>/dev/null
+    if [ $? -ne 0 ]; then
+        echo "ADVERTENCIA: No se pudo crear lockfile, continuando sin lock..."
+        return 0
+    fi
     return 0
 }
 
@@ -598,7 +631,7 @@ backup_diario(){
     return 0
 }
 
-# funcion para activar/desactivar el backup automatico en crontab
+# funcion para activar/desactivar el backup automatico en crontab - CORREGIDA
 toggle_backup_automatico(){
     if backup_automatico_activo; then
         # DESACTIVAR - eliminar de crontab
@@ -612,15 +645,16 @@ toggle_backup_automatico(){
             echo "Puede gestionar la lista en la opción 4 del menú principal."
             echo
         fi
-        # ⭐⭐ SOLUCIÓN HÍBRIDA CRON + AT
-        # Cron maneja la recurrencia, AT maneja la ejecución con entorno completo
-        CRON_CMD="$CRON_MINUTO $CRON_HORA * * * echo '/home/alumno_scriptTest/Proyecto_Final_Sistemas_Operativos_backup.sh automatico' | at now 2>/dev/null"
+        
+        # ⭐⭐ SOLUCIÓN CORREGIDA: Ejecutar directamente el script con entorno completo
+        SCRIPT_PATH=$(realpath "$0")
+        CRON_CMD="$CRON_MINUTO $CRON_HORA * * * /bin/bash '$SCRIPT_PATH' automatico >> /var/log/backups.log 2>&1"
         
         (sudo crontab -l 2>/dev/null; echo "$CRON_CMD # backup_daily_scheduler") | sudo crontab -
         
         echo "Backup automático ACTIVADO"
         echo "Se ejecutará todos los días a las ${CRON_HORA}:${CRON_MINUTO}"
-        echo "Arquitectura: Cron (recurrencia) → AT (ejecución con entorno completo)"
+        echo "Script: $SCRIPT_PATH"
     fi
 }
 
@@ -755,12 +789,24 @@ restaurar_backup(){
 check_user
 crear_dir_backup
 
-#**+*** VERIFICAR SI SE EJECUTA EN MODO AUTOMATICO (desde cron + at)
+#**+*** VERIFICAR SI SE EJECUTA EN MODO AUTOMATICO (desde cron) - CORREGIDO
 if [ "$1" = "automatico" ]; then
+    # Configurar entorno para ejecución en cron
+    setup_cron_environment
+    
     {
         echo "================================================"
-        echo "$(date): [CRON+AT] INICIANDO BACKUP AUTOMÁTICO"
+        echo "$(date): [CRON] INICIANDO BACKUP AUTOMÁTICO"
         echo "================================================"
+        echo "Usuario: $(whoami)"
+        echo "PATH: $PATH"
+        echo "Directorio actual: $(pwd)"
+        echo "Lockfile: $lockfile"
+        
+        # Verificar existencia de directorios críticos
+        echo "Verificando directorios..."
+        echo "dir_backup: $dir_backup - $( [ -d "$dir_backup" ] && echo "EXISTE" || echo "NO EXISTE" )"
+        echo "backup_list: $backup_list - $( [ -f "$backup_list" ] && echo "EXISTE" || echo "NO EXISTE" )"
         
         # Ejecutar backup diario
         echo "Ejecutando backup_diario..."
@@ -771,7 +817,7 @@ if [ "$1" = "automatico" ]; then
         fi
         
         echo "================================================"
-        echo "$(date): [CRON+AT] FINALIZANDO BACKUP AUTOMÁTICO"
+        echo "$(date): [CRON] FINALIZANDO BACKUP AUTOMÁTICO"
         echo "================================================"
     } >> /var/log/backups.log 2>&1
     
