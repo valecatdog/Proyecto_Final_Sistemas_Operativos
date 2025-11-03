@@ -150,6 +150,7 @@ aniadir_quitar_usergrupo(){
 admin_usergroup_archivo(){
     while true
     do
+        
         clear
         echo "==AGREAGAR USUARIOS A GRUPOS CON ARCHIVO=="
         printf "\n\n"
@@ -160,20 +161,22 @@ admin_usergroup_archivo(){
         else 
             listaUsuarios=()         
             read -ra palabras <<< "$(cat "$archivo")"
+            if [ -n "${palabras[*]}" ]
+            then
+                for palabra in "${palabras[@]}"; do
+                    if getent passwd "$palabra" > /dev/null; then
+                        listaUsuarios+=("$palabra")
+                    fi
+                done
 
-            for palabra in "${palabras[@]}"; do
-                if getent passwd "$palabra" > /dev/null; then
-                    listaUsuarios+=("$palabra")
+                if [ -n "${listaUsuarios[*]}" ]; then
+                    admin_usergroup_archivo_grupo
+                    return
+                else
+                    read -t1 -n2 -srp "ERROR: el archivo no contiene ningun usuario valido"
                 fi
-            done
-
-            if [ -n "${listaUsuarios[*]}" ]; then
-                admin_usergroup_archivo_grupo
-                return
             else
-                read -t1 -n2 -srp "ERROR: el archivo no contiene ningun usuario valido"
-                gestion_usuarios_grupos
-                return
+                read -t1 -n2 -srp "ERROR: el archivo esta vacio"
             fi
         fi
     done
