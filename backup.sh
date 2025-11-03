@@ -532,17 +532,20 @@ crear_backup(){
 
 #***** MODIFICADA: funcion de backup diario que usa la lista configurada
 backup_diario(){
+    echo "$(date): [BACKUP_DIARIO] Iniciando función" >> /var/log/backups.log
+    
     # ⭐⭐ MEJORADO: Manejo robusto de locks para modo automático
+    echo "$(date): [BACKUP_DIARIO] Intentando adquirir lock..." >> /var/log/backups.log
     if ! acquire_lock; then
-        echo "$(date): ERROR: No se pudo adquirir lock, backup automático omitido" >> /var/log/backups.log
+        echo "$(date): [BACKUP_DIARIO] ERROR: No se pudo adquirir lock" >> /var/log/backups.log
         # Intentar limpieza de lockfile obsoleto
         if [ -f "$lockfile" ]; then
             local lock_pid=$(cat "$lockfile" 2>/dev/null)
             if [ -n "$lock_pid" ] && ! ps -p "$lock_pid" > /dev/null 2>&1; then
                 rm -f "$lockfile"
-                echo "$(date): Lockfile obsoleto eliminado (PID: $lock_pid), reintentando..." >> /var/log/backups.log
+                echo "$(date): [BACKUP_DIARIO] Lockfile obsoleto eliminado (PID: $lock_pid), reintentando..." >> /var/log/backups.log
                 if acquire_lock; then
-                    echo "$(date): Reintento exitoso después de limpiar lockfile" >> /var/log/backups.log
+                    echo "$(date): [BACKUP_DIARIO] Reintento exitoso después de limpiar lockfile" >> /var/log/backups.log
                 else
                     return 1
                 fi
@@ -554,9 +557,10 @@ backup_diario(){
         fi
     fi
     
-    # ⭐⭐ GARANTIZAR liberación del lock
-    trap 'release_lock; echo "$(date): [BACKUP_DIARIO] Lock liberado por trap" >> /var/log/backups.log' EXIT
+    echo "$(date): [BACKUP_DIARIO] Lock adquirido exitosamente" >> /var/log/backups.log
     
+    # GARANTIZAR liberación del lock
+    trap 'release_lock; echo "$(date): [BACKUP_DIARIO] Lock liberado por trap" >> /var/log/backups.log' EXIT
     fecha=$(date '+%Y%m%d')
     usuarios_procesados=0
 
@@ -619,7 +623,7 @@ backup_diario(){
 
     echo "$(date): Backup automático completado - $usuarios_procesados usuarios procesados" >> /var/log/backups.log
     
-    # ⭐⭐ LIBERACIÓN EXPLÍCITA DEL LOCK
+    # LIBERACIÓN EXPLÍCITA DEL LOCK
     release_lock
     echo "$(date): [BACKUP_DIARIO] Lock liberado explícitamente" >> /var/log/backups.log
     return 0
