@@ -159,24 +159,31 @@ admin_usergroup_archivo(){
             gestion_usuarios_grupos
             return
         else 
-            listaUsuarios=()         
-            read -ra palabras <<< "$(cat "$archivo")"
-            if [ -n "${palabras[*]}" ]
-            then
-                for palabra in "${palabras[@]}"; do
-                    if getent passwd "$palabra" > /dev/null; then
-                        listaUsuarios+=("$palabra")
-                    fi
-                done
+            if [ -f "$archivo" ] && [ -r "$archivo" ]
+                then
+                listaUsuarios=()         
+                read -ra palabras <<< "$(cat "$archivo")"
 
-                if [ -n "${listaUsuarios[*]}" ]; then
-                    admin_usergroup_archivo_grupo
-                    return
+                if [ -n "${palabras[*]}" ]
+                then
+                    for palabra in "${palabras[@]}"; do
+                        if getent passwd "$palabra" > /dev/null; then
+                            listaUsuarios+=("$palabra")
+                        fi
+                    done
+
+                    if [ -n "${listaUsuarios[*]}" ]; then
+                        admin_usergroup_archivo_grupo
+                        return
+                    else
+                        read -t1 -n2 -srp "ERROR: el archivo no contiene ningun usuario valido"
+                    fi
                 else
-                    read -t1 -n2 -srp "ERROR: el archivo no contiene ningun usuario valido"
+                    read -t1 -n2 -srp "ERROR: el archivo esta vacio"
                 fi
+                
             else
-                read -t1 -n2 -srp "ERROR: el archivo esta vacio"
+                read -t1 -n2 -srp "ERROR: el archivo no existe o no se puede leer" 
             fi
         fi
     done
