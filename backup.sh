@@ -617,7 +617,6 @@ backup_diario(){
 toggle_backup_automatico(){
     if backup_automatico_activo; then
         # DESACTIVAR - eliminar de crontab
-        #**** grep -v muestra todo EXCEPTO la linea que contiene nuestro script
         (sudo crontab -l 2>/dev/null | grep -v "$Delta automatico") | sudo crontab -
         echo "Backup automático DESACTIVADO"
     else
@@ -628,8 +627,8 @@ toggle_backup_automatico(){
             echo "Puede gestionar la lista en la opción 4 del menú principal."
             echo
         fi
-        #  MODIFICADO: Usar entorno completo para cron - SOLUCIÓN AL PROBLEMA
-        (sudo crontab -l 2>/dev/null; echo "$CRON_MINUTO $CRON_HORA * * * /bin/bash -l -c '$Delta automatico'") | sudo crontab -
+        # SOLUCIÓN DEFINITIVA: Forzar entorno completo en cron
+        (sudo crontab -l 2>/dev/null; echo "$CRON_MINUTO $CRON_HORA * * * . /etc/profile; cd /root && /bin/bash $Delta automatico") | sudo crontab -
         echo "Backup automático ACTIVADO"
         echo "Se ejecutará todos los días a las ${CRON_HORA}:${CRON_MINUTO}"
     fi
