@@ -180,14 +180,14 @@ programar_transferencia_remota() {
     
     local nombre_archivo=$(basename "$archivo_backup")
     
-    # Crear script temporal con todas las variables RESUELTAS
+    # Cr ear script temporal con todas las variables RESUELTAS
     local temp_script=$(mktemp /tmp/rsync_job_XXXXXX.sh)
     
     cat > "$temp_script" << SCRIPT_EOF
 #!/bin/bash
 # Script temporal para transferencia rsync
 # VARIABLES YA EXPANDIDAS - nada depende del entorno
-
+ 
 LOG_FILE="/var/log/backups.log"
 BACKUP_FILE="$archivo_backup"
 REMOTE_USER="$REMOTE_BACKUP_USER"
