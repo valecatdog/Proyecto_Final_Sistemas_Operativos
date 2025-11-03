@@ -263,7 +263,7 @@ aniadir_quitar_usergrupo_archivo(){
                 noBorrados=()
                 for u in "${listaUsuarios[@]}"
                 do
-                    if ! sudo gpasswd -d "$u" "$2" 2>/dev/null; then
+                    if ! sudo gpasswd -d "$u" "$2" &>/dev/null; then
                         noBorrados+=("$u")  
                     fi 
                 done
