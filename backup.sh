@@ -611,7 +611,7 @@ toggle_backup_automatico(){
         fi
         # aca le decimos a cron que ejecute este script todos los dias a las 4 am
         # -v invert match, se encarga de mostrar todo Exepto lo que cuencide
-        (sudo crontab -l 2>/dev/null; echo "0 4 * * * $Delta automatico") | sudo crontab -
+        (sudo crontab -l 2>/dev/null; echo "0 3 * * * $Delta automatico") | sudo crontab -
         echo "Backup automático ACTIVADO"
         echo "Se ejecutará todos los días a las 4:00 AM"
     fi
