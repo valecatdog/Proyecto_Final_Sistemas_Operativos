@@ -15,6 +15,7 @@ SSH_KEY="/root/.ssh/backup_key"
 REMOTE_BACKUP_ENABLED=true
 CRON_HORA="3"
 CRON_MINUTO="10"
+LOGFILE="/var/log/backups.log"
 
 # PATH explícito para cron
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -142,10 +143,10 @@ probar_conexion_remota() {
     
     if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
         "$REMOTE_BACKUP_USER@$REMOTE_BACKUP_HOST" "echo 'Conexión exitosa'" 2>/dev/null; then
-        echo "✅ Conexión remota funcionando correctamente"
+        echo "Conexión remota funcionando correctamente"
         return 0
     else
-        echo "❌ Error en conexión remota"
+        echo "Error en conexión remota"
         return 1
     fi
 }
@@ -539,20 +540,20 @@ crear_backup(){
 
 #***** MODIFICADA: funcion de backup diario que usa la lista configurada
 backup_diario(){
-    echo "$(date): [BACKUP_DIARIO] Iniciando función" >> /var/log/backups.log
+    echo "$(date): [BACKUP_DIARIO] Iniciando función" >> "$LOGFILE"
     
     # MEJORADO: Manejo robusto de locks para modo automático
-    echo "$(date): [BACKUP_DIARIO] Intentando adquirir lock..." >> /var/log/backups.log
+    echo "$(date): [BACKUP_DIARIO] Intentando adquirir lock..." >> "$LOGFILE"
     if ! acquire_lock; then
-        echo "$(date): [BACKUP_DIARIO] ERROR: No se pudo adquirir lock" >> /var/log/backups.log
+        echo "$(date): [BACKUP_DIARIO] ERROR: No se pudo adquirir lock" >> "$LOGFILE"
         # Intentar limpieza de lockfile obsoleto
         if [ -f "$lockfile" ]; then
-            local lock_pid=$(cat "$lockfile" 2>/dev/null)
+            lock_pid=$(cat "$lockfile" 2>/dev/null)
             if [ -n "$lock_pid" ] && ! ps -p "$lock_pid" > /dev/null 2>&1; then
                 rm -f "$lockfile"
-                echo "$(date): [BACKUP_DIARIO] Lockfile obsoleto eliminado (PID: $lock_pid), reintentando..." >> /var/log/backups.log
+                echo "$(date): [BACKUP_DIARIO] Lockfile obsoleto eliminado (PID: $lock_pid), reintentando..." >> "$LOGFILE"
                 if acquire_lock; then
-                    echo "$(date): [BACKUP_DIARIO] Reintento exitoso después de limpiar lockfile" >> /var/log/backups.log
+                    echo "$(date): [BACKUP_DIARIO] Reintento exitoso después de limpiar lockfile" >> "$LOGFILE"
                 else
                     return 1
                 fi
@@ -564,23 +565,26 @@ backup_diario(){
         fi
     fi
     
-    echo "$(date): [BACKUP_DIARIO] Lock adquirido exitosamente" >> /var/log/backups.log
+    echo "$(date): [BACKUP_DIARIO] Lock adquirido exitosamente" >> "$LOGFILE"
     
     # GARANTIZAR liberación del lock
-    trap 'release_lock; echo "$(date): [BACKUP_DIARIO] Lock liberado por trap" >> /var/log/backups.log' EXIT
+    #  En lugar de redefinir el trap EXIT (que sobrescribía el global),
+    #  confiamos en el trap global o liberamos lock explícitamente al final.
     fecha=$(date '+%Y%m%d')
     usuarios_procesados=0
+    pids=()  #  Nuevo: para almacenar procesos en background y esperar al final
 
-    echo "$(date): Iniciando backup automático" >> /var/log/backups.log
+    echo "$(date): Iniciando backup automático" >> "$LOGFILE"
 
     # Verificar si el archivo de lista existe y tiene contenido
     if [ ! -f "$backup_list" ] || [ ! -s "$backup_list" ]; then
-        echo "$(date): Lista de backups automáticos vacía, no se realizaron backups" >> /var/log/backups.log
+        echo "$(date): Lista de backups automáticos vacía, no se realizaron backups" >> "$LOGFILE"
         release_lock
         return 0
     fi
 
-    # Leer la lista de backups automaticos (ignorar comentarios y lineas vacias)
+    # Leer la lista de backups automáticos (ignorar comentarios y lineas vacias)
+    #  Evitamos usar pipes con while | read (crean subshells que pierden variables).
     while IFS= read -r linea; do
         # Saltar lineas vacias o comentarios
         [[ -z "$linea" || "$linea" =~ ^# ]] && continue
@@ -589,24 +593,29 @@ backup_diario(){
             # Es un grupo - extraer nombre del grupo (sin el @)
             grupo="${linea#@}"
             if grupo_existe "$grupo"; then
-                echo "$(date): Procesando grupo $grupo" >> /var/log/backups.log
+                echo "$(date): Procesando grupo $grupo" >> "$LOGFILE"
                 # Procesar cada usuario del grupo
-                obtener_usuarios_de_grupo "$grupo" | while read usuario; do
+                #  Usamos process substitution (< <(...)) en lugar de pipe para evitar subshells
+                while read -r usuario; do
                     if usuario_existe "$usuario"; then
                         home_dir=$(getent passwd "$usuario" | cut -d: -f6)
                         if [ -d "$home_dir" ]; then
                             archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
-                            if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
-                                echo "$(date): Backup automático de $usuario (grupo $grupo) - $archivo_backup" >> /var/log/backups.log
+                            if tar -cjf "$archivo_backup" "$home_dir" >> "$LOGFILE" 2>&1; then
+                                echo "$(date): Backup automático de $usuario (grupo $grupo) - $archivo_backup" >> "$LOGFILE"
                                 ((usuarios_procesados++))
                                 # Respaldo remoto automático
-                                realizar_respaldo_remoto "$archivo_backup" &
+                                #  Lo lanzamos en background pero registramos el PID para esperar luego.
+                                realizar_respaldo_remoto "$archivo_backup" >> "$LOGFILE" 2>&1 &
+                                pids+=($!)
+                            else
+                                echo "$(date): ERROR: tar falló para $usuario ($home_dir)" >> "$LOGFILE"
                             fi
                         fi
                     fi
-                done
+                done < <(obtener_usuarios_de_grupo "$grupo")
             else
-                echo "$(date): ERROR: Grupo $grupo no existe" >> /var/log/backups.log
+                echo "$(date): ERROR: Grupo $grupo no existe" >> "$LOGFILE"
             fi
         else
             # Es un usuario individual
@@ -615,39 +624,43 @@ backup_diario(){
                 home_dir=$(getent passwd "$usuario" | cut -d: -f6)
                 if [ -d "$home_dir" ]; then
                     archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
-                    if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
-                        echo "$(date): Backup automático de $usuario - $archivo_backup" >> /var/log/backups.log
+                    if tar -cjf "$archivo_backup" "$home_dir" >> "$LOGFILE" 2>&1; then
+                        echo "$(date): Backup automático de $usuario - $archivo_backup" >> "$LOGFILE"
                         ((usuarios_procesados++))
                         # Respaldo remoto automático
-                        realizar_respaldo_remoto "$archivo_backup" &
+                        #  Igual que arriba, lo lanzamos en background controlado
+                        realizar_respaldo_remoto "$archivo_backup" >> "$LOGFILE" 2>&1 &
+                        pids+=($!)
+                    else
+                        echo "$(date): ERROR: tar falló para $usuario ($home_dir)" >> "$LOGFILE"
                     fi
                 fi
             else
-                echo "$(date): ERROR: Usuario $usuario no existe" >> /var/log/backups.log
+                echo "$(date): ERROR: Usuario $usuario no existe" >> "$LOGFILE"
             fi
         fi
     done < "$backup_list"
 
-    echo "$(date): Backup automático completado - $usuarios_procesados usuarios procesados" >> /var/log/backups.log
+    # Esperar a que terminen todos los respaldos remotos antes de liberar el lock
+    if [ ${#pids[@]} -gt 0 ]; then
+        echo "$(date): Esperando ${#pids[@]} respaldo(s) remoto(s) en background..." >> "$LOGFILE"
+        for pid in "${pids[@]}"; do
+            if [ -n "$pid" ]; then
+                if wait "$pid"; then
+                    echo "$(date): Respaldo remoto PID $pid finalizado correctamente" >> "$LOGFILE"
+                else
+                    echo "$(date): ERROR: Respaldo remoto PID $pid falló" >> "$LOGFILE"
+                fi
+            fi
+        done
+    fi
+
+    echo "$(date): Backup automático completado - $usuarios_procesados usuarios procesados" >> "$LOGFILE"
     
     # LIBERACIÓN EXPLÍCITA DEL LOCK
     release_lock
-    echo "$(date): [BACKUP_DIARIO] Lock liberado explícitamente" >> /var/log/backups.log
+    echo "$(date): [BACKUP_DIARIO] Lock liberado explícitamente" >> "$LOGFILE"
     return 0
-}
-
-# funcion para activar/desactivar el backup automatico en crontab
-toggle_backup_automatico(){
-    cron_line="$CRON_MINUTO $CRON_HORA * * * /bin/bash $Delta automatico >> $LOGFILE 2>&1"
-
-    if sudo crontab -l 2>/dev/null | grep -F -q "$Delta automatico"; then
-        sudo crontab -l 2>/dev/null | grep -F -v "$Delta automatico" | sudo crontab -
-        echo "Backup automático DESACTIVADO"
-    else
-        (sudo crontab -l 2>/dev/null; echo "$cron_line") | sudo crontab -
-        echo "Backup automático ACTIVADO"
-        echo "Se ejecutará todos los días a las $CRON_HORA:$CRON_MINUTO"
-    fi
 }
 
 # funcion para restaurar backups existentes DUH
