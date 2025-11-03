@@ -568,11 +568,11 @@ backup_diario(){
     echo "$(date): [BACKUP_DIARIO] Lock adquirido exitosamente" >> "$LOGFILE"
     
     # GARANTIZAR liberación del lock
-    #  En lugar de redefinir el trap EXIT (que sobrescribía el global),
-    #  confiamos en el trap global o liberamos lock explícitamente al final.
+    # 🔧 En lugar de redefinir el trap EXIT (que sobrescribía el global),
+    #     confiamos en el trap global o liberamos lock explícitamente al final.
     fecha=$(date '+%Y%m%d')
     usuarios_procesados=0
-    pids=()  #  Nuevo: para almacenar procesos en background y esperar al final
+    pids=()  # 🔧 Nuevo: para almacenar procesos en background y esperar al final
 
     echo "$(date): Iniciando backup automático" >> "$LOGFILE"
 
@@ -584,7 +584,7 @@ backup_diario(){
     fi
 
     # Leer la lista de backups automáticos (ignorar comentarios y lineas vacias)
-    #  Evitamos usar pipes con while | read (crean subshells que pierden variables).
+    # 🔧 Evitamos usar pipes con while | read (crean subshells que pierden variables).
     while IFS= read -r linea; do
         # Saltar lineas vacias o comentarios
         [[ -z "$linea" || "$linea" =~ ^# ]] && continue
@@ -595,7 +595,7 @@ backup_diario(){
             if grupo_existe "$grupo"; then
                 echo "$(date): Procesando grupo $grupo" >> "$LOGFILE"
                 # Procesar cada usuario del grupo
-                #  Usamos process substitution (< <(...)) en lugar de pipe para evitar subshells
+                # 🔧 Usamos process substitution (< <(...)) en lugar de pipe para evitar subshells
                 while read -r usuario; do
                     if usuario_existe "$usuario"; then
                         home_dir=$(getent passwd "$usuario" | cut -d: -f6)
@@ -605,7 +605,7 @@ backup_diario(){
                                 echo "$(date): Backup automático de $usuario (grupo $grupo) - $archivo_backup" >> "$LOGFILE"
                                 ((usuarios_procesados++))
                                 # Respaldo remoto automático
-                                #  Lo lanzamos en background pero registramos el PID para esperar luego.
+                                # 🔧 Lo lanzamos en background pero registramos el PID para esperar luego.
                                 realizar_respaldo_remoto "$archivo_backup" >> "$LOGFILE" 2>&1 &
                                 pids+=($!)
                             else
@@ -628,7 +628,7 @@ backup_diario(){
                         echo "$(date): Backup automático de $usuario - $archivo_backup" >> "$LOGFILE"
                         ((usuarios_procesados++))
                         # Respaldo remoto automático
-                        #  Igual que arriba, lo lanzamos en background controlado
+                        # 🔧 Igual que arriba, lo lanzamos en background controlado
                         realizar_respaldo_remoto "$archivo_backup" >> "$LOGFILE" 2>&1 &
                         pids+=($!)
                     else
@@ -641,7 +641,7 @@ backup_diario(){
         fi
     done < "$backup_list"
 
-    # Esperar a que terminen todos los respaldos remotos antes de liberar el lock
+    # 🔧 Esperar a que terminen todos los respaldos remotos antes de liberar el lock
     if [ ${#pids[@]} -gt 0 ]; then
         echo "$(date): Esperando ${#pids[@]} respaldo(s) remoto(s) en background..." >> "$LOGFILE"
         for pid in "${pids[@]}"; do
@@ -661,6 +661,21 @@ backup_diario(){
     release_lock
     echo "$(date): [BACKUP_DIARIO] Lock liberado explícitamente" >> "$LOGFILE"
     return 0
+}
+
+
+# funcion para activar/desactivar el backup automatico en crontab
+toggle_backup_automatico(){
+    cron_line="$CRON_MINUTO $CRON_HORA * * * /bin/bash $Delta automatico >> $LOGFILE 2>&1"
+
+    if sudo crontab -l 2>/dev/null | grep -F -q "$Delta automatico"; then
+        sudo crontab -l 2>/dev/null | grep -F -v "$Delta automatico" | sudo crontab -
+        echo "Backup automático DESACTIVADO"
+    else
+        (sudo crontab -l 2>/dev/null; echo "$cron_line") | sudo crontab -
+        echo "Backup automático ACTIVADO"
+        echo "Se ejecutará todos los días a las $CRON_HORA:$CRON_MINUTO"
+    fi
 }
 
 # funcion para restaurar backups existentes DUH
