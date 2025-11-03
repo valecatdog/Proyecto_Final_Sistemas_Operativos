@@ -1,18 +1,12 @@
 #! /bin/bash
 
-# === SOLUCIÓN NUCLEAR PARA CRON ===
-# Si es modo automático, RE-EJECUTAR con entorno completo
-if [ "$1" = "automatico" ] && [ -z "$CRON_FIXED" ]; then
-    export CRON_FIXED=1
-    # Re-ejecutar con entorno completo
-    exec /bin/bash -c "source /etc/profile; export PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'; export HOME='/root'; export USER='root'; cd /tmp; '$0' automatico"
-    exit 1
-fi
-
-# Resto de tus variables originales...
+#en esta variable guardamos la direccion de donde se van a guardar los backups
 dir_backup="/var/users_backups"
+# Delta es el valor actual de este scrit, lo conseguimos con realpath
+# tambien podriamos usar la direccion actual del script y ya, pero esto le da mas flexibilidad
 Delta=$(realpath "$0")
 lockfile="/var/lock/backup-script.lock"
+# Archivo de configuracion para la lista de backups automaticos
 backup_list="/etc/backup-script/auto-backup-list.conf"
 REMOTE_BACKUP_USER="respaldo_user"
 REMOTE_BACKUP_HOST="192.168.0.93"
@@ -22,47 +16,30 @@ REMOTE_BACKUP_ENABLED=true
 CRON_HORA="3"
 CRON_MINUTO="10"
 
-# Configuración de entorno para ejecución en cron
-setup_cron_environment() {
-    # Establecer PATH completo para cron
-    export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-    
-    # Establecer directorio de trabajo
-    cd /tmp  # o el directorio donde tengas permisos
-    
-    # Cargar variables de entorno si existen
-    if [ -f /etc/environment ]; then
-        source /etc/environment
-    fi
-    
-    # Verificar y crear lockfile directory si no existe
-    local lockdir=$(dirname "$lockfile")
-    if [ ! -d "$lockdir" ]; then
-        mkdir -p "$lockdir"
-        chmod 755 "$lockdir"
-    fi
-}
-
 #**investigar mas a detalle
 cleanup() {
-    # SOLO eliminar lockfile si es de este proceso - SIN MENSAJES DE SPAM
+    echo "$(date): [CLEANUP] Ejecutando limpieza..." >> /var/log/backups.log
+    # Eliminar lockfile si existe
     if [ -f "$lockfile" ]; then
         local current_pid=$$
         local lock_pid=$(cat "$lockfile" 2>/dev/null)
         
-        # Solo eliminar si el lockfile es de este proceso
-        if [ "$lock_pid" = "$current_pid" ]; then
+        # Solo eliminar si el lockfile es de este proceso o el proceso ya no existe
+        if [ "$lock_pid" = "$current_pid" ] || [ -z "$lock_pid" ] || ! ps -p "$lock_pid" > /dev/null 2>&1; then
             rm -f "$lockfile"
+            echo "$(date): [CLEANUP] Lockfile removido (PID: $lock_pid, Current: $current_pid)" >> /var/log/backups.log
+        else
+            echo "$(date): [CLEANUP] Lockfile NO removido - pertenece a proceso activo PID: $lock_pid" >> /var/log/backups.log
         fi
     fi
-    
     # Eliminar directorio temporal si existe
-    if [ -n "$temp_dir" ] && [ -d "$temp_dir" ]; then
+    if [ -n  "$temp_dir" ] && [ -d "$temp_dir" ]; then
         rm -rf "$temp_dir"
+        echo "$(date): [CLEANUP] Directorio temporal removido: $temp_dir" >> /var/log/backups.log
     fi
 }
-#****** trap SOLO para EXIT - eliminar INT y TERM que causan spam
-trap cleanup EXIT
+#****** trap se encarga de ejecutar cleanup cuando el script termina (EXIT) o recibe señales (INT, TERM)
+trap cleanup EXIT INT TERM
 
 #**** funcion para verificar que el script se ejecute como root
 check_user() {
@@ -75,14 +52,6 @@ check_user() {
 
 # funcion para adquirir el lock y evitar ejecuciones simultaneas
 acquire_lock() {
-    local lockdir=$(dirname "$lockfile")
-    
-    # Asegurar que el directorio del lockfile existe
-    if [ ! -d "$lockdir" ]; then
-        mkdir -p "$lockdir"
-        chmod 755 "$lockdir"
-    fi
-    
     if [ -f "$lockfile" ]; then
         local lock_pid=$(cat "$lockfile" 2>/dev/null)
         if [ -n "$lock_pid" ] && ps -p "$lock_pid" > /dev/null 2>&1; then
@@ -91,16 +60,12 @@ acquire_lock() {
             return 1
         else
             # Lockfile obsoleto, eliminarlo
-            rm -f "$lockfile" 2>/dev/null
+            rm -f "$lockfile"
         fi
     fi
     
     # Crear nuevo lockfile
-    echo $$ > "$lockfile" 2>/dev/null
-    if [ $? -ne 0 ]; then
-        echo "ADVERTENCIA: No se pudo crear lockfile, continuando sin lock..."
-        return 0
-    fi
+    echo $$ > "$lockfile"
     return 0
 }
 
@@ -265,10 +230,9 @@ crear_dir_backup(){
     fi
 }
 
-# se encarga de verificar si el backup esta up and running :D
+# se encarga de verificar si el backup esta up and running :D, crontab -l te da una lista con las tareas Cron actuales y busca alguna linea que contenga la ruta del script ( grep te devuelve 0 (true) si no la encuentra y 1 (false) si la encuentra)
 backup_automatico_activo(){
-    # Verificar si cron está programado para nuestro backup
-    sudo crontab -l 2>/dev/null | grep -q "backup_daily_scheduler"
+    sudo crontab -l 2>/dev/null | grep -q "backup.sh automatico"
 }
 
 # funcion para mostrar el menu
@@ -345,6 +309,7 @@ ver_lista_backup_auto() {
     echo "=== LISTA ACTUAL DE BACKUPS AUTOMÁTICOS ==="
     if [ ! -s "$backup_list" ]; then
         echo "La lista está vacía."
+        echo "Los backups automáticos no se ejecutarán hasta que añada elementos."
     else
         # Mostrar solo lineas que no son comentarios y no están vacías
         grep -v '^#' "$backup_list" | grep -v '^$' | nl -w 2 -s '. '
@@ -475,12 +440,13 @@ crear_backup_grupo(){
         # Contador para usuarios procesados
         usuarios_procesados=0
         
-        # CORREGIDO: Evitar subshell usando process substitution
-        while IFS= read -r usuario; do
+        # Obtener usuarios del grupo y crear backup INDIVIDUAL para cada uno
+        obtener_usuarios_de_grupo "$grupo" | while read usuario; do
             if usuario_existe "$usuario"; then
                 home_dir=$(getent passwd "$usuario" | cut -d: -f6)
                 if [ -d "$home_dir" ]; then
                     echo "  - Creando backup de: $usuario"
+                    # CORREGIDO: Cambiamos el formato del nombre para que sea consistente
                     archivo_backup="${dir_backup}/backup_${usuario}_grupo_${fecha}.tar.bz2"
                     
                     # Crear backup individual del usuario
@@ -488,8 +454,7 @@ crear_backup_grupo(){
                     then
                         echo "    Backup creado: $(basename "$archivo_backup")"
                         echo "$(date): Backup manual de grupo $grupo - usuario $usuario - $archivo_backup" >> /var/log/backups.log
-                        # CORREGIDO: Incrementar contador correctamente
-                        usuarios_procesados=$((usuarios_procesados + 1))
+                        ((usuarios_procesados++))
                         # Respaldo remoto automático
                         realizar_respaldo_remoto "$archivo_backup"
                     else
@@ -499,7 +464,7 @@ crear_backup_grupo(){
             else
                 echo "  - Usuario $usuario no existe, omitiendo"
             fi
-        done < <(obtener_usuarios_de_grupo "$grupo")
+        done
         
         echo "Backup de grupo completado: $usuarios_procesados usuarios procesados"
         
@@ -525,11 +490,19 @@ crear_backup(){
 
                 if usuario_existe "$usuario" 
                 then
+                    #getent (get entry) te da las entradas de datos del sistema
+                    #lo deberiamos usar por el tema de backups entre maquinas (el getent), si no se deberia usar grep 
+                    #
                     home_dir=$(getent passwd "$usuario" | cut -d: -f6)
                     
+                    #Creamos el nombre del archivo de backup
+                    #Guardamos una personalizacion del comando date en una variable fecha 
+                    #Lo guardamos sin espacios 
                     fecha=$(date '+%Y%m%d_%H%M%S')
                     archivo_backup="/var/users_backups/backup_${usuario}_${fecha}.tar.bz2"
                     
+                    # Creando el backup
+                    # tar empaqueta lo que esta en la var archivo_backup, crea un nuevo arch con -c, con j lo comprimimos con bzip2, y -f le decimos el nombre del arch 
                     echo "Creando backup de $home_dir"
                     if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
                         echo "Backup creado: $archivo_backup"
@@ -559,16 +532,12 @@ crear_backup(){
     done
 }
 
-#***** FUNCIÓN CORREGIDA: backup diario sin problema de subshell
+#***** MODIFICADA: funcion de backup diario que usa la lista configurada
 backup_diario(){
-    echo "$(date): [DEBUG] Entrando en backup_diario" >> /var/log/backups.log
-    
     if ! acquire_lock; then
-        echo "$(date): [DEBUG] No se pudo adquirir lock en backup_diario" >> /var/log/backups.log
+        echo "No se pudo adquirir lock, backup automático omitido" >> /var/log/backups.log
         return 1
     fi
-    
-    echo "$(date): [DEBUG] Lock adquirido exitosamente" >> /var/log/backups.log
     
     fecha=$(date '+%Y%m%d')
     usuarios_procesados=0
@@ -592,22 +561,21 @@ backup_diario(){
             grupo="${linea#@}"
             if grupo_existe "$grupo"; then
                 echo "$(date): Procesando grupo $grupo" >> /var/log/backups.log
-                # CORREGIDO: Evitar subshell usando process substitution
-                while IFS= read -r usuario; do
+                # Procesar cada usuario del grupo
+                obtener_usuarios_de_grupo "$grupo" | while read usuario; do
                     if usuario_existe "$usuario"; then
                         home_dir=$(getent passwd "$usuario" | cut -d: -f6)
                         if [ -d "$home_dir" ]; then
                             archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
                             if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
                                 echo "$(date): Backup automático de $usuario (grupo $grupo) - $archivo_backup" >> /var/log/backups.log
-                                # CORREGIDO: Incrementar contador correctamente
-                                usuarios_procesados=$((usuarios_procesados + 1))
+                                ((usuarios_procesados++))
                                 # Respaldo remoto automático
                                 realizar_respaldo_remoto "$archivo_backup" &
                             fi
                         fi
                     fi
-                done < <(obtener_usuarios_de_grupo "$grupo")
+                done
             else
                 echo "$(date): ERROR: Grupo $grupo no existe" >> /var/log/backups.log
             fi
@@ -620,8 +588,7 @@ backup_diario(){
                     archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
                     if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
                         echo "$(date): Backup automático de $usuario - $archivo_backup" >> /var/log/backups.log
-                        # CORREGIDO: Incrementar contador
-                        usuarios_procesados=$((usuarios_procesados + 1))
+                        ((usuarios_procesados++))
                         # Respaldo remoto automático
                         realizar_respaldo_remoto "$archivo_backup" &
                     fi
@@ -637,13 +604,14 @@ backup_diario(){
     return 0
 }
 
-# funcion para activar/desactivar el backup automatico en crontab - CORREGIDA
+# funcion para activar/desactivar el backup automatico en crontab
 toggle_backup_automatico(){
     if backup_automatico_activo; then
-        # DESACTIVAR - eliminar TODO relacionado con nuestro script
-        (sudo crontab -l 2>/dev/null | grep -v "Proyecto_Final_Sistemas_Operativos_backup.sh") | sudo crontab -
+        # DESACTIVAR - eliminar de crontab
+        (sudo crontab -l 2>/dev/null | grep -v "backup.sh automatico") | sudo crontab -
         echo "Backup automático DESACTIVADO"
     else
+        # Mostrar advertencia si la lista está vacía
         if [ ! -f "$backup_list" ] || [ ! -s "$backup_list" ]; then
             echo "¡ADVERTENCIA: La lista de backups automáticos está vacía!"
             echo "No se realizarán backups hasta que añada usuarios/grupos."
@@ -651,15 +619,12 @@ toggle_backup_automatico(){
             echo
         fi
         
-        # ⚡ OPCIÓN NUCLEAR: Cron que ejecuta DIRECTAMENTE el script
-        # SIN complicaciones, SIN wrappers, SIN comillas raras
-        CRON_CMD="$CRON_MINUTO $CRON_HORA * * * /home/alumno_scriptTest/Proyecto_Final_Sistemas_Operativos_backup.sh automatico"
+        # ⭐⭐ NUEVA SOLUCIÓN: Usar cron + at para mejor entorno de ejecución
+        (sudo crontab -l 2>/dev/null; echo "0 3 * * * echo '$Delta automatico' | at '3:10 AM' 2>/dev/null") | sudo crontab -
         
-        (sudo crontab -l 2>/dev/null; echo "$CRON_CMD") | sudo crontab -
-        
-        echo "💥 BACKUP AUTOMÁTICO ACTIVADO (MODO NUCLEAR)"
-        echo "🕐 Se ejecutará todos los días a las ${CRON_HORA}:${CRON_MINUTO}"
-        echo "🔧 Método: Re-ejecución automática con entorno completo"
+        echo "Backup automático ACTIVADO"
+        echo "Se ejecutará todos los días a las 3:10 AM"
+        echo "Usando 'at' para mejor entorno de ejecución"
     fi
 }
 
@@ -790,28 +755,58 @@ restaurar_backup(){
     done
 }
 
-# punto de entrada del script - verifica usuario y crea directorios necesarios
+# punto de entrada del script - verifica usuario y crea directorios necesarios blablabla
 check_user
 crear_dir_backup
 
-#**+*** VERIFICAR SI SE EJECUTA EN MODO AUTOMATICO (desde cron) - CORREGIDO
+#***** VERIFICAR SI SE EJECUTA EN MODO AUTOMATICO (desde crontab) - VERSIÓN CON DEBUGGING
 if [ "$1" = "automatico" ]; then
-    # Configurar entorno para ejecución en cron
-    setup_cron_environment
-    
     {
         echo "================================================"
         echo "$(date): [CRON] INICIANDO BACKUP AUTOMÁTICO"
         echo "================================================"
-        echo "Usuario: $(whoami)"
-        echo "PATH: $PATH"
-        echo "Directorio actual: $(pwd)"
+        echo "Delta: $Delta"
         echo "Lockfile: $lockfile"
+        echo "Backup list: $backup_list"
+        echo "Remote backup enabled: $REMOTE_BACKUP_ENABLED"
         
-        # Verificar existencia de directorios críticos
-        echo "Verificando directorios..."
-        echo "dir_backup: $dir_backup - $( [ -d "$dir_backup" ] && echo "EXISTE" || echo "NO EXISTE" )"
-        echo "backup_list: $backup_list - $( [ -f "$backup_list" ] && echo "EXISTE" || echo "NO EXISTE" )"
+        # Verificar que los archivos necesarios existen
+        echo "Verificando archivos necesarios..."
+        if [ ! -f "$backup_list" ]; then
+            echo "ERROR: No existe el archivo de lista: $backup_list"
+            exit 1
+        fi
+        
+        if [ ! -s "$backup_list" ]; then
+            echo "INFO: Lista de backups vacía, no hay nada que hacer"
+            exit 0
+        fi
+        
+        echo "Contenido de la lista de backups:"
+        grep -v '^#' "$backup_list" | grep -v '^$' | while read line; do
+            echo "  - $line"
+        done
+        
+        # Limpieza agresiva de lockfiles obsoletos para cron
+        echo "Verificando lockfile..."
+        if [ -f "$lockfile" ]; then
+            lock_pid=$(cat "$lockfile" 2>/dev/null)
+            if [ -n "$lock_pid" ]; then
+                if ! ps -p "$lock_pid" > /dev/null 2>&1; then
+                    echo "Eliminando lockfile obsoleto (PID $lock_pid no existe)"
+                    rm -f "$lockfile"
+                else
+                    echo "ERROR: Script ya en ejecución (PID $lock_pid), omitiendo backup"
+                    exit 1
+                fi
+            else
+                # Lockfile vacío o inválido
+                rm -f "$lockfile"
+                echo "Eliminando lockfile inválido"
+            fi
+        else
+            echo "No hay lockfile existente"
+        fi
         
         # Ejecutar backup diario
         echo "Ejecutando backup_diario..."
@@ -824,6 +819,9 @@ if [ "$1" = "automatico" ]; then
         echo "================================================"
         echo "$(date): [CRON] FINALIZANDO BACKUP AUTOMÁTICO"
         echo "================================================"
+        
+        # Limpieza final
+        cleanup
     } >> /var/log/backups.log 2>&1
     
     exit 0
