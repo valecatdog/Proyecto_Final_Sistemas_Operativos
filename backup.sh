@@ -1,16 +1,5 @@
 #! /bin/bash
 
-# === SOLUCIÓN DEFINITIVA PARA CRON ===
-# Si se ejecuta desde cron, forzar entorno completo
-if [ "$1" = "automatico" ]; then
-    # Cargar profile si existe
-    [ -f /etc/profile ] && source /etc/profile
-    # Forzar PATH completo
-    export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-    # Ir a directorio seguro
-    cd /root 2>/dev/null || cd /tmp
-fi
-
 #en esta variable guardamos la direccion de donde se van a guardar los backups
 dir_backup="/var/users_backups"
 # Delta es el valor actual de este scrit, lo conseguimos con realpath
@@ -241,9 +230,10 @@ crear_dir_backup(){
     fi
 }
 
-# se encarga de verificar si el backup esta up and running :D, crontab -l te da una lista con las tareas Cron actuales y busca alguna linea que contenga la ruta del script ( grep te devuelve 0 (true) si no la encuentra y 1 (false) si la encuentra)
+# se encarga de verificar si el backup esta up and running :D
 backup_automatico_activo(){
-    sudo crontab -l 2>/dev/null | grep -q "Proyecto_Final_Sistemas_Operativos_backup.sh automatico"
+    # Verificar si cron está programado para nuestro backup
+    sudo crontab -l 2>/dev/null | grep -q "backup_daily_scheduler"
 }
 
 # funcion para mostrar el menu
@@ -625,7 +615,7 @@ backup_diario(){
 toggle_backup_automatico(){
     if backup_automatico_activo; then
         # DESACTIVAR - eliminar de crontab
-        (sudo crontab -l 2>/dev/null | grep -v "Proyecto_Final_Sistemas_Operativos_backup.sh automatico") | sudo crontab -
+        (sudo crontab -l 2>/dev/null | grep -v "backup_daily_scheduler") | sudo crontab -
         echo "Backup automático DESACTIVADO"
     else
         # Mostrar advertencia si la lista está vacía
@@ -635,12 +625,15 @@ toggle_backup_automatico(){
             echo "Puede gestionar la lista en la opción 4 del menú principal."
             echo
         fi
+        # ⭐⭐ SOLUCIÓN HÍBRIDA CRON + AT
+        # Cron maneja la recurrencia, AT maneja la ejecución con entorno completo
+        CRON_CMD="$CRON_MINUTO $CRON_HORA * * * echo '/home/alumno_scriptTest/Proyecto_Final_Sistemas_Operativos_backup.sh automatico' | at now 2>/dev/null"
         
-        # ⭐⭐ SOLUCIÓN MÁS SIMPLE - Solo el comando esencial
-        (sudo crontab -l 2>/dev/null; echo "$CRON_MINUTO $CRON_HORA * * * /bin/bash /home/alumno_scriptTest/Proyecto_Final_Sistemas_Operativos_backup.sh automatico") | sudo crontab -
+        (sudo crontab -l 2>/dev/null; echo "$CRON_CMD # backup_daily_scheduler") | sudo crontab -
         
         echo "Backup automático ACTIVADO"
         echo "Se ejecutará todos los días a las ${CRON_HORA}:${CRON_MINUTO}"
+        echo "Arquitectura: Cron (recurrencia) → AT (ejecución con entorno completo)"
     fi
 }
 
@@ -771,59 +764,16 @@ restaurar_backup(){
     done
 }
 
-# punto de entrada del script - verifica usuario y crea directorios necesarios blablabla
+# punto de entrada del script - verifica usuario y crea directorios necesarios
 check_user
 crear_dir_backup
 
-#**+*** VERIFICAR SI SE EJECUTA EN MODO AUTOMATICO (desde crontab) - VERSION CON DEBUG MEJORADO
+#**+*** VERIFICAR SI SE EJECUTA EN MODO AUTOMATICO (desde cron + at)
 if [ "$1" = "automatico" ]; then
     {
         echo "================================================"
-        echo "$(date): [CRON] INICIANDO BACKUP AUTOMÁTICO - DEBUG MEJORADO"
+        echo "$(date): [CRON+AT] INICIANDO BACKUP AUTOMÁTICO"
         echo "================================================"
-        echo "Usuario: $(whoami)"
-        echo "PATH: $PATH"
-        echo "PWD: $(pwd)"
-        echo "Delta: $Delta"
-        
-        # Verificar comandos críticos
-        echo "Verificando comandos:"
-        which realpath && echo "realpath: OK" || echo "realpath: FALLO"
-        which tar && echo "tar: OK" || echo "tar: FALLO" 
-        which getent && echo "getent: OK" || echo "getent: FALLO"
-        which ssh && echo "ssh: OK" || echo "ssh: FALLO"
-        which rsync && echo "rsync: OK" || echo "rsync: FALLO"
-        
-        # Verificar archivos críticos
-        echo "Verificando archivos:"
-        [ -f "$backup_list" ] && echo "backup_list: EXISTE" || echo "backup_list: NO EXISTE"
-        [ -f "$SSH_KEY" ] && echo "SSH_KEY: EXISTE" || echo "SSH_KEY: NO EXISTE"
-        [ -d "$dir_backup" ] && echo "dir_backup: EXISTE" || echo "dir_backup: NO EXISTE"
-        
-        # Verificar contenido de backup_list
-        echo "Contenido de backup_list:"
-        cat "$backup_list"
-        
-        # Limpieza agresiva de lockfiles obsoletos para cron
-        echo "Verificando lockfile..."
-        if [ -f "$lockfile" ]; then
-            lock_pid=$(cat "$lockfile" 2>/dev/null)
-            if [ -n "$lock_pid" ]; then
-                if ! ps -p "$lock_pid" > /dev/null 2>&1; then
-                    echo "Eliminando lockfile obsoleto (PID $lock_pid no existe)"
-                    rm -f "$lockfile"
-                else
-                    echo "ERROR: Script ya en ejecución (PID $lock_pid), omitiendo backup"
-                    exit 1
-                fi
-            else
-                # Lockfile vacío o inválido
-                rm -f "$lockfile"
-                echo "Eliminando lockfile inválido"
-            fi
-        else
-            echo "No hay lockfile existente"
-        fi
         
         # Ejecutar backup diario
         echo "Ejecutando backup_diario..."
@@ -834,7 +784,7 @@ if [ "$1" = "automatico" ]; then
         fi
         
         echo "================================================"
-        echo "$(date): [CRON] FINALIZANDO BACKUP AUTOMÁTICO"
+        echo "$(date): [CRON+AT] FINALIZANDO BACKUP AUTOMÁTICO"
         echo "================================================"
         
         # Limpieza final
