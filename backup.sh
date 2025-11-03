@@ -71,6 +71,12 @@ formato_am_pm() {
 }
 
 # Función para obtener la hora en formato legible
+get_cron_hora_completa() {
+    local hora_ampm=$(formato_am_pm "$CRON_HORA")
+    echo "${CRON_HORA}:${CRON_MINUTO} ($hora_ampm)"
+}
+
+# Función para obtener solo la hora en formato legible
 get_cron_hora_ampm() {
     formato_am_pm "$CRON_HORA"
 }
@@ -216,13 +222,13 @@ configurar_respaldo_remoto() {
         echo "=== CONFIGURACIÓN DE RESPALDO REMOTO ==="
         echo "Estado actual: $REMOTE_BACKUP_ENABLED"
         echo "Delay de transferencia: $RSYNC_DELAY_MINUTOS minutos"
-        echo "Hora de backup automático: $(get_cron_hora_ampm)"
+        echo "Hora de backup automático: $(get_cron_hora_completa)"
         echo
         echo "1. Activar/Desactivar respaldo remoto"
         echo "2. Probar conexión remota"
         echo "3. Ver configuración actual"
         echo "4. Configurar delay de transferencia (actual: $RSYNC_DELAY_MINUTOS min)"
-        echo "5. Configurar hora del backup automático (actual: $(get_cron_hora_ampm))"
+        echo "5. Configurar hora del backup automático (actual: $(get_cron_hora_completa))"
         echo "0. Volver al menú principal"
         echo
         echo -n "Seleccione opción: "
@@ -249,7 +255,7 @@ configurar_respaldo_remoto() {
                 echo "  Clave SSH: $SSH_KEY"
                 echo "  Habilitado: $REMOTE_BACKUP_ENABLED"
                 echo "  Delay transferencia: $RSYNC_DELAY_MINUTOS minutos"
-                echo "  Hora de backup: $(get_cron_hora_ampm)"
+                echo "  Hora de backup: $(get_cron_hora_completa)"
                 ;;
             4)
                 echo -n "Nuevo delay en minutos (actual: $RSYNC_DELAY_MINUTOS): "
@@ -262,15 +268,38 @@ configurar_respaldo_remoto() {
                 fi
                 ;;
             5)
-                echo -n "Nueva hora para backup (0-23, actual: $CRON_HORA): "
+                echo "Configuración de hora del backup automático"
+                echo "Hora actual: $(get_cron_hora_completa)"
+                echo
+                
+                # Configurar hora
+                echo -n "Nueva hora (0-23, actual: $CRON_HORA): "
                 read nueva_hora
                 if [[ "$nueva_hora" =~ ^[0-9]+$ ]] && [ "$nueva_hora" -ge 0 ] && [ "$nueva_hora" -le 23 ]; then
                     CRON_HORA="$nueva_hora"
-                    echo "Hora de backup actualizada a $(get_cron_hora_ampm)"
-                    echo "$(date): Hora de backup cambiada a $(get_cron_hora_ampm)" >> /var/log/backups.log
+                    echo "Hora actualizada a $nueva_hora"
                 else
                     echo "Error: Hora debe ser entre 0 y 23"
+                    # Si la hora es inválida, preguntar si quiere continuar
+                    echo -n "¿Continuar configurando los minutos? (s/n): "
+                    read continuar
+                    if [ "$continuar" != "s" ]; then
+                        continue
+                    fi
                 fi
+                
+                # Configurar minuto
+                echo -n "Nuevo minuto (0-59, actual: $CRON_MINUTO): "
+                read nuevo_minuto
+                if [[ "$nuevo_minuto" =~ ^[0-9]+$ ]] && [ "$nuevo_minuto" -ge 0 ] && [ "$nuevo_minuto" -le 59 ]; then
+                    CRON_MINUTO="$nuevo_minuto"
+                    echo "Minuto actualizado a $nuevo_minuto"
+                else
+                    echo "Error: Minuto debe ser entre 0 y 59"
+                fi
+                
+                echo "Hora de backup actualizada a: $(get_cron_hora_completa)"
+                echo "$(date): Hora de backup cambiada a $(get_cron_hora_completa)" >> /var/log/backups.log
                 ;;
             0)
                 return 0
@@ -737,10 +766,10 @@ toggle_backup_automatico(){
         (sudo crontab -l 2>/dev/null; echo "* * * * * $Delta") | sudo crontab -
         
         echo "Backup automático ACTIVADO"
-        echo "El script verificará cada minuto si es las $(get_cron_hora_ampm)"
+        echo "El script verificará cada minuto si es las $(get_cron_hora_completa)"
         echo "y ejecutará el backup automático cuando coincida."
         echo "Las transferencias remotas se programarán con at para ejecutarse $RSYNC_DELAY_MINUTOS minutos después."
-        echo "$(date): Backup automático activado - verificación cada minuto para las $(get_cron_hora_ampm)" >> /var/log/backups.log
+        echo "$(date): Backup automático activado - verificación cada minuto para las $(get_cron_hora_completa)" >> /var/log/backups.log
     fi
 }
 
