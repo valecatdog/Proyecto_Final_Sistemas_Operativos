@@ -443,13 +443,12 @@ crear_backup_grupo(){
         # Contador para usuarios procesados
         usuarios_procesados=0
         
-        # Obtener usuarios del grupo y crear backup INDIVIDUAL para cada uno
-        obtener_usuarios_de_grupo "$grupo" | while read usuario; do
+        # CORREGIDO: Evitar subshell usando process substitution
+        while IFS= read -r usuario; do
             if usuario_existe "$usuario"; then
                 home_dir=$(getent passwd "$usuario" | cut -d: -f6)
                 if [ -d "$home_dir" ]; then
                     echo "  - Creando backup de: $usuario"
-                    # CORREGIDO: Cambiamos el formato del nombre para que sea consistente
                     archivo_backup="${dir_backup}/backup_${usuario}_grupo_${fecha}.tar.bz2"
                     
                     # Crear backup individual del usuario
@@ -457,7 +456,8 @@ crear_backup_grupo(){
                     then
                         echo "    Backup creado: $(basename "$archivo_backup")"
                         echo "$(date): Backup manual de grupo $grupo - usuario $usuario - $archivo_backup" >> /var/log/backups.log
-                        ((usuarios_procesados++))
+                        # CORREGIDO: Incrementar contador correctamente
+                        usuarios_procesados=$((usuarios_procesados + 1))
                         # Respaldo remoto automático
                         realizar_respaldo_remoto "$archivo_backup"
                     else
@@ -467,7 +467,7 @@ crear_backup_grupo(){
             else
                 echo "  - Usuario $usuario no existe, omitiendo"
             fi
-        done
+        done < <(obtener_usuarios_de_grupo "$grupo")
         
         echo "Backup de grupo completado: $usuarios_procesados usuarios procesados"
         
@@ -535,7 +535,7 @@ crear_backup(){
     done
 }
 
-#***** MODIFICADA: funcion de backup diario que usa la lista configurada
+#***** FUNCIÓN CORREGIDA: backup diario sin problema de subshell
 backup_diario(){
     echo "$(date): [DEBUG] Entrando en backup_diario" >> /var/log/backups.log
     
@@ -568,21 +568,22 @@ backup_diario(){
             grupo="${linea#@}"
             if grupo_existe "$grupo"; then
                 echo "$(date): Procesando grupo $grupo" >> /var/log/backups.log
-                # Procesar cada usuario del grupo
-                obtener_usuarios_de_grupo "$grupo" | while read usuario; do
+                # CORREGIDO: Evitar subshell usando process substitution
+                while IFS= read -r usuario; do
                     if usuario_existe "$usuario"; then
                         home_dir=$(getent passwd "$usuario" | cut -d: -f6)
                         if [ -d "$home_dir" ]; then
                             archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
                             if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
                                 echo "$(date): Backup automático de $usuario (grupo $grupo) - $archivo_backup" >> /var/log/backups.log
-                                ((usuarios_procesados++))
+                                # CORREGIDO: Incrementar contador correctamente
+                                usuarios_procesados=$((usuarios_procesados + 1))
                                 # Respaldo remoto automático
                                 realizar_respaldo_remoto "$archivo_backup" &
                             fi
                         fi
                     fi
-                done
+                done < <(obtener_usuarios_de_grupo "$grupo")
             else
                 echo "$(date): ERROR: Grupo $grupo no existe" >> /var/log/backups.log
             fi
@@ -595,7 +596,8 @@ backup_diario(){
                     archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
                     if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
                         echo "$(date): Backup automático de $usuario - $archivo_backup" >> /var/log/backups.log
-                        ((usuarios_procesados++))
+                        # CORREGIDO: Incrementar contador
+                        usuarios_procesados=$((usuarios_procesados + 1))
                         # Respaldo remoto automático
                         realizar_respaldo_remoto "$archivo_backup" &
                     fi
@@ -626,7 +628,7 @@ toggle_backup_automatico(){
             echo "Puede gestionar la lista en la opción 4 del menú principal."
             echo
         fi
-        # ⭐⭐ MODIFICADO: Usar entorno completo para cron - SOLUCIÓN AL PROBLEMA
+        #  MODIFICADO: Usar entorno completo para cron - SOLUCIÓN AL PROBLEMA
         (sudo crontab -l 2>/dev/null; echo "$CRON_MINUTO $CRON_HORA * * * /bin/bash -l -c '$Delta automatico'") | sudo crontab -
         echo "Backup automático ACTIVADO"
         echo "Se ejecutará todos los días a las ${CRON_HORA}:${CRON_MINUTO}"
