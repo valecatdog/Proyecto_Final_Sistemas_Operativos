@@ -1,12 +1,18 @@
 #! /bin/bash
 
-#en esta variable guardamos la direccion de donde se van a guardar los backups
+# === SOLUCIÓN NUCLEAR PARA CRON ===
+# Si es modo automático, RE-EJECUTAR con entorno completo
+if [ "$1" = "automatico" ] && [ -z "$CRON_FIXED" ]; then
+    export CRON_FIXED=1
+    # Re-ejecutar con entorno completo
+    exec /bin/bash -c "source /etc/profile; export PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'; export HOME='/root'; export USER='root'; cd /tmp; '$0' automatico"
+    exit 1
+fi
+
+# Resto de tus variables originales...
 dir_backup="/var/users_backups"
-# Delta es el valor actual de este scrit, lo conseguimos con realpath
-# tambien podriamos usar la direccion actual del script y ya, pero esto le da mas flexibilidad
 Delta=$(realpath "$0")
 lockfile="/var/lock/backup-script.lock"
-# Archivo de configuracion para la lista de backups automaticos
 backup_list="/etc/backup-script/auto-backup-list.conf"
 REMOTE_BACKUP_USER="respaldo_user"
 REMOTE_BACKUP_HOST="192.168.0.93"
@@ -634,27 +640,36 @@ backup_diario(){
 # funcion para activar/desactivar el backup automatico en crontab - CORREGIDA
 toggle_backup_automatico(){
     if backup_automatico_activo; then
-        # DESACTIVAR - eliminar de crontab
-        (sudo crontab -l 2>/dev/null | grep -v "backup_daily_scheduler") | sudo crontab -
+        (sudo crontab -l 2>/dev/null | grep -v "Proyecto_Final_Sistemas_Operativos_backup.sh") | sudo crontab -
         echo "Backup automático DESACTIVADO"
     else
-        # Mostrar advertencia si la lista está vacía
         if [ ! -f "$backup_list" ] || [ ! -s "$backup_list" ]; then
             echo "¡ADVERTENCIA: La lista de backups automáticos está vacía!"
-            echo "No se realizarán backups hasta que añada usuarios/grupos."
-            echo "Puede gestionar la lista en la opción 4 del menú principal."
-            echo
         fi
         
-        # ⭐⭐ SOLUCIÓN CORREGIDA: Ejecutar directamente el script con entorno completo
-        SCRIPT_PATH=$(realpath "$0")
-        CRON_CMD="$CRON_MINUTO $CRON_HORA * * * /bin/bash '$SCRIPT_PATH' automatico >> /var/log/backups.log 2>&1"
+        # ⭐ SOLUCIÓN EXTREMA: Cron que ejecuta un wrapper que carga entorno
+        WRAPPER="/root/cron_wrapper.sh"
         
-        (sudo crontab -l 2>/dev/null; echo "$CRON_CMD # backup_daily_scheduler") | sudo crontab -
+        # Crear wrapper
+        sudo cat > "$WRAPPER" << 'EOF'
+#!/bin/bash
+# Cargar entorno COMPLETO
+source /etc/profile
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export HOME="/root"
+export USER="root"
+cd /tmp
+
+# Ejecutar el backup
+exec /home/alumno_scriptTest/Proyecto_Final_Sistemas_Operativos_backup.sh automatico
+EOF
+
+        sudo chmod +x "$WRAPPER"
+        
+        (sudo crontab -l 2>/dev/null; echo "$CRON_MINUTO $CRON_HORA * * * $WRAPPER") | sudo crontab -
         
         echo "Backup automático ACTIVADO"
-        echo "Se ejecutará todos los días a las ${CRON_HORA}:${CRON_MINUTO}"
-        echo "Script: $SCRIPT_PATH"
+        echo "Se ejecutará a las ${CRON_HORA}:${CRON_MINUTO}"
     fi
 }
 
