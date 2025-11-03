@@ -781,6 +781,7 @@ restaurar_backup(){
 check_user
 crear_dir_backup
 
+
 #***** VERIFICAR SI SE EJECUTA EN MODO AUTOMATICO (desde crontab) - VERSIÓN CON DEBUGGING
 if [ "$1" = "automatico" ]; then
     {
