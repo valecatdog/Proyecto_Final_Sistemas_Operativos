@@ -640,36 +640,26 @@ backup_diario(){
 # funcion para activar/desactivar el backup automatico en crontab - CORREGIDA
 toggle_backup_automatico(){
     if backup_automatico_activo; then
+        # DESACTIVAR - eliminar TODO relacionado con nuestro script
         (sudo crontab -l 2>/dev/null | grep -v "Proyecto_Final_Sistemas_Operativos_backup.sh") | sudo crontab -
         echo "Backup automático DESACTIVADO"
     else
         if [ ! -f "$backup_list" ] || [ ! -s "$backup_list" ]; then
             echo "¡ADVERTENCIA: La lista de backups automáticos está vacía!"
+            echo "No se realizarán backups hasta que añada usuarios/grupos."
+            echo "Puede gestionar la lista en la opción 4 del menú principal."
+            echo
         fi
         
-        # ⭐ SOLUCIÓN EXTREMA: Cron que ejecuta un wrapper que carga entorno
-        WRAPPER="/root/cron_wrapper.sh"
+        # ⚡ OPCIÓN NUCLEAR: Cron que ejecuta DIRECTAMENTE el script
+        # SIN complicaciones, SIN wrappers, SIN comillas raras
+        CRON_CMD="$CRON_MINUTO $CRON_HORA * * * /home/alumno_scriptTest/Proyecto_Final_Sistemas_Operativos_backup.sh automatico"
         
-        # Crear wrapper
-        sudo cat > "$WRAPPER" << 'EOF'
-#!/bin/bash
-# Cargar entorno COMPLETO
-source /etc/profile
-export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-export HOME="/root"
-export USER="root"
-cd /tmp
-
-# Ejecutar el backup
-exec /home/alumno_scriptTest/Proyecto_Final_Sistemas_Operativos_backup.sh automatico
-EOF
-
-        sudo chmod +x "$WRAPPER"
+        (sudo crontab -l 2>/dev/null; echo "$CRON_CMD") | sudo crontab -
         
-        (sudo crontab -l 2>/dev/null; echo "$CRON_MINUTO $CRON_HORA * * * $WRAPPER") | sudo crontab -
-        
-        echo "Backup automático ACTIVADO"
-        echo "Se ejecutará a las ${CRON_HORA}:${CRON_MINUTO}"
+        echo "💥 BACKUP AUTOMÁTICO ACTIVADO (MODO NUCLEAR)"
+        echo "🕐 Se ejecutará todos los días a las ${CRON_HORA}:${CRON_MINUTO}"
+        echo "🔧 Método: Re-ejecución automática con entorno completo"
     fi
 }
 
