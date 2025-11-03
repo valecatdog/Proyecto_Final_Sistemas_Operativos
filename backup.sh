@@ -139,7 +139,7 @@ obtener_usuarios_de_grupo() {
 leer_con_cancelar() {
     local prompt="$1"
     local variable="$2"
-    echo -n "$prompt (o '0' para cancelar): "
+    echo -n "$prompt (0 para volver al menu): "
     read $variable
     if [ "${!variable}" = "0" ]; then
         echo "Operación cancelada."
@@ -342,7 +342,6 @@ restaurar_backup(){
         # usamos basename solo para agarrar el nombre del backup que queremos EJ: backup_user.tar.bz2 envez de la direccion entera
         nombre_archivo=$(basename "$archivo_backup")
         
-        # CORREGIDO: Extraemos el usuario de manera más inteligente
         # Para backup individual: backup_alumno_20241210_143022.tar.bz2 -> usuario=alumno
         # Para backup de grupo: backup_alumno_grupo_20241210_143022.tar.bz2 -> usuario=alumno
         if [[ "$nombre_archivo" =~ ^backup_([^_]+)_ ]]; then
