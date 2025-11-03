@@ -172,6 +172,8 @@ admin_usergroup_archivo(){
                         fi
                     done
 
+                    read -t3 -n2 -srp "DEBUG: usuarios: ${listaUsuarios[*]}"
+
                     if [ -n "${listaUsuarios[*]}" ]; then
                         admin_usergroup_archivo_grupo
                         return
@@ -181,7 +183,7 @@ admin_usergroup_archivo(){
                 else
                     read -t1 -n2 -srp "ERROR: el archivo esta vacio"
                 fi
-                
+
             else
                 read -t1 -n2 -srp "ERROR: el archivo no existe o no se puede leer" 
             fi
@@ -258,18 +260,18 @@ aniadir_quitar_usergrupo_archivo(){
             ;;
 
             2)
-                noAgregados=()
+                noBorrados=()
                 for u in "${listaUsuarios[@]}"
                 do
                     if ! sudo gpasswd -d "$u" "$2" 2>/dev/null; then
-                        noAgregados+=("$u")  
+                        noBorrados+=("$u")  
                     fi 
                 done
-                if [ -n "${noAgregados[*]}" ]
+                if [ -n "${noBorrados[*]}" ]
                 then
                     read -t2 -n1 -srp "No se puedieron agregar los usuarios: ${noAgregados[*]}"
                 else
-                    read -t2 -n1 -srp "Usuarios agregados correctamente"
+                    read -t2 -n1 -srp "Usuarios eliminados correctamente"
                 fi
                 gestion_usuarios_grupos
                 return
