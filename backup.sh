@@ -18,28 +18,24 @@ CRON_MINUTO="10"
 
 #**investigar mas a detalle
 cleanup() {
-    echo "$(date): [CLEANUP] Ejecutando limpieza..." >> /var/log/backups.log
-    # Eliminar lockfile si existe
+    # SOLO eliminar lockfile si es de este proceso - SIN MENSAJES DE SPAM
     if [ -f "$lockfile" ]; then
         local current_pid=$$
         local lock_pid=$(cat "$lockfile" 2>/dev/null)
         
-        # Solo eliminar si el lockfile es de este proceso o el proceso ya no existe
-        if [ "$lock_pid" = "$current_pid" ] || [ -z "$lock_pid" ] || ! ps -p "$lock_pid" > /dev/null 2>&1; then
+        # Solo eliminar si el lockfile es de este proceso
+        if [ "$lock_pid" = "$current_pid" ]; then
             rm -f "$lockfile"
-            echo "$(date): [CLEANUP] Lockfile removido (PID: $lock_pid, Current: $current_pid)" >> /var/log/backups.log
-        else
-            echo "$(date): [CLEANUP] Lockfile NO removido - pertenece a proceso activo PID: $lock_pid" >> /var/log/backups.log
         fi
     fi
+    
     # Eliminar directorio temporal si existe
-    if [ -n  "$temp_dir" ] && [ -d "$temp_dir" ]; then
+    if [ -n "$temp_dir" ] && [ -d "$temp_dir" ]; then
         rm -rf "$temp_dir"
-        echo "$(date): [CLEANUP] Directorio temporal removido: $temp_dir" >> /var/log/backups.log
     fi
 }
-#****** trap se encarga de ejecutar cleanup cuando el script termina (EXIT) o recibe señales (INT, TERM)
-trap cleanup EXIT INT TERM
+#****** trap SOLO para EXIT - eliminar INT y TERM que causan spam
+trap cleanup EXIT
 
 #**** funcion para verificar que el script se ejecute como root
 check_user() {
@@ -310,7 +306,6 @@ ver_lista_backup_auto() {
     echo "=== LISTA ACTUAL DE BACKUPS AUTOMÁTICOS ==="
     if [ ! -s "$backup_list" ]; then
         echo "La lista está vacía."
-        echo "Los backups automáticos no se ejecutarán hasta que añada elementos."
     else
         # Mostrar solo lineas que no son comentarios y no están vacías
         grep -v '^#' "$backup_list" | grep -v '^$' | nl -w 2 -s '. '
@@ -491,19 +486,11 @@ crear_backup(){
 
                 if usuario_existe "$usuario" 
                 then
-                    #getent (get entry) te da las entradas de datos del sistema
-                    #lo deberiamos usar por el tema de backups entre maquinas (el getent), si no se deberia usar grep 
-                    #
                     home_dir=$(getent passwd "$usuario" | cut -d: -f6)
                     
-                    #Creamos el nombre del archivo de backup
-                    #Guardamos una personalizacion del comando date en una variable fecha 
-                    #Lo guardamos sin espacios 
                     fecha=$(date '+%Y%m%d_%H%M%S')
                     archivo_backup="/var/users_backups/backup_${usuario}_${fecha}.tar.bz2"
                     
-                    # Creando el backup
-                    # tar empaqueta lo que esta en la var archivo_backup, crea un nuevo arch con -c, con j lo comprimimos con bzip2, y -f le decimos el nombre del arch 
                     echo "Creando backup de $home_dir"
                     if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
                         echo "Backup creado: $archivo_backup"
@@ -786,9 +773,6 @@ if [ "$1" = "automatico" ]; then
         echo "================================================"
         echo "$(date): [CRON+AT] FINALIZANDO BACKUP AUTOMÁTICO"
         echo "================================================"
-        
-        # Limpieza final
-        cleanup
     } >> /var/log/backups.log 2>&1
     
     exit 0
