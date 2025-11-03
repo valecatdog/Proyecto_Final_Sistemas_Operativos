@@ -15,6 +15,8 @@ SSH_KEY="/root/.ssh/backup_key"
 REMOTE_BACKUP_ENABLED=true
 CRON_HORA="3"
 CRON_MINUTO="10"
+# Nueva variable para el delay de rsync (minutos después del backup)
+RSYNC_DELAY_MINUTOS="5"
 
 #**investigar mas a detalle
 cleanup() {
@@ -131,6 +133,64 @@ realizar_respaldo_remoto() {
     fi
 }
 
+# Nueva función para programar transferencia remota con at
+programar_transferencia_remota() {
+    local archivo_backup="$1"
+    local delay_minutos="${2:-$RSYNC_DELAY_MINUTOS}"
+    
+    if [ "$REMOTE_BACKUP_ENABLED" != "true" ]; then
+        return 0
+    fi
+    
+    # Crear script temporal para la transferencia
+    local temp_script=$(mktemp)
+    cat > "$temp_script" << EOF
+#!/bin/bash
+# Script temporal para transferencia remota
+echo "\$(date): [AT-TRANSFER] Iniciando transferencia programada de $(basename "$archivo_backup")" >> /var/log/backups.log
+
+if "$Delta" transferir-remoto "$archivo_backup"; then
+    echo "\$(date): [AT-TRANSFER] Transferencia completada exitosamente: $(basename "$archivo_backup")" >> /var/log/backups.log
+else
+    echo "\$(date): [AT-TRANSFER] ERROR en transferencia: $(basename "$archivo_backup")" >> /var/log/backups.log
+fi
+
+# Limpiar script temporal
+rm -f "$temp_script"
+EOF
+    
+    chmod +x "$temp_script"
+    
+    # Programar con at
+    if echo "$temp_script" | at now + "$delay_minutos" minutes 2>/dev/null; then
+        echo "$(date): Transferencia remota programada en $delay_minutos minutos para: $(basename "$archivo_backup")" >> /var/log/backups.log
+        return 0
+    else
+        echo "ERROR: No se pudo programar la transferencia remota con at"
+        rm -f "$temp_script"
+        return 1
+    fi
+}
+
+# Nueva función para modo de transferencia remota
+modo_transferir_remoto() {
+    local archivo_backup="$1"
+    
+    if [ -z "$archivo_backup" ]; then
+        echo "ERROR: No se especificó archivo para transferencia remota"
+        return 1
+    fi
+    
+    if [ ! -f "$archivo_backup" ]; then
+        echo "ERROR: Archivo no encontrado: $archivo_backup"
+        return 1
+    fi
+    
+    echo "$(date): [MODO-TRANSFERIR] Ejecutando transferencia remota programada" >> /var/log/backups.log
+    realizar_respaldo_remoto "$archivo_backup"
+    return $?
+}
+
 # Función para probar conexión remota
 probar_conexion_remota() {
     echo "Probando conexión con servidor remoto..."
@@ -151,10 +211,12 @@ configurar_respaldo_remoto() {
         clear
         echo "=== CONFIGURACIÓN DE RESPALDO REMOTO ==="
         echo "Estado actual: $REMOTE_BACKUP_ENABLED"
+        echo "Delay de transferencia: $RSYNC_DELAY_MINUTOS minutos"
         echo
         echo "1. Activar/Desactivar respaldo remoto"
         echo "2. Probar conexión remota"
         echo "3. Ver configuración actual"
+        echo "4. Configurar delay de transferencia (actual: $RSYNC_DELAY_MINUTOS min)"
         echo "0. Volver al menú principal"
         echo
         echo -n "Seleccione opción: "
@@ -180,6 +242,17 @@ configurar_respaldo_remoto() {
                 echo "  Directorio remoto: $REMOTE_BACKUP_DIR"
                 echo "  Clave SSH: $SSH_KEY"
                 echo "  Habilitado: $REMOTE_BACKUP_ENABLED"
+                echo "  Delay transferencia: $RSYNC_DELAY_MINUTOS minutos"
+                ;;
+            4)
+                echo -n "Nuevo delay en minutos (actual: $RSYNC_DELAY_MINUTOS): "
+                read nuevo_delay
+                if [[ "$nuevo_delay" =~ ^[0-9]+$ ]] && [ "$nuevo_delay" -gt 0 ]; then
+                    RSYNC_DELAY_MINUTOS="$nuevo_delay"
+                    echo "Delay de transferencia actualizado a $RSYNC_DELAY_MINUTOS minutos"
+                else
+                    echo "Error: Debe ingresar un número positivo"
+                fi
                 ;;
             0)
                 return 0
@@ -232,7 +305,19 @@ crear_dir_backup(){
 
 # se encarga de verificar si el backup esta up and running :D, crontab -l te da una lista con las tareas Cron actuales y busca alguna linea que contenga la ruta del script ( grep te devuelve 0 (true) si no la encuentra y 1 (false) si la encuentra)
 backup_automatico_activo(){
-    sudo crontab -l 2>/dev/null | grep -q "backup.sh automatico"
+    sudo crontab -l 2>/dev/null | grep -q "$Delta"
+}
+
+# Función para verificar y ejecutar backup por hora
+verificar_y_ejecutar_backup_automatico() {
+    local hora_actual=$(date '+%H')
+    local minuto_actual=$(date '+%M')
+    
+    # Verificar si es la hora programada
+    if [ "$hora_actual" = "$CRON_HORA" ] && [ "$minuto_actual" = "$CRON_MINUTO" ]; then
+        echo "$(date): [HORA-DETECTADA] Ejecutando backup automático por verificación de hora" >> /var/log/backups.log
+        backup_diario
+    fi
 }
 
 # funcion para mostrar el menu
@@ -250,6 +335,7 @@ menu_alpha(){
     echo "3. Restaurar backup"
     echo "4. Gestionar lista de backups automáticos"
     echo "5. Configurar respaldo remoto"
+    echo "6. Probar backup automático (ejecuta ahora)"
     echo "0. Salir"
     echo
     echo -n "Seleccione opción (0 para salir): "
@@ -455,8 +541,8 @@ crear_backup_grupo(){
                         echo "    Backup creado: $(basename "$archivo_backup")"
                         echo "$(date): Backup manual de grupo $grupo - usuario $usuario - $archivo_backup" >> /var/log/backups.log
                         ((usuarios_procesados++))
-                        # Respaldo remoto automático
-                        realizar_respaldo_remoto "$archivo_backup"
+                        # Respaldo remoto programado con at
+                        programar_transferencia_remota "$archivo_backup"
                     else
                         echo "    Error al crear backup de $usuario"
                     fi
@@ -507,8 +593,8 @@ crear_backup(){
                     if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
                         echo "Backup creado: $archivo_backup"
                         echo "$(date): Backup manual de $usuario - $archivo_backup" >> /var/log/backups.log
-                        # Respaldo remoto automático
-                        realizar_respaldo_remoto "$archivo_backup"
+                        # Respaldo remoto programado con at
+                        programar_transferencia_remota "$archivo_backup"
                     else
                         echo "Error al crear el backup"
                     fi
@@ -541,6 +627,7 @@ backup_diario(){
     
     fecha=$(date '+%Y%m%d')
     usuarios_procesados=0
+    archivos_creados=()
 
     echo "$(date): Iniciando backup automático" >> /var/log/backups.log
 
@@ -570,8 +657,7 @@ backup_diario(){
                             if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
                                 echo "$(date): Backup automático de $usuario (grupo $grupo) - $archivo_backup" >> /var/log/backups.log
                                 ((usuarios_procesados++))
-                                # Respaldo remoto automático
-                                realizar_respaldo_remoto "$archivo_backup" &
+                                archivos_creados+=("$archivo_backup")
                             fi
                         fi
                     fi
@@ -589,8 +675,7 @@ backup_diario(){
                     if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
                         echo "$(date): Backup automático de $usuario - $archivo_backup" >> /var/log/backups.log
                         ((usuarios_procesados++))
-                        # Respaldo remoto automático
-                        realizar_respaldo_remoto "$archivo_backup" &
+                        archivos_creados+=("$archivo_backup")
                     fi
                 fi
             else
@@ -598,6 +683,14 @@ backup_diario(){
             fi
         fi
     done < "$backup_list"
+
+    # Programar transferencias remotas para todos los archivos creados
+    if [ ${#archivos_creados[@]} -gt 0 ] && [ "$REMOTE_BACKUP_ENABLED" = "true" ]; then
+        echo "$(date): Programando transferencias remotas para ${#archivos_creados[@]} archivos" >> /var/log/backups.log
+        for archivo in "${archivos_creados[@]}"; do
+            programar_transferencia_remota "$archivo" "$RSYNC_DELAY_MINUTOS"
+        done
+    fi
 
     echo "$(date): Backup automático completado - $usuarios_procesados usuarios procesados" >> /var/log/backups.log
     release_lock
@@ -608,23 +701,26 @@ backup_diario(){
 toggle_backup_automatico(){
     if backup_automatico_activo; then
         # DESACTIVAR - eliminar de crontab
-        (sudo crontab -l 2>/dev/null | grep -v "backup.sh automatico") | sudo crontab -
+        (sudo crontab -l 2>/dev/null | grep -v "$Delta") | sudo crontab -
         echo "Backup automático DESACTIVADO"
+        echo "$(date): Backup automático desactivado" >> /var/log/backups.log
     else
         # Mostrar advertencia si la lista está vacía
-        if [ ! -f "$backup_list" ] || [ ! -s "$backup_list" ]; then
+        if [ ! -f "$backup_list" ] || ! grep -v '^#' "$backup_list" | grep -v '^$' | read; then
             echo "¡ADVERTENCIA: La lista de backups automáticos está vacía!"
             echo "No se realizarán backups hasta que añada usuarios/grupos."
             echo "Puede gestionar la lista en la opción 4 del menú principal."
             echo
         fi
         
-        # ⭐⭐ SOLUCIÓN MEJORADA: Usar cron + at con variables
-        (sudo crontab -l 2>/dev/null; echo "0 $CRON_HORA * * * echo '$Delta automatico' | at '$CRON_HORA:$CRON_MINUTO AM' 2>/dev/null") | sudo crontab -
+        # ACTIVAR - programar para que ejecute cada minuto y verifique la hora
+        (sudo crontab -l 2>/dev/null; echo "* * * * * $Delta") | sudo crontab -
         
         echo "Backup automático ACTIVADO"
-        echo "Se ejecutará todos los días a las ${CRON_HORA}:${CRON_MINUTO} AM"
-        echo "Usando 'at' para mejor entorno de ejecución"
+        echo "El script verificará cada minuto si es las $CRON_HORA:$CRON_MINUTO"
+        echo "y ejecutará el backup automático cuando coincida."
+        echo "Las transferencias remotas se programarán con at para ejecutarse $RSYNC_DELAY_MINUTOS minutos después."
+        echo "$(date): Backup automático activado - verificación cada minuto para las $CRON_HORA:$CRON_MINUTO" >> /var/log/backups.log
     fi
 }
 
@@ -755,20 +851,17 @@ restaurar_backup(){
     done
 }
 
-# punto de entrada del script - verifica usuario y crea directorios necesarios blablabla
+# punto de entrada del script - verifica usuario y crea directorios necesarios
 check_user
 crear_dir_backup
 
-#***** VERIFICAR SI SE EJECUTA EN MODO AUTOMATICO (desde crontab) - VERSIÓN CON DEBUGGING
+# ***** Manejo de modos de ejecución
 if [ "$1" = "automatico" ]; then
+    # Modo automático desde cron
     {
         echo "================================================"
         echo "$(date): [CRON] INICIANDO BACKUP AUTOMÁTICO"
         echo "================================================"
-        echo "Delta: $Delta"
-        echo "Lockfile: $lockfile"
-        echo "Backup list: $backup_list"
-        echo "Remote backup enabled: $REMOTE_BACKUP_ENABLED"
         
         # Verificar que los archivos necesarios existen
         echo "Verificando archivos necesarios..."
@@ -782,32 +875,6 @@ if [ "$1" = "automatico" ]; then
             exit 0
         fi
         
-        echo "Contenido de la lista de backups:"
-        grep -v '^#' "$backup_list" | grep -v '^$' | while read line; do
-            echo "  - $line"
-        done
-        
-        # Limpieza agresiva de lockfiles obsoletos para cron
-        echo "Verificando lockfile..."
-        if [ -f "$lockfile" ]; then
-            lock_pid=$(cat "$lockfile" 2>/dev/null)
-            if [ -n "$lock_pid" ]; then
-                if ! ps -p "$lock_pid" > /dev/null 2>&1; then
-                    echo "Eliminando lockfile obsoleto (PID $lock_pid no existe)"
-                    rm -f "$lockfile"
-                else
-                    echo "ERROR: Script ya en ejecución (PID $lock_pid), omitiendo backup"
-                    exit 1
-                fi
-            else
-                # Lockfile vacío o inválido
-                rm -f "$lockfile"
-                echo "Eliminando lockfile inválido"
-            fi
-        else
-            echo "No hay lockfile existente"
-        fi
-        
         # Ejecutar backup diario
         echo "Ejecutando backup_diario..."
         if backup_diario; then
@@ -819,12 +886,18 @@ if [ "$1" = "automatico" ]; then
         echo "================================================"
         echo "$(date): [CRON] FINALIZANDO BACKUP AUTOMÁTICO"
         echo "================================================"
-        
-        # Limpieza final
-        cleanup
     } >> /var/log/backups.log 2>&1
-    
     exit 0
+
+elif [ "$1" = "transferir-remoto" ]; then
+    # Modo transferencia remota desde at
+    archivo_backup="$2"
+    modo_transferir_remoto "$archivo_backup"
+    exit $?
+
+else
+    # Modo interactivo normal - verificar si es hora de backup automático
+    verificar_y_ejecutar_backup_automatico
 fi
 
 while true; do
@@ -848,6 +921,10 @@ while true; do
             ;;
         5)
             configurar_respaldo_remoto
+            ;;
+        6)
+            echo "Ejecutando backup automático de prueba..."
+            execute_with_lock backup_diario
             ;;
         0)
              echo "cerrando programa"
