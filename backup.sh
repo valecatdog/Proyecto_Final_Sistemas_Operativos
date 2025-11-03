@@ -13,6 +13,8 @@ REMOTE_BACKUP_HOST="192.168.0.93"
 REMOTE_BACKUP_DIR="/backups/usuarios"
 SSH_KEY="/root/.ssh/backup_key"
 REMOTE_BACKUP_ENABLED=true
+CRON_HORA="3"
+CRON_MINUTO="10"
 
 #**investigar mas a detalle
 cleanup() {
@@ -534,7 +536,7 @@ crear_backup(){
 backup_diario(){
     echo "$(date): [BACKUP_DIARIO] Iniciando función" >> /var/log/backups.log
     
-    # ⭐⭐ MEJORADO: Manejo robusto de locks para modo automático
+    # MEJORADO: Manejo robusto de locks para modo automático
     echo "$(date): [BACKUP_DIARIO] Intentando adquirir lock..." >> /var/log/backups.log
     if ! acquire_lock; then
         echo "$(date): [BACKUP_DIARIO] ERROR: No se pudo adquirir lock" >> /var/log/backups.log
@@ -646,7 +648,7 @@ toggle_backup_automatico(){
         fi
         # aca le decimos a cron que ejecute este script todos los dias a las 4 am
         # -v invert match, se encarga de mostrar todo Exepto lo que cuencide
-        (sudo crontab -l 2>/dev/null; echo "10 3 * * * $Delta automatico") | sudo crontab -
+        (sudo crontab -l 2>/dev/null; echo "$CRON_MINUTO $CRON_HORA * * * $Delta automatico") | sudo crontab -
         echo "Backup automático ACTIVADO"
         echo "Se ejecutará todos los días a las 3:10 AM"
     fi
