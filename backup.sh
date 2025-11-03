@@ -16,16 +16,24 @@ REMOTE_BACKUP_ENABLED=false
 
 #**investigar mas a detalle
 cleanup() {
-    echo "Ejecutando limpieza..."
+    echo "$(date): [CLEANUP] Ejecutando limpieza..." >> /var/log/backups.log
     # Eliminar lockfile si existe
     if [ -f "$lockfile" ]; then
-        rm -f "$lockfile"
-        echo "Lockfile removido"
+        local current_pid=$$
+        local lock_pid=$(cat "$lockfile" 2>/dev/null)
+        
+        # Solo eliminar si el lockfile es de este proceso o el proceso ya no existe
+        if [ "$lock_pid" = "$current_pid" ] || [ -z "$lock_pid" ] || ! ps -p "$lock_pid" > /dev/null 2>&1; then
+            rm -f "$lockfile"
+            echo "$(date): [CLEANUP] Lockfile removido (PID: $lock_pid, Current: $current_pid)" >> /var/log/backups.log
+        else
+            echo "$(date): [CLEANUP] Lockfile NO removido - pertenece a proceso activo PID: $lock_pid" >> /var/log/backups.log
+        fi
     fi
     # Eliminar directorio temporal si existe
     if [ -n  "$temp_dir" ] && [ -d "$temp_dir" ]; then
         rm -rf "$temp_dir"
-        echo "Directorio temporal removido"
+        echo "$(date): [CLEANUP] Directorio temporal removido: $temp_dir" >> /var/log/backups.log
     fi
 }
 #****** trap se encarga de ejecutar cleanup cuando el script termina (EXIT) o recibe señales (INT, TERM)
@@ -524,10 +532,30 @@ crear_backup(){
 
 #***** MODIFICADA: funcion de backup diario que usa la lista configurada
 backup_diario(){
+    # ⭐⭐ MEJORADO: Manejo robusto de locks para modo automático
     if ! acquire_lock; then
-        echo "No se pudo adquirir lock, backup automático omitido" >> /var/log/backups.log
-        return 1
+        echo "$(date): ERROR: No se pudo adquirir lock, backup automático omitido" >> /var/log/backups.log
+        # Intentar limpieza de lockfile obsoleto
+        if [ -f "$lockfile" ]; then
+            local lock_pid=$(cat "$lockfile" 2>/dev/null)
+            if [ -n "$lock_pid" ] && ! ps -p "$lock_pid" > /dev/null 2>&1; then
+                rm -f "$lockfile"
+                echo "$(date): Lockfile obsoleto eliminado (PID: $lock_pid), reintentando..." >> /var/log/backups.log
+                if acquire_lock; then
+                    echo "$(date): Reintento exitoso después de limpiar lockfile" >> /var/log/backups.log
+                else
+                    return 1
+                fi
+            else
+                return 1
+            fi
+        else
+            return 1
+        fi
     fi
+    
+    # ⭐⭐ GARANTIZAR liberación del lock
+    trap 'release_lock; echo "$(date): [BACKUP_DIARIO] Lock liberado por trap" >> /var/log/backups.log' EXIT
     
     fecha=$(date '+%Y%m%d')
     usuarios_procesados=0
@@ -590,7 +618,10 @@ backup_diario(){
     done < "$backup_list"
 
     echo "$(date): Backup automático completado - $usuarios_procesados usuarios procesados" >> /var/log/backups.log
+    
+    # ⭐⭐ LIBERACIÓN EXPLÍCITA DEL LOCK
     release_lock
+    echo "$(date): [BACKUP_DIARIO] Lock liberado explícitamente" >> /var/log/backups.log
     return 0
 }
 
@@ -611,9 +642,9 @@ toggle_backup_automatico(){
         fi
         # aca le decimos a cron que ejecute este script todos los dias a las 4 am
         # -v invert match, se encarga de mostrar todo Exepto lo que cuencide
-        (sudo crontab -l 2>/dev/null; echo "0 3 * * * $Delta automatico") | sudo crontab -
+        (sudo crontab -l 2>/dev/null; echo "10 3 * * * $Delta automatico") | sudo crontab -
         echo "Backup automático ACTIVADO"
-        echo "Se ejecutará todos los días a las 4:00 AM"
+        echo "Se ejecutará todos los días a las 3:10 AM"
     fi
 }
 
@@ -748,10 +779,37 @@ restaurar_backup(){
 check_user
 crear_dir_backup
 
-#***** VERIFICAR SI SE EJECUTA EN MODO AUTOMATICO (desde crontab)
+#***** VERIFICAR SI SE EJECUTA EN MODO AUTOMATICO (desde crontab) - VERSIÓN MEJORADA
 if [ "$1" = "automatico" ]; then
-    echo "$(date): Ejecutando backup automático desde crontab" >> /var/log/backups.log
-    execute_with_lock backup_diario
+    echo "$(date): [CRON] Iniciando backup automático desde crontab" >> /var/log/backups.log
+    
+    # Limpieza agresiva de lockfiles obsoletos para cron
+    if [ -f "$lockfile" ]; then
+        lock_pid=$(cat "$lockfile" 2>/dev/null)
+        if [ -n "$lock_pid" ]; then
+            if ! ps -p "$lock_pid" > /dev/null 2>&1; then
+                echo "$(date): [CRON] Eliminando lockfile obsoleto (PID $lock_pid no existe)" >> /var/log/backups.log
+                rm -f "$lockfile"
+            else
+                echo "$(date): [CRON] ERROR: Script ya en ejecución (PID $lock_pid), omitiendo backup" >> /var/log/backups.log
+                exit 1
+            fi
+        else
+            # Lockfile vacío o inválido
+            rm -f "$lockfile"
+            echo "$(date): [CRON] Eliminando lockfile inválido" >> /var/log/backups.log
+        fi
+    fi
+    
+    # Ejecutar backup diario SIN execute_with_lock (manejamos el lock manualmente)
+    if backup_diario; then
+        echo "$(date): [CRON] Backup automático completado exitosamente" >> /var/log/backups.log
+    else
+        echo "$(date): [CRON] Backup automático falló" >> /var/log/backups.log
+    fi
+    
+    # Limpieza final garantizada
+    cleanup
     exit 0
 fi
 
