@@ -1,7 +1,15 @@
 #! /bin/bash
 
-# Configurar PATH explícito para cron 
-export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+# === SOLUCIÓN DEFINITIVA PARA CRON ===
+# Si se ejecuta desde cron, forzar entorno completo
+if [ "$1" = "automatico" ]; then
+    # Cargar profile si existe
+    [ -f /etc/profile ] && source /etc/profile
+    # Forzar PATH completo
+    export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    # Ir a directorio seguro
+    cd /root 2>/dev/null || cd /tmp
+fi
 
 #en esta variable guardamos la direccion de donde se van a guardar los backups
 dir_backup="/var/users_backups"
@@ -235,7 +243,7 @@ crear_dir_backup(){
 
 # se encarga de verificar si el backup esta up and running :D, crontab -l te da una lista con las tareas Cron actuales y busca alguna linea que contenga la ruta del script ( grep te devuelve 0 (true) si no la encuentra y 1 (false) si la encuentra)
 backup_automatico_activo(){
-    sudo crontab -l 2>/dev/null | grep -q "$Delta automatico"
+    sudo crontab -l 2>/dev/null | grep -q "Proyecto_Final_Sistemas_Operativos_backup.sh automatico"
 }
 
 # funcion para mostrar el menu
@@ -617,7 +625,7 @@ backup_diario(){
 toggle_backup_automatico(){
     if backup_automatico_activo; then
         # DESACTIVAR - eliminar de crontab
-        (sudo crontab -l 2>/dev/null | grep -v "$Delta automatico") | sudo crontab -
+        (sudo crontab -l 2>/dev/null | grep -v "Proyecto_Final_Sistemas_Operativos_backup.sh automatico") | sudo crontab -
         echo "Backup automático DESACTIVADO"
     else
         # Mostrar advertencia si la lista está vacía
@@ -627,8 +635,10 @@ toggle_backup_automatico(){
             echo "Puede gestionar la lista en la opción 4 del menú principal."
             echo
         fi
-        # ⭐⭐ SOLUCIÓN SIMPLE: Comando único y directo
-        (sudo crontab -l 2>/dev/null; echo "$CRON_MINUTO $CRON_HORA * * * /bin/bash -c 'cd /root && PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /home/alumno_scriptTest/Proyecto_Final_Sistemas_Operativos_backup.sh automatico'") | sudo crontab -
+        
+        # ⭐⭐ SOLUCIÓN MÁS SIMPLE - Solo el comando esencial
+        (sudo crontab -l 2>/dev/null; echo "$CRON_MINUTO $CRON_HORA * * * /bin/bash /home/alumno_scriptTest/Proyecto_Final_Sistemas_Operativos_backup.sh automatico") | sudo crontab -
+        
         echo "Backup automático ACTIVADO"
         echo "Se ejecutará todos los días a las ${CRON_HORA}:${CRON_MINUTO}"
     fi
