@@ -12,7 +12,7 @@ REMOTE_BACKUP_USER="respaldo_user"
 REMOTE_BACKUP_HOST="192.168.0.93"
 REMOTE_BACKUP_DIR="/backups/usuarios"
 SSH_KEY="/root/.ssh/backup_key"
-REMOTE_BACKUP_ENABLED=false
+REMOTE_BACKUP_ENABLED=true
 
 #**investigar mas a detalle
 cleanup() {
