@@ -13,8 +13,11 @@ REMOTE_BACKUP_HOST="192.168.0.93"
 REMOTE_BACKUP_DIR="/backups/usuarios"
 SSH_KEY="/root/.ssh/backup_key"
 REMOTE_BACKUP_ENABLED=true
-CRON_HORA="3"
-CRON_MINUTO="10"
+
+# Configuración de hora para backup automático
+CRON_HORA="3"           # Hora en formato 24h (0-23)
+CRON_MINUTO="10"        # Minuto (0-59)
+
 # Nueva variable para el delay de rsync (minutos después del backup)
 RSYNC_DELAY_MINUTOS="5"
 
@@ -50,6 +53,26 @@ check_user() {
         echo "Uso: sudo $0"
         exit 1
     fi
+}
+
+# Función para convertir hora 24h a formato AM/PM
+formato_am_pm() {
+    local hora_24h="$1"
+    if [ "$hora_24h" -eq 0 ]; then
+        echo "12 AM"
+    elif [ "$hora_24h" -eq 12 ]; then
+        echo "12 PM"
+    elif [ "$hora_24h" -lt 12 ]; then
+        echo "${hora_24h} AM"
+    else
+        local hora_pm=$((hora_24h - 12))
+        echo "${hora_pm} PM"
+    fi
+}
+
+# Función para obtener la hora en formato legible
+get_cron_hora_ampm() {
+    formato_am_pm "$CRON_HORA"
 }
 
 # funcion para adquirir el lock y evitar ejecuciones simultaneas
@@ -193,11 +216,13 @@ configurar_respaldo_remoto() {
         echo "=== CONFIGURACIÓN DE RESPALDO REMOTO ==="
         echo "Estado actual: $REMOTE_BACKUP_ENABLED"
         echo "Delay de transferencia: $RSYNC_DELAY_MINUTOS minutos"
+        echo "Hora de backup automático: $(get_cron_hora_ampm)"
         echo
         echo "1. Activar/Desactivar respaldo remoto"
         echo "2. Probar conexión remota"
         echo "3. Ver configuración actual"
         echo "4. Configurar delay de transferencia (actual: $RSYNC_DELAY_MINUTOS min)"
+        echo "5. Configurar hora del backup automático (actual: $(get_cron_hora_ampm))"
         echo "0. Volver al menú principal"
         echo
         echo -n "Seleccione opción: "
@@ -224,6 +249,7 @@ configurar_respaldo_remoto() {
                 echo "  Clave SSH: $SSH_KEY"
                 echo "  Habilitado: $REMOTE_BACKUP_ENABLED"
                 echo "  Delay transferencia: $RSYNC_DELAY_MINUTOS minutos"
+                echo "  Hora de backup: $(get_cron_hora_ampm)"
                 ;;
             4)
                 echo -n "Nuevo delay en minutos (actual: $RSYNC_DELAY_MINUTOS): "
@@ -233,6 +259,17 @@ configurar_respaldo_remoto() {
                     echo "Delay de transferencia actualizado a $RSYNC_DELAY_MINUTOS minutos"
                 else
                     echo "Error: Debe ingresar un número positivo"
+                fi
+                ;;
+            5)
+                echo -n "Nueva hora para backup (0-23, actual: $CRON_HORA): "
+                read nueva_hora
+                if [[ "$nueva_hora" =~ ^[0-9]+$ ]] && [ "$nueva_hora" -ge 0 ] && [ "$nueva_hora" -le 23 ]; then
+                    CRON_HORA="$nueva_hora"
+                    echo "Hora de backup actualizada a $(get_cron_hora_ampm)"
+                    echo "$(date): Hora de backup cambiada a $(get_cron_hora_ampm)" >> /var/log/backups.log
+                else
+                    echo "Error: Hora debe ser entre 0 y 23"
                 fi
                 ;;
             0)
@@ -700,10 +737,10 @@ toggle_backup_automatico(){
         (sudo crontab -l 2>/dev/null; echo "* * * * * $Delta") | sudo crontab -
         
         echo "Backup automático ACTIVADO"
-        echo "El script verificará cada minuto si es las $CRON_HORA:$CRON_MINUTO"
+        echo "El script verificará cada minuto si es las $(get_cron_hora_ampm)"
         echo "y ejecutará el backup automático cuando coincida."
         echo "Las transferencias remotas se programarán con at para ejecutarse $RSYNC_DELAY_MINUTOS minutos después."
-        echo "$(date): Backup automático activado - verificación cada minuto para las $CRON_HORA:$CRON_MINUTO" >> /var/log/backups.log
+        echo "$(date): Backup automático activado - verificación cada minuto para las $(get_cron_hora_ampm)" >> /var/log/backups.log
     fi
 }
 
