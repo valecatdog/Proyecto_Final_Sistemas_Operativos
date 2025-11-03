@@ -146,7 +146,7 @@ aniadir_quitar_usergrupo(){
         esac
     done
 }
-: '
+
 admin_usergroup_archivo(){
     while true
     do
@@ -154,18 +154,127 @@ admin_usergroup_archivo(){
         echo "==AGREAGAR USUARIOS A GRUPOS CON ARCHIVO=="
         printf "\n\n"
         read -rp "Ingrese la ruta del archivo (enter para regresar): " archivo
-        if ! verificar_archivo "$archivo"; then
+        if [ -z "$archivo" ]; then
             gestion_usuarios_grupos
-        else
+            return
+        else 
+            listaUsuarios=()         
+            read -ra palabras <<< "$(cat "$archivo")"
 
+            for palabra in "${palabras[@]}"; do
+                if getent passwd "$palabra" > /dev/null; then
+                    listaUsuarios+=("$palabra")
+                fi
+            done
+
+            if [ -n "${listaUsuarios[*]}" ]; then
+                admin_usergroup_archivo_grupo
+                return
+            else
+                read -t1 -n2 -srp "ERROR: el archivo no contiene ningun usuario valido"
+                gestion_usuarios_grupos
+                return
+            fi
         fi
     done
 }
 
-archivo_grupo_verificar(){
+admin_usergroup_archivo_grupo(){
+    while true
+    do    
+        clear
+        echo "==AGREAGAR USUARIOS A GRUPOS CON ARCHIVO=="
+        echo "*archivo: $archivo"
+        printf "\n\n"
+        read -rp "Ingrese el grupo (enter para regresar): " grupo
+        
+        if [ -z "$grupo" ]
+        then
+            admin_usergroup_archivo
+            return
+        elif  [[ "$grupo" =~ ^[a-zA-Z_][a-zA-Z0-9_-]+$ ]]
+        then
+            if grupo_existe "$grupo"; then
+                aniadir_quitar_usergrupo_archivo "$archivo" "$grupo"
+                return
+            else
+                read -n1 -t1 -srp "ERROR: el grupo $grupo no existe"  
+            fi
+        else
+            read -n1 -t1 -srp "ERROR: formato de nombre incorrecto"   
+        fi
+    done
 }
 
-'
+aniadir_quitar_usergrupo_archivo(){
+    while true
+    do
+        clear
+        echo "==AGREAGAR USUARIOS A GRUPOS CON ARCHIVO=="
+        echo "*archivo: $1"
+        echo "*grupo: $2"
+        printf "\n\n"
+        echo "Que desea hacer?"
+        printf "\n"
+        echo "0. Volver a menu anterior" 
+        echo "1. Agregar usuarios al grupo"
+        echo "2. Quitarlos del grupo"
+        printf "\n"
+        read -rp "Opcion: " opcionaniadirQuitar
+    
+
+        case $opcionaniadirQuitar in
+            0)
+                admin_usergroup_archivo_grupo
+                return   
+            ;;
+        
+            1)
+                noAgregados=()
+                for u in "${listaUsuarios[@]}"
+                do
+                    if ! sudo gpasswd -a "$u" "$2" &>/dev/null; then
+                       noAgregados+=("$u")
+                    fi
+                done
+                if [ -n "${noAgregados[*]}" ]
+                then
+                    read -t2 -n1 -srp "No se puedieron agregar los usuarios: ${noAgregados[*]}"
+                else
+                    read -t2 -n1 -srp "Usuarios agregados correctamente"
+                fi
+                gestion_usuarios_grupos
+                return
+            ;;
+
+            2)
+                noAgregados=()
+                for u in "${listaUsuarios[@]}"
+                do
+                    if ! sudo gpasswd -d "$u" "$2" 2>/dev/null; then
+                        noAgregados+=("$u")  
+                    fi 
+                done
+                if [ -n "${noAgregados[*]}" ]
+                then
+                    read -t2 -n1 -srp "No se puedieron agregar los usuarios: ${noAgregados[*]}"
+                else
+                    read -t2 -n1 -srp "Usuarios agregados correctamente"
+                fi
+                gestion_usuarios_grupos
+                return
+            ;;
+
+            *)
+               read -n1 -t1 -srp "ERROR: opcion incorrecta" 
+            ;;
+        esac
+    done
+}
+
+
+
+
 usuario_existe_user(){
     local user
     user="$1"
