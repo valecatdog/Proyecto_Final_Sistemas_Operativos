@@ -636,7 +636,7 @@ toggle_backup_automatico(){
     if backup_automatico_activo; then
         # DESACTIVAR - eliminar de crontab
         #**** grep -v muestra todo EXCEPTO la linea que contiene nuestro script
-        (sudo crontab -l 2>/dev/null | grep -v "$Delta automatico") | sudo crontab -
+        (sudo crontab -l 2>/dev/null; echo "$CRON_MINUTO $CRON_HORA * * * /bin/bash $Delta automatico") | sudo crontab -
         echo "Backup automático DESACTIVADO"
     else
         # Mostrar advertencia si la lista está vacía
