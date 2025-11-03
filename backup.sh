@@ -779,37 +779,71 @@ restaurar_backup(){
 check_user
 crear_dir_backup
 
-#***** VERIFICAR SI SE EJECUTA EN MODO AUTOMATICO (desde crontab) - VERSIÓN MEJORADA
+#***** VERIFICAR SI SE EJECUTA EN MODO AUTOMATICO (desde crontab) - VERSIÓN CON DEBUGGING
 if [ "$1" = "automatico" ]; then
-    echo "$(date): [CRON] Iniciando backup automático desde crontab" >> /var/log/backups.log
-    
-    # Limpieza agresiva de lockfiles obsoletos para cron
-    if [ -f "$lockfile" ]; then
-        lock_pid=$(cat "$lockfile" 2>/dev/null)
-        if [ -n "$lock_pid" ]; then
-            if ! ps -p "$lock_pid" > /dev/null 2>&1; then
-                echo "$(date): [CRON] Eliminando lockfile obsoleto (PID $lock_pid no existe)" >> /var/log/backups.log
-                rm -f "$lockfile"
+    {
+        echo "================================================"
+        echo "$(date): [CRON] INICIANDO BACKUP AUTOMÁTICO"
+        echo "================================================"
+        echo "Delta: $Delta"
+        echo "Lockfile: $lockfile"
+        echo "Backup list: $backup_list"
+        echo "Remote backup enabled: $REMOTE_BACKUP_ENABLED"
+        
+        # Verificar que los archivos necesarios existen
+        echo "Verificando archivos necesarios..."
+        if [ ! -f "$backup_list" ]; then
+            echo "ERROR: No existe el archivo de lista: $backup_list"
+            exit 1
+        fi
+        
+        if [ ! -s "$backup_list" ]; then
+            echo "INFO: Lista de backups vacía, no hay nada que hacer"
+            exit 0
+        fi
+        
+        echo "Contenido de la lista de backups:"
+        grep -v '^#' "$backup_list" | grep -v '^$' | while read line; do
+            echo "  - $line"
+        done
+        
+        # Limpieza agresiva de lockfiles obsoletos para cron
+        echo "Verificando lockfile..."
+        if [ -f "$lockfile" ]; then
+            lock_pid=$(cat "$lockfile" 2>/dev/null)
+            if [ -n "$lock_pid" ]; then
+                if ! ps -p "$lock_pid" > /dev/null 2>&1; then
+                    echo "Eliminando lockfile obsoleto (PID $lock_pid no existe)"
+                    rm -f "$lockfile"
+                else
+                    echo "ERROR: Script ya en ejecución (PID $lock_pid), omitiendo backup"
+                    exit 1
+                fi
             else
-                echo "$(date): [CRON] ERROR: Script ya en ejecución (PID $lock_pid), omitiendo backup" >> /var/log/backups.log
-                exit 1
+                # Lockfile vacío o inválido
+                rm -f "$lockfile"
+                echo "Eliminando lockfile inválido"
             fi
         else
-            # Lockfile vacío o inválido
-            rm -f "$lockfile"
-            echo "$(date): [CRON] Eliminando lockfile inválido" >> /var/log/backups.log
+            echo "No hay lockfile existente"
         fi
-    fi
+        
+        # Ejecutar backup diario
+        echo "Ejecutando backup_diario..."
+        if backup_diario; then
+            echo "Backup automático completado exitosamente"
+        else
+            echo "Backup automático falló con código: $?"
+        fi
+        
+        echo "================================================"
+        echo "$(date): [CRON] FINALIZANDO BACKUP AUTOMÁTICO"
+        echo "================================================"
+        
+        # Limpieza final
+        cleanup
+    } >> /var/log/backups.log 2>&1
     
-    # Ejecutar backup diario SIN execute_with_lock (manejamos el lock manualmente)
-    if backup_diario; then
-        echo "$(date): [CRON] Backup automático completado exitosamente" >> /var/log/backups.log
-    else
-        echo "$(date): [CRON] Backup automático falló" >> /var/log/backups.log
-    fi
-    
-    # Limpieza final garantizada
-    cleanup
     exit 0
 fi
 
