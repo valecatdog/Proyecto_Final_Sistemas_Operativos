@@ -73,7 +73,9 @@ formato_am_pm() {
 # Función para obtener la hora en formato legible
 get_cron_hora_completa() {
     local hora_ampm=$(formato_am_pm "$CRON_HORA")
-    echo "${CRON_HORA}:${CRON_MINUTO} ($hora_ampm)"
+    # Asegurar que los minutos tengan 2 dígitos
+    local minuto_formateado=$(printf "%02d" "$CRON_MINUTO")
+    echo "${CRON_HORA}:${minuto_formateado} ($hora_ampm)"
 }
 
 # Función para obtener solo la hora en formato legible
@@ -321,8 +323,8 @@ crear_dir_backup(){
     # el -d verifica si es un directorio 
     if [ ! -d "$dir_backup" ]
     then
-    sudo mkdir -p "$dir_backup"
-    sudo chmod 700 "$dir_backup"
+    mkdir -p "$dir_backup"
+    chmod 700 "$dir_backup"
     echo "Directorio de backups creado: $dir_backup"
     fi
 
@@ -334,8 +336,8 @@ crear_dir_backup(){
     
     #***** crear directorio de configuracion si no existe
     if [ ! -d "/etc/backup-script" ]; then
-        sudo mkdir -p "/etc/backup-script"
-        sudo chmod 700 "/etc/backup-script"
+        mkdir -p "/etc/backup-script"
+        chmod 700 "/etc/backup-script"
     fi
     
     #***** crear archivo de lista de backups automaticos si no existe
@@ -352,19 +354,7 @@ crear_dir_backup(){
 
 # se encarga de verificar si el backup esta up and running :D, crontab -l te da una lista con las tareas Cron actuales y busca alguna linea que contenga la ruta del script ( grep te devuelve 0 (true) si no la encuentra y 1 (false) si la encuentra)
 backup_automatico_activo(){
-    sudo crontab -l 2>/dev/null | grep -q "$Delta"
-}
-
-# Función para verificar y ejecutar backup por hora
-verificar_y_ejecutar_backup_automatico() {
-    local hora_actual=$(date '+%H')
-    local minuto_actual=$(date '+%M')
-    
-    # Verificar si es la hora programada
-    if [ "$hora_actual" = "$CRON_HORA" ] && [ "$minuto_actual" = "$CRON_MINUTO" ]; then
-        echo "$(date): [HORA-DETECTADA] Ejecutando backup automático por verificación de hora" >> /var/log/backups.log
-        backup_diario
-    fi
+    crontab -l 2>/dev/null | grep -q "$Delta"
 }
 
 # funcion para mostrar el menu
@@ -559,6 +549,7 @@ gestionar_backup_auto() {
     done
 }
 
+# CORREGIDA: Función para crear backup de grupo con contador correcto
 crear_backup_grupo(){
     if ! leer_con_cancelar "Ingrese nombre del grupo" grupo; then
         return 1
@@ -570,16 +561,17 @@ crear_backup_grupo(){
         echo "Creando backup del grupo: $grupo"
         echo "Usuarios en el grupo:"
         
-        # Contador para usuarios procesados
-        usuarios_procesados=0
+        # Contador para usuarios procesados - CORREGIDO: usar archivo temporal para el contador
+        local temp_counter=$(mktemp)
+        echo "0" > "$temp_counter"
         
         # Obtener usuarios del grupo y crear backup INDIVIDUAL para cada uno
-        obtener_usuarios_de_grupo "$grupo" | while read usuario; do
-            if usuario_existe "$usuario"; then
+        # CORREGIDO: Usar while read sin pipeline para mantener el contexto
+        while IFS= read -r usuario; do
+            if [ -n "$usuario" ] && usuario_existe "$usuario"; then
                 home_dir=$(getent passwd "$usuario" | cut -d: -f6)
                 if [ -d "$home_dir" ]; then
                     echo "  - Creando backup de: $usuario"
-                    # CORREGIDO: Cambiamos el formato del nombre para que sea consistente
                     archivo_backup="${dir_backup}/backup_${usuario}_grupo_${fecha}.tar.bz2"
                     
                     # Crear backup individual del usuario
@@ -587,7 +579,9 @@ crear_backup_grupo(){
                     then
                         echo "    Backup creado: $(basename "$archivo_backup")"
                         echo "$(date): Backup manual de grupo $grupo - usuario $usuario - $archivo_backup" >> /var/log/backups.log
-                        ((usuarios_procesados++))
+                        # Incrementar contador
+                        local current_count=$(cat "$temp_counter")
+                        echo $((current_count + 1)) > "$temp_counter"
                         # Respaldo remoto programado con at (método simplificado)
                         programar_transferencia_remota "$archivo_backup"
                     else
@@ -597,7 +591,10 @@ crear_backup_grupo(){
             else
                 echo "  - Usuario $usuario no existe, omitiendo"
             fi
-        done
+        done < <(obtener_usuarios_de_grupo "$grupo")
+        
+        local usuarios_procesados=$(cat "$temp_counter")
+        rm -f "$temp_counter"
         
         echo "Backup de grupo completado: $usuarios_procesados usuarios procesados"
         
@@ -698,9 +695,9 @@ backup_diario(){
             grupo="${linea#@}"
             if grupo_existe "$grupo"; then
                 echo "$(date): Procesando grupo $grupo" >> /var/log/backups.log
-                # Procesar cada usuario del grupo
-                obtener_usuarios_de_grupo "$grupo" | while read usuario; do
-                    if usuario_existe "$usuario"; then
+                # Procesar cada usuario del grupo - CORREGIDO: usar process substitution
+                while IFS= read -r usuario; do
+                    if [ -n "$usuario" ] && usuario_existe "$usuario"; then
                         home_dir=$(getent passwd "$usuario" | cut -d: -f6)
                         if [ -d "$home_dir" ]; then
                             archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
@@ -711,7 +708,7 @@ backup_diario(){
                             fi
                         fi
                     fi
-                done
+                done < <(obtener_usuarios_de_grupo "$grupo")
             else
                 echo "$(date): ERROR: Grupo $grupo no existe" >> /var/log/backups.log
             fi
@@ -746,11 +743,11 @@ backup_diario(){
     return 0
 }
 
-# funcion para activar/desactivar el backup automatico en crontab
+# CORREGIDA: función para activar/desactivar el backup automatico en crontab - AHORA DIARIO
 toggle_backup_automatico(){
     if backup_automatico_activo; then
         # DESACTIVAR - eliminar de crontab
-        (sudo crontab -l 2>/dev/null | grep -v "$Delta") | sudo crontab -
+        (crontab -l 2>/dev/null | grep -v "$Delta") | crontab -
         echo "Backup automático DESACTIVADO"
         echo "$(date): Backup automático desactivado" >> /var/log/backups.log
     else
@@ -762,14 +759,13 @@ toggle_backup_automatico(){
             echo
         fi
         
-        # ACTIVAR - programar para que ejecute cada minuto y verifique la hora
-        (sudo crontab -l 2>/dev/null; echo "* * * * * $Delta") | sudo crontab -
+        # CORREGIDO: Programar ejecución DIARIA a la hora específica
+        (crontab -l 2>/dev/null; echo "$CRON_MINUTO $CRON_HORA * * * $Delta automatico") | crontab -
         
         echo "Backup automático ACTIVADO"
-        echo "El script verificará cada minuto si es las $(get_cron_hora_completa)"
-        echo "y ejecutará el backup automático cuando coincida."
+        echo "Se ejecutará diariamente a las $(get_cron_hora_completa)"
         echo "Las transferencias remotas se programarán con at para ejecutarse $RSYNC_DELAY_MINUTOS minutos después."
-        echo "$(date): Backup automático activado - verificación cada minuto para las $(get_cron_hora_completa)" >> /var/log/backups.log
+        echo "$(date): Backup automático activado - programado diariamente a las $(get_cron_hora_completa)" >> /var/log/backups.log
     fi
 }
 
@@ -858,7 +854,7 @@ restaurar_backup(){
         echo "Restaurando backup..."
 
         # extraemos el backup en el directorio temporal
-        if sudo tar -xjf "$archivo_backup" -C "$temp_dir" 2>/dev/null
+        if tar -xjf "$archivo_backup" -C "$temp_dir" 2>/dev/null
             then
             #Buscamos donde estan los archivos de usuario
             #aca buscamos si esta con /home/y el usuario
@@ -882,7 +878,7 @@ restaurar_backup(){
             rsync -av "$dir_origen/" "$home_destino"/ 2>/dev/null
 
             # reparamos los permisos con un change owner recursivo en todo el directorio
-            sudo chown -R "$usuario:$usuario" "$home_destino"
+            chown -R "$usuario:$usuario" "$home_destino"
 
             echo "Restauración completada"
 
@@ -906,10 +902,10 @@ crear_dir_backup
 
 # ***** Manejo de modos de ejecución
 if [ "$1" = "automatico" ]; then
-    # Modo automático desde cron
+    # Modo automático desde cron - CORREGIDO: ejecución diaria única
     {
         echo "================================================"
-        echo "$(date): [CRON] INICIANDO BACKUP AUTOMÁTICO"
+        echo "$(date): [CRON] INICIANDO BACKUP AUTOMÁTICO DIARIO"
         echo "================================================"
         
         # Verificar que los archivos necesarios existen
@@ -927,20 +923,21 @@ if [ "$1" = "automatico" ]; then
         # Ejecutar backup diario
         echo "Ejecutando backup_diario..."
         if backup_diario; then
-            echo "Backup automático completado exitosamente"
+            echo "Backup automático diario completado exitosamente"
         else
-            echo "Backup automático falló con código: $?"
+            echo "Backup automático diario falló con código: $?"
         fi
         
         echo "================================================"
-        echo "$(date): [CRON] FINALIZANDO BACKUP AUTOMÁTICO"
+        echo "$(date): [CRON] FINALIZANDO BACKUP AUTOMÁTICO DIARIO"
         echo "================================================"
     } >> /var/log/backups.log 2>&1
     exit 0
 
 else
-    # Modo interactivo normal - verificar si es hora de backup automático
-    verificar_y_ejecutar_backup_automatico
+    # Modo interactivo normal - ELIMINADA la verificación horaria automática
+    # No se verifica la hora para evitar duplicación con cron
+    :
 fi
 
 while true; do
