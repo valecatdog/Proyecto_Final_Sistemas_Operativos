@@ -633,24 +633,17 @@ backup_diario(){
 
 # funcion para activar/desactivar el backup automatico en crontab
 toggle_backup_automatico(){
-    if backup_automatico_activo; then
-        # DESACTIVAR - eliminar de crontab
-        #**** grep -v muestra todo EXCEPTO la linea que contiene nuestro script
-        (sudo crontab -l 2>/dev/null; echo "$CRON_MINUTO $CRON_HORA * * * /bin/bash $Delta automatico") | sudo crontab -
+    cron_line="$CRON_MINUTO $CRON_HORA * * * /bin/bash $Delta automatico"
+
+    # Si la tarea ya está en crontab -> eliminarla
+    if sudo crontab -l 2>/dev/null | grep -F -q "$Delta automatico"; then
+        sudo crontab -l 2>/dev/null | grep -F -v "$Delta automatico" | sudo crontab -
         echo "Backup automático DESACTIVADO"
     else
-        # Mostrar advertencia si la lista está vacía
-        if [ ! -f "$backup_list" ] || [ ! -s "$backup_list" ]; then
-            echo "¡ADVERTENCIA: La lista de backups automáticos está vacía!"
-            echo "No se realizarán backups hasta que añada usuarios/grupos."
-            echo "Puede gestionar la lista en la opción 4 del menú principal."
-            echo
-        fi
-        # aca le decimos a cron que ejecute este script todos los dias a las 4 am
-        # -v invert match, se encarga de mostrar todo Exepto lo que cuencide
-        (sudo crontab -l 2>/dev/null; echo "$CRON_MINUTO $CRON_HORA * * * $Delta automatico") | sudo crontab -
+        # Añadir tarea (si no existe)
+        (sudo crontab -l 2>/dev/null; echo "$cron_line") | sudo crontab -
         echo "Backup automático ACTIVADO"
-        echo "Se ejecutará todos los días a las 3:10 AM"
+        echo "Se ejecutará todos los días a las $CRON_HORA:$CRON_MINUTO"
     fi
 }
 
