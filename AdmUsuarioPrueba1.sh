@@ -455,11 +455,12 @@ archivo_procesar_addDel(){
     else
         echo "Elegido: 2. Eliminar usuarios del sistema"
     fi
-
+#PROBANDO
     echo "Con qué usuarios desea trabajar? (ingrese sus numeros separados por espacios o nada para volver al menu anterior):"
     #despliega todos los usuarios
     usuariosTrabajar=()
 
+    echo "-1. Todos"
     for ((i = 0; i < ${#listaUsuarios[@]}; i++)); do
         IFS=':' read -r nombre apellido user <<< "${listaUsuarios[i]}"
 
@@ -487,7 +488,16 @@ archivo_procesar_addDel(){
             return
         else
         #Si sí se ingresaron usuarios
-            valido=true
+            if echo "$opciones" | grep -qw "-1"
+            then
+                for ((i=0; i<${#usuariosTrabajar[@]}; i++)); do
+                    if [ "$1" = add ]; then
+                        add_usuario "${usuariosTrabajar[$i]}"
+                    else
+                        del_usuario "${usuariosTrabajar[$i]}"
+                    fi
+                done
+            fi
 
             opciones=$(echo "$opciones" | tr -s ' ')
             #si hay varios espacion en blanco seguidos los convertimos en uno para evitar errores
