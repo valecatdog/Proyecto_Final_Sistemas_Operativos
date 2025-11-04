@@ -803,7 +803,7 @@ backup_diario(){
 
     echo "ℹ️  [BACKUP-DIARIO] Leyendo lista de backups: $backup_list" >> /var/log/backups.log
 
-    # Leer la lista de backups automáticos
+    # Leer la  lista de  backups automáticos
     while IFS= read -r linea; do
         # Saltar líneas vacías o comentarios
         [[ -z "$linea" || "$linea" =~ ^# ]] && continue
