@@ -390,7 +390,7 @@ leer_con_cancelar() {
     local prompt="$1"
     local variable="$2"
     echo -n "$prompt (o '0' para cancelar): "
-    read $variable
+    read "$variable"
     if [ "${!variable}" = "0" ]; then
         echo "Operación cancelada."
         return 1
@@ -1051,9 +1051,7 @@ configurar_respaldo_remoto() {
                 # porque cron sigue usando la hora vieja
                 if backup_automatico_activo; then
                     echo "Actualizando programación en cron..."
-                    toggle_backup_automatico  # Desactivar primero
-                    toggle_backup_automatico  # Reactivar con nueva hora
-                    echo "Cron actualizado con la nueva hora"
+                    configurar_backup_automatico
                 fi
                 ;;
             0)
@@ -1075,79 +1073,41 @@ configurar_respaldo_remoto() {
 
 
 
-# Activa o desactiva el backup automático en crontab
-toggle_backup_automatico(){
-        # primero verificamos si ya esta activo el backup automatico
-        # buscamos nuestro script en la crontab del usuario actual
-    if backup_automatico_activo; then
-        # MODO DESACTIVAR- removemos nuestra entrada de crontab
-        
-        # esto es un poco magico: 
-        # 1. crontab -l lista el crontab actual
-        # 2. grep -v "$Delta" remueve la linea que contiene nuestro script
-        # 3. el nuevo crontab (sin nuestra linea) se pasa a crontab -
-        (crontab -l 2>/dev/null | grep -v "$Delta") | crontab -
-        
-        echo "Backup automático DESACTIVADO"
-        echo "los backups ya no se ejecutaran automaticamente"
-        echo "$(date): Backup automático desactivado" >> /var/log/backups.log
-        
-    else
-        # MODO ACTIVAR - agregamos nuestra entrada a crontab
-        
-        #  antes de activar, verificamos que todas las dependencias esten okei
-        # no tiene sentido activar algo que va a fallar
-        echo "Verificando dependencias antes de activar backup automático..." >> /var/log/backups.log
-        
-        if ! verificar_dependencias; then
-            echo "ERROR: No se puede activar backup automático debido a errores en dependencias"
-            echo "Revisa /var/log/backups.log para más detalles"
-            echo "necesitas resolver los problemas antes de activar el backup automatico"
-            return 1  # salimos con error
-        fi
-        
-        # verificamos si la lista de backups esta vacia
-        # [ ! -f ] verifica que el archivo existe
-        # grep -v '^#' excluye lineas comentadas, grep -v '^$' excluye lineas vacias
-        # read verifica si queda algo para leer (si la lista tiene contenido)
-        if [ ! -f "$backup_list" ] || ! grep -v '^#' "$backup_list" | grep -v '^$' | read; then
-            # la lista esta vacia, mostramos advertencia pero permitimos continuar
-            echo "ADVERTENCIA: La lista de backups automáticos está vacía!"
-            echo "No se realizarán backups hasta que añada usuarios/grupos."
-            echo "Puede gestionar la lista en la opción 4 del menú principal."
-            echo "¿Está seguro que quiere activar igualmente? (s/n)"
-            read confirmar
-            if [ "$confirmar" != "s" ]; then
-                echo "Activación cancelada por el usuario"
-                return 1
-            fi
-            echo
-        fi
-        
-        # construimos la entrada de cron con la hora configurada
-        # formato: minuto hora * * * comando
-        # * * * * son: dia-mes mes dia-semana (todos = diario)
-        local entrada_cron="$CRON_MINUTO $CRON_HORA * * * $Delta automatico"
-        
-        # esto es el truco para agregar una linea a crontab sin borrar las existentes:
-        # 1. crontab -l obtiene el crontab actual (si existe)
-        # 2. agregamos nuestra nueva linea al final
-        # 3. todo se pasa a crontab - que reemplaza el crontab completo
-        (crontab -l 2>/dev/null; echo "$entrada_cron") | crontab -
-        
-        echo "Backup automático ACTIVADO"
-        echo "Se ejecutará diariamente a las $(get_cron_hora_completa)"
-        echo "Las transferencias remotas se programarán con at"
-        echo "$(date): Backup automático activado - $entrada_cron" >> /var/log/backups.log
-        
-        # mostramos confirmacion de lo que se configuro
-        # para que puedas ver si quedo bien programado, tambien puesto por temas de debug 
-        echo
-        echo "Entrada de cron actual:"
-        crontab -l | grep "$Delta"
-        echo
-        echo "Puedes verificar con: crontab -l"
+# Reemplaza toggle_backup_automatico por esta función:
+configurar_backup_automatico() {
+    # Verificar dependencias primero
+    echo "Verificando dependencias..." >> /var/log/backups.log
+    if ! verificar_dependencias; then
+        echo "ERROR: No se puede configurar backup automático debido a errores en dependencias"
+        echo "Revisa /var/log/backups.log para más detalles"
+        return 1
     fi
+    
+    # Verificar si la lista está vacía (solo advertencia)
+    if [ ! -f "$backup_list" ] || ! grep -v '^#' "$backup_list" | grep -v '^$' | read; then
+        echo "ADVERTENCIA: La lista de backups automáticos está vacía"
+        echo "No se realizarán backups hasta que añada usuarios/grupos."
+        echo "¿Continuar igualmente? (s/n)"
+        read confirmar
+        if [ "$confirmar" != "s" ]; then
+            return 1
+        fi
+    fi
+    
+    # Construir y establecer la entrada de cron
+    local entrada_cron="$CRON_MINUTO $CRON_HORA * * * $Delta automatico"
+    
+    # Eliminar cualquier entrada existente y agregar la nueva
+    (crontab -l 2>/dev/null | grep -v "$Delta"; echo "$entrada_cron") | crontab -
+    
+    echo "Backup automático CONFIGURADO"
+    echo "Se ejecutará diariamente a las $(get_cron_hora_completa)"
+    echo "$(date): Backup automático configurado - $entrada_cron" >> /var/log/backups.log
+    
+    # Mostrar confirmación
+    echo
+    echo "Entrada de cron actual:"
+    crontab -l | grep "$Delta"
 }
 
 # Restaura un backup seleccionado por el usuario
@@ -1347,7 +1307,7 @@ while true; do
             ;;
         2)
             # Activar/desactivar backup automático
-            toggle_backup_automatico
+            configurar_backup_automatico 
             ;;
         3)
             # Restaurar backup existente
