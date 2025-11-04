@@ -608,7 +608,6 @@ gestion_grupos(){
             echo "==LISTADO DE GRUPOS=="
             echo "*este listado solo contiene usuarios estandar"
             printf "\n"
-            # awk filtra grupos por ID (1000-60000) y muestra numero y nombre
             getent group | awk -F: '$3 >= 1000 && $3 <= 60000 { print $3 ". " $1 }'
             printf "\n"
             read -n 1 -srp "------Presione cualquier tecla para continuar------"
@@ -625,36 +624,36 @@ del_grupo(){
     echo "==GESTION DE GRUPOS=="
     echo "Eliminar un grupo"
     printf "\n\n"
-    # mapfile crea array con nombres de grupos del sistema
+    #obtengo todos los grupos de usuarios y los guardo en una lista
     mapfile -t listaGrupos < <(getent group | awk -F: '$3 >= 1000 && $3 < 60000 {print $1}')
-    # awk -F: divide por campos usando : como separador
-    # $3 >= 1000 && $3 < 60000 filtra por ID de grupo
-    # {print $1} muestra solo el nombre del grupo
-    
+    : 'tambien conocido como readarray, s un comando que lee lineas de texto y las guarda en un array. con awk
+    lo qeu hacemos es filtrar la lista de gruops (getent group), haciendo qeu solo muestre el nombre de los grupos
+    de usuario. -t le agrega saltos de linea al final a cada elemento
+    '
+    #muestro la lista con el indice
     echo "Que grupos desea eliminar? (ingrese sus numeros separados por espacios):"
 
-    # bucle para mostrar lista numerada de grupos
+
+    #es como un for each de java, desplegamos grupos
     for ((i=0; i<${#listaGrupos[@]}; i++)); do
         echo "${i}. ${listaGrupos[$i]}"
     done
     
     printf "\n"
-    set -f  # desactiva expansion de comodines
+    set -f
     read -rp "opcion/es (no ingrese nada para retroceder): " opciones
     
-    # verifica si no se ingreso nada
+    #Si no se ingreso nada (te devuelve al menu)
     if [ -z "$opciones" ]
     then   
         gestion_grupos
         return
     else
-        # limpia espacios multiples
+    #Si sí se ingresaron grupos
         opciones=$(echo "$opciones" | tr -s ' ')
-        opcionesInvalidas=""
-        
-        # procesa cada opcion ingresada
+        #si hay varios espacion en blanco seguidos los convertimos en uno para evitar errores
         for opcion in $opciones; do
-            # verifica si opcion es numero valido
+                            #arreglar esto
             if  [[ "$opcion" =~ ^[0-9]+$ ]] && (( "$opcion" >= 0 && "$opcion" < ${#listaGrupos[@]})) > /dev/null; then 
                 sudo groupdel "${listaGrupos["$opcion"]}"
                 read -n1 -t1 -srp "Se ha eliminado el grupo $opcion con exito"
@@ -662,12 +661,12 @@ del_grupo(){
                 opcionesInvalidas+=" $opcion"
             fi
         done
-        
-        # maneja opciones invalidas
         if [ -n "$opcionesInvalidas" ]
         then
+            # desactivo la expansion de comdines por ahora, proque si  no al mostrar opciones incorrectas los expande
             read -n1 -t1 -rsp "Las opciones invalidas ingresadas fueron: $(echo "$opcionesInvalidas" | sort | uniq 2>/dev/null)"
             opcionesInvalidas=""
+            #activo expansion de comodines
         fi
         
     fi
@@ -684,13 +683,12 @@ add_grupo(){
 
         read -rp "Nombre del grupo (no ingrese nada para rertoceder): " nombre
 
-        # verifica si se presiono enter sin texto
         if [ -z "$nombre" ]
         then
             gestion_grupos
             return
         else
-            # regex valida formato de nombre: letra/guion bajo al inicio, luego alfanumerico/guiones
+            #los nombres pueden empezar con letras o guiones bajos, y el resto puede ser letras, nuemros o guiones -_
             if [[ "$nombre" =~ ^[a-zA-Z_][a-zA-Z0-9_-]+$ ]] && ! grupo_existe "$nombre"; then
                 sudo groupadd "$nombre"
                 read -n1 -t1 -srp "El grupo $nombre fue creado con exito"
@@ -753,7 +751,7 @@ admin_usergroup_manual_user(){
             return
         elif [[ $usuario =~ ^[A-Za-z]+$ ]]
         then
-            # verifica existencia de usuario
+        #hay 2 ifs en vez de uno para poder indicarle especificamente al usuario que error hay
             if usuario_existe_user "$usuario"; then
                 admin_usergroup_manual_grupo
                 return
@@ -781,7 +779,6 @@ admin_usergroup_manual_grupo(){
             return
         elif  [[ "$grupo" =~ ^[a-zA-Z_][a-zA-Z0-9_-]+$ ]]
         then
-            # verifica existencia del grupo
             if grupo_existe "$grupo"; then
                 aniadir_quitar_usergrupo "$usuario" "$grupo"
                 return
@@ -817,11 +814,9 @@ aniadir_quitar_usergrupo(){
             ;;
         
             1)
-                # verifica si usuario ya esta en el grupo
                 if id -nG "$1" | grep -qw "$2"; then
                     read -n1 -t2 -srp "El usuario ya pertenece al grupo" 
                 else
-                    # agrega usuario al grupo con gpasswd
                     if sudo gpasswd -a "$1" "$2" &>/dev/null; then
                         read -n1 -t2 -srp "Usuario agregado correctamente" 
                     else
@@ -831,7 +826,6 @@ aniadir_quitar_usergrupo(){
             ;;
 
             2)
-                # elimina usuario del grupo con gpasswd
                 if sudo gpasswd -d "$1" "$2" 2>/dev/null; then
                     read -n1 -t2 -srp "Usuario eliminado correctamente" 
                 else
@@ -860,18 +854,14 @@ admin_usergroup_archivo(){
             gestion_usuarios_grupos
             return
         else 
-            # verifica que archivo exista y sea legible
             if [ -f "$archivo" ] && [ -r "$archivo" ]
                 then
                 listaUsuarios=()         
-                # mapfile lee archivo y separa palabras por espacios
                 mapfile -t palabras < <(tr -s '[:space:]' '\n' < "$archivo")
 
                 if [ -n "${palabras[*]}" ]
                 then
-                    # procesa cada palabra del archivo
                     for palabra in "${palabras[@]}"; do
-                        # verifica si palabra es usuario existente
                         if getent passwd "$palabra" > /dev/null; then
                             listaUsuarios+=("$palabra")
                         fi
@@ -879,7 +869,6 @@ admin_usergroup_archivo(){
 
                     read -t3 -n2 -srp "DEBUG: usuarios: ${listaUsuarios[*]}"
 
-                    # verifica si se encontraron usuarios validos
                     if [ -n "${listaUsuarios[*]}" ]; then
                         admin_usergroup_archivo_grupo
                         return
@@ -912,7 +901,6 @@ admin_usergroup_archivo_grupo(){
             return
         elif  [[ "$grupo" =~ ^[a-zA-Z_][a-zA-Z0-9_-]+$ ]]
         then
-            # verifica existencia del grupo
             if grupo_existe "$grupo"; then
                 aniadir_quitar_usergrupo_archivo "$archivo" "$grupo"
                 return
@@ -950,15 +938,12 @@ aniadir_quitar_usergrupo_archivo(){
         
             1)
                 noAgregados=()
-                # procesa cada usuario de la lista
                 for u in "${listaUsuarios[@]}"
                 do
-                    # intenta agregar usuario al grupo
                     if ! sudo gpasswd -a "$u" "$2" &>/dev/null; then
                        noAgregados+=("$u")
                     fi
                 done
-                # maneja usuarios que no se pudieron agregar
                 if [ -n "${noAgregados[*]}" ]
                 then
                     read -t2 -n1 -srp "No se puedieron agregar los usuarios: ${noAgregados[*]}"
@@ -971,15 +956,12 @@ aniadir_quitar_usergrupo_archivo(){
 
             2)
                 noBorrados=()
-                # procesa cada usuario de la lista
                 for u in "${listaUsuarios[@]}"
                 do
-                    # intenta eliminar usuario del grupo
                     if ! sudo gpasswd -d "$u" "$2" &>/dev/null; then
                         noBorrados+=("$u")  
                     fi 
                 done
-                # maneja usuarios que no se pudieron eliminar
                 if [ -n "${noBorrados[*]}" ]
                     then
                         read -t2 -n1 -srp "No se puedieron agregar los usuarios: ${noBorrados[*]}"
@@ -997,7 +979,6 @@ aniadir_quitar_usergrupo_archivo(){
     done
 }
 
-# funcion para verificar existencia de usuario
 usuario_existe_user(){
     local user
     user="$1"
@@ -1008,7 +989,6 @@ usuario_existe_user(){
     fi
 }
 
-# funcion para verificar existencia de grupo
 grupo_existe(){
     local group
     group="$1"
