@@ -8,14 +8,6 @@
 
 #SUGERENCIAS
 : '
--Podriamos hacer algo para cancelar el si se ingreso un archivo valido, pero no me parece necesario porque con
-ctrl c ya podes salir
-
--cuando metes varios ususaris si pones varios espacios se tranca
-
--podiramos mostrar el nombre que sobro cuando metes un archivo
-
-- los usuarios ya creados podriamos no mostrarlos
 
 -hacer los nobres con una funcion y no como los estoy haiendo ahora para 2 parametros
 
@@ -40,6 +32,7 @@ no manejan por si solos la misma cantidad de caracteress y eso genera un problem
 #ESPACIO PARA FUNCIONES
 #NO CORREGIDO NO COMENTADO
 #CORREGIDO NO COMENTADO
+
 menu_principal(){
     valido="false"
     while [ "$valido" = false ]
@@ -80,14 +73,13 @@ menu_principal(){
 
 }
 
-#NO ANDA
+
 menu_usuarios_grupos(){
     while true 
     do
         clear
         echo "==GESTION DE USUARIOS Y GRUPOS=="
         printf "\n\n"
-        #0  NO ANDA
         echo "Que desea hacer?"
         printf "\n"
         echo "0. Volver al menu anterior"
@@ -232,7 +224,6 @@ generar_usuario() {
 #CORREGIDO Y COMENTADO
 #recibe usuario completo
 usuario_existe() {
-    +
     local user
     user="$(echo "$1" | cut -d: -f3)"
     if getent passwd "$user" >/dev/null; then
@@ -241,7 +232,7 @@ usuario_existe() {
         return 1
     fi
 }
-
+iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii9iiiiiiiiii8888
 #CORREGIDO Y COMENTADO
 #recibe usuario completo
 add_usuario(){
@@ -489,44 +480,50 @@ archivo_procesar_addDel(){
             ind=$((ind+1))
         fi
     done
+    if [ -z "${usuariosTrabajar[*]}" ]
+    then
 
-    read -rp "opcion/es (no ingrese nada para retroceder): " opciones
-    
-    #Si no se ingreso nada (te devuelve al menu)
-    if [ -z "$opciones" ]
-    then   
+        read -rp "opcion/es (no ingrese nada para retroceder): " opciones
+        
+        #Si no se ingreso nada (te devuelve al menu)
+        #aca lo que hice fue poner el if para que si esta vacio te coso
+        if [ -z "$opciones" ]
+        then   
+            archivo_procesar "$archivo"
+            return
+        else
+        #Si sí se ingresaron usuarios
+            valido=true
+
+            opciones=$(echo "$opciones" | tr -s ' ')
+            #si hay varios espacion en blanco seguidos los convertimos en uno para evitar errores
+            for opcion in $opciones; do
+                if [[ "$opcion" =~ ^[0-9]+$ ]] && (( opcion >= 0 && opcion < ${#usuariosTrabajar[@]} )); then
+                    if [ "$1" = add ]
+                    then
+                        add_usuario "${usuariosTrabajar[$opcion]}"
+                    else
+                        del_usuario "${usuariosTrabajar[$opcion]}"
+                    fi
+                else
+                    opcionesInvalidas+=" $opcion"
+                fi
+            done
+
+            if [ -n "$opcionesInvalidas" ]
+            then
+            #NO SE SI ESTO DE DEV NULL ESTA BIEN ASI
+                read -n1 -t1 -rsp "Las opciones invalidas ingresadas fueron: $(sort "$opcionesInvalidas" | uniq 2>/dev/null)"
+                opcionesInvalidas=""
+            fi
+            
+        fi
+
         archivo_procesar "$archivo"
         return
-    else
-    #Si sí se ingresaron usuarios
-        valido=true
-
-        opciones=$(echo "$opciones" | tr -s ' ')
-        #si hay varios espacion en blanco seguidos los convertimos en uno para evitar errores
-        for opcion in $opciones; do
-            if [[ "$opcion" =~ ^[0-9]+$ ]] && (( opcion >= 0 && opcion < ${#usuariosTrabajar[@]} )); then
-                if [ "$1" = add ]
-                then
-                    add_usuario "${usuariosTrabajar[$opcion]}"
-                else
-                    del_usuario "${usuariosTrabajar[$opcion]}"
-                fi
-            else
-                opcionesInvalidas+=" $opcion"
-            fi
-        done
-
-        if [ -n "$opcionesInvalidas" ]
-        then
-        #NO SE SI ESTO DE DEV NULL ESTA BIEN ASI
-            read -n1 -t1 -rsp "Las opciones invalidas ingresadas fueron: $(sort "$opcionesInvalidas" | uniq 2>/dev/null)"
-            opcionesInvalidas=""
-        fi
-        
+    else 
+        read -n1 -t1 -rsp "No hay usuarios trabajar con esta opcion"
     fi
-
-    archivo_procesar "$archivo"
-    return
 }
 #-----------------------------------------------------
 
@@ -965,12 +962,12 @@ clear
 #SI NO SE INGRESAN PARAMETROS
 if (($# == 0))
 then
-menu_principal
+    menu_principal
 
 #SI SE INGRESA 1 PARAMETRO
 elif (($# == 1))
 then
-    archivo_procesar "$1"
+    archivo_procesar "$1" 
 
 #SI SE INGRESAN 2 PARAMETROS
 elif (($# == 2))
