@@ -160,9 +160,7 @@ gestion_usuarios(){
                 printf "\n"
                 read -rp "Ingrese la ruta del archivo a procesar (no ingresar nada para cancelar): " archivo
                 if [ -n "$archivo" ]; then
-                #-n es si NO esta vacio
                     archivo_procesar "$archivo"
-                    #le pasamos una variable como parametro para que trabaje con ella
                     return
                 else
                     gestion_usuarios
@@ -185,7 +183,6 @@ gestion_usuarios(){
                     #-n es "si NO esta vacio"
                     then
                         ingreso_usuario "$nombre" "$apellido"
-                        #aca le pasamos variables como parametros a una funcion para que trabaje con ellas
                         return
                     else
                         read -n1 -t1 -rsp "ERROR: procure escribir el nombre y el apellido del usuario"
@@ -198,7 +195,7 @@ gestion_usuarios(){
                 echo "==LISTADO DE USUARIOS=="
                 echo "*este listado solo contiene usuarios estandar"
                 printf "\n"
-            
+
                 getent passwd | awk -F: '$3 >= 1000 && $3 <= 60000 { print $3 ". " $1 }'
                 : ' getent passwd es lo mismo que cat /etc/passwd
                 -F: funciona como un cut -d: 
@@ -218,6 +215,8 @@ gestion_usuarios(){
 
 }
 
+#CORREGIDO Y COMENTADO
+#recibe nombre y apellido
 generar_usuario() {
     local nombre
     local apellido
@@ -236,20 +235,20 @@ generar_usuario() {
     #usamos el formato nombre:apellido:user porque es lo mas comodo para trababarlo en el resto del script
 }
 
+#CORREGIDO Y COMENTADO
+#recibe usuario completo
 usuario_existe() {
     local user
     user="$(echo "$1" | cut -d: -f3)"
-    #como el fomato es nombre:apellido:user necesitamos el 3er campo
     if getent passwd "$user" >/dev/null; then
-        #lo buscamos en passwd
         return 0
-        #si lo encontro, retorna 0 (sin errores)
     else 
         return 1
-        #si no, retorna 1 (error)
     fi
 }
 
+#CORREGIDO Y COMENTADO
+#recibe usuario completo
 add_usuario(){
     local user
     local nombre
@@ -258,7 +257,6 @@ add_usuario(){
     nombre="$(echo "$1" | cut -d: -f1)"
     apellido="$(echo "$1" | cut -d: -f2)"
     user="$(echo "$1" | cut -d: -f3)"
-    #comsigo nombre apellido user
 
     if ! usuario_existe "$1"; then
         #generar contraseña
@@ -293,49 +291,37 @@ add_usuario(){
         si el usuario escribe algo no especificamos una variable para que se guarde
         '
         echo "$1" >> cre_usuarios.log 
-        #se agrega el nombre al final del log
         return
     fi
 }
 
+#CORREGIDO NO COMENTADO
+#recibe usuario completo
 del_usuario(){
     local nombre
     local apellido
     local user
-
+    
     nombre=$(echo "$1" | cut -d: -f1)
     apellido=$(echo "$1" | cut -d: -f2)
     user=$(echo "$1" | cut -d: -f3)
-    #extraemos nombre, apellido y nombre de usuario desde el parámetro $1 (formato: nombre:apellido:user)
 
     if usuario_existe "$1" && [ "$(id -u "$user" 2>/dev/null)" -ge 1000 ] && [ "$(id -u "$user" 2>/dev/null)" -le 65000 ]
     then
-        #verificamos que el usuario exista y que su UID esté en el rango de usuarios normales (1000-65000)
-        
         sudo userdel -r "$user"
-        : 'userdel elimina al usuario del sistema.
-        -r elimina también su directorio home y archivos del spool de correo.
-        Se usa sudo para asegurarse de tener permisos, aunque el script debería ejecutarse con privilegios adecuados.
-        '
-        
         read -n1 -t2 -rsp "Usuario $user ($nombre $apellido) eliminado correctamente del sistema"
-        #mensaje al usuario indicando que la eliminación fue exitosa
-        #-n1: lee solo un caracter
-        #-t2: espera máximo 2 segundos
-        #-r: no interpreta escapes
-        #-s: no muestra lo que se escribe
-        #-p: mensaje a mostrar
-
         printf "\n"
-        return
+        return 
     else
-        read -n1 -t2 -rsp "ERROR: el usuario $user ($nombre $apellido) no existe en el sistema o es posible trabajar con el"
-        #mensaje de error si el usuario no existe o si su UID no está en el rango permitido
-        printf "\n"
-        return
+         read -n1 -t2 -rsp "ERROR: el usuario $user ($nombre $apellido) no existe en el sistema o es posible trabajar con el"
+         printf "\n"
+         return
     fi
 }
 
+#PARA USUARIOS INDIVIDUALES----------------------------
+#NO CORREGIDO NO COMENTADO
+#recibe nombre y apellido
 ingreso_usuario(){
     local nombre
     local apellido
@@ -344,10 +330,7 @@ ingreso_usuario(){
 
     if [[ "$nombre" =~ ^[A-Za-z]+$  && "$apellido" =~ ^[A-Za-z]+$ ]]
     then
-    #verificamos que tanto nombre como apellido contengan solo letras (mayusculas o minusculas)
-    #lso doble parentesis permiten regex =~ es el simbolo qeu se usa para comparar
-        until false
-        #lo mismo que un while true 
+        until false 
         do
             generar_usuario "$nombre" "$apellido"
             clear
@@ -385,7 +368,11 @@ ingreso_usuario(){
         return
     fi  
 }
+#-------------------------------------------------------
 
+
+#PARA ARCHIVOS-------------------------------------------
+#CORREGIDO NO COMENTADO
 verificar_archivo(){
     clear
     archivo="$1"
@@ -417,6 +404,7 @@ verificar_archivo(){
     #fin del until
 }
 
+#NO CORREGIDO NO COMENTADO, TIENE LA FUNCION archivo_procesar_addDel QUE NO SE SI ANDA
 archivo_procesar(){
     listaUsuarios=()
     archivo=$1
@@ -430,14 +418,8 @@ archivo_procesar(){
         while read -r nombre apellido _
         do
             generar_usuario "$nombre" "$apellido"
-            #llamamos a la funcion generar_usuario pasando nombre y apellido
-
             listaUsuarios+=("$usuario_completo")
-            #agregamos el usuario completo (generado por la funcion) al array listaUsuarios
-        done < <(awk 'NF >= 2 {print $1, $2}' "$archivo")
-        #: 'awk procesa el archivo y devuelve solo las lineas con al menos 2 campos
-        # y extrae el primer y segundo campo (nombre y apellido) para ser leidos por el while
-
+        done< <(awk 'NF >= 2 {print $1, $2}' "$archivo")
 
         while  true; do
             #CAPAZ QUE HABRIA UQE HACER ALGO PARA RETROCEDER? 0?
@@ -480,7 +462,6 @@ archivo_procesar(){
 #LAS OPCIONES INCORRECTAS NO SE MUESRTAN
 #NO PROBADO NO COMENTADO
 archivo_procesar_addDel(){
-    #creo un array
     local usuariosTrabajar=()
     local ind
     ind=0
@@ -493,6 +474,7 @@ archivo_procesar_addDel(){
     else
         echo "Elegido: 2. Eliminar usuarios del sistema"
     fi
+#PROBANDO
     echo "Con qué usuarios desea trabajar? (ingrese sus numeros separados por espacios o nada para volver al menu anterior):"
     #despliega todos los usuarios
     usuariosTrabajar=()
@@ -500,31 +482,19 @@ archivo_procesar_addDel(){
     echo "-T. Todos"
     for ((i = 0; i < ${#listaUsuarios[@]}; i++)); do
         IFS=':' read -r nombre apellido user <<< "${listaUsuarios[i]}"
-        #separamos cada elemento del array listaUsuarios en nombre, apellido y usuario usando ':' como separador
 
         if ! getent passwd "$user" > /dev/null && [ "$1" = add ]
         then
             echo "$ind. $user ($nombre $apellido)"
-            #mostramos el indice y los datos del usuario que se puede agregar
-
             usuariosTrabajar+=("${listaUsuarios["$i"]}")
-            #agregamos el usuario al array de usuarios a trabajar
-
             ind=$((ind+1))
-            #incrementamos el indice
         elif getent passwd "$user" > /dev/null && [ "$1" = del ]
         then
             echo "$ind. $user ($nombre $apellido)"
-            #mostramos el indice y los datos del usuario que se puede eliminar
-
             usuariosTrabajar+=("${listaUsuarios["$i"]}")
-            #agregamos el usuario al array de usuarios a trabajar
-
             ind=$((ind+1))
-            #incrementamos el indice
         fi
     done
-
     if [ "${#usuariosTrabajar[*]}" -ne 0 ]
     then
         read -rp "opcion/es (no ingrese nada para retroceder): " opciones
@@ -538,11 +508,9 @@ archivo_procesar_addDel(){
         else
         #Si sí se ingresaron usuarios
             if echo "$opciones" | grep -qw "T"
-            #w es solo para si se ingreso T no pegada a nada
             then
                 for ((i=0; i<${#usuariosTrabajar[@]}; i++)); do
                     if [ "$1" = add ]; then
-                    #si es add, aniade al usuarios de al posicion i
                         add_usuario "${usuariosTrabajar[$i]}"
                     else
                         del_usuario "${usuariosTrabajar[$i]}"
@@ -554,7 +522,6 @@ archivo_procesar_addDel(){
             #si hay varios espacion en blanco seguidos los convertimos en uno para evitar errores
             for opcion in $opciones; do
                 if [[ "$opcion" =~ ^[0-9]+$ ]] && (( opcion >= 0 && opcion < ${#usuariosTrabajar[@]} )); then
-                #el # espara uqe te diga el numero de elemntro qe tiene. verificamos que vaya de 0 a 9
                     if [ "$1" = add ]
                     then
                         add_usuario "${usuariosTrabajar[$opcion]}"
