@@ -1,33 +1,27 @@
 #!/bin/bash
 
-# =============================================
-# CONFIGURACIÓN Y VARIABLES GLOBALES
-# =============================================
-
-# Archivo de configuración persistente donde se guardan los ajustes del usuario
+# Archivo de configuración persistente
 CONFIG_FILE="/etc/backup-script/backup-config.conf"
 
-# Configuración por defecto del sistema de backups
-CRON_HORA="3"                           # Hora programada para backup automático (formato 24h)
-CRON_MINUTO="10"                        # Minuto programado para backup automático
-RSYNC_DELAY_MINUTOS="5"                 # Tiempo de espera antes de transferencia remota
-REMOTE_BACKUP_ENABLED="true"            # Habilitar/deshabilitar respaldo remoto
-REMOTE_BACKUP_USER="respaldo_user"      # Usuario para conexión SSH remota
-REMOTE_BACKUP_HOST="192.168.0.93"       # Dirección del servidor de backups remoto
-REMOTE_BACKUP_DIR="/backups/usuarios"   # Directorio destino en servidor remoto
-SSH_KEY="/root/.ssh/backup_key"         # Ruta de la clave SSH para autenticación
+# Archivo de configuracion para la lista de backups automaticos
+CRON_HORA="3"
+CRON_MINUTO="10"
+# Nueva variable para el delay de rsync (minutos después del backup)
+RSYNC_DELAY_MINUTOS="5"
+REMOTE_BACKUP_ENABLED="true"
+REMOTE_BACKUP_USER="respaldo_user"
+REMOTE_BACKUP_HOST="192.168.0.93"
+REMOTE_BACKUP_DIR="/backups/usuarios"
+SSH_KEY="/root/.ssh/backup_key"
 
-# Variables de rutas y directorios del sistema
-dir_backup="/var/users_backups"         # Directorio local donde se almacenan los backups
-Delta=$(realpath "$0")                  # Ruta absoluta del script actual para referencias
-backup_list="/etc/backup-script/auto-backup-list.conf"  # Lista de usuarios/grupos para backup automático
 
-# =============================================
-# FUNCIONES DE CONFIGURACIÓN Y SISTEMA
-# =============================================
-
-# Verifica que el script se ejecute con privilegios de root
-# Esto es necesario para acceder a directorios de sistema y modificar crontab
+#en esta variable guardamos la direccion de donde se van a guardar los backups
+dir_backup="/var/users_backups"
+# tambien podriamos usar la direccion actual del script y ya, pero esto le da mas flexibilidad
+# Delta es el valor actual de este scrit, lo conseguimos con realpath
+Delta=$(realpath "$0")
+backup_list="/etc/backup-script/auto-backup-list.conf"
+#**** funcion para verificar que el script se ejecute como root
 check_user() {
     if [ "$(whoami)" != "root" ]; then
         echo "ERROR: Este script debe ejecutarse con sudo o como root"
@@ -36,24 +30,26 @@ check_user() {
     fi
 }
 
-# Carga la configuración desde archivo persistente o crea una nueva con valores por defecto
+
+
+# Función para cargar configuración desde archivo
 cargar_configuracion() {
     if [ -f "$CONFIG_FILE" ]; then
-        # source ejecuta el archivo de configuración como si fuera parte del script
+        # Cargar configuración desde archivo
         source "$CONFIG_FILE"
-        echo "Configuración cargada desde $CONFIG_FILE" >> /var/log/backups.log
+        echo "✅ Configuración cargada desde $CONFIG_FILE" >> /var/log/backups.log
     else
-        # Si no existe el archivo, guarda la configuración por defecto
+        # Valores por defecto si el archivo no existe
         guardar_configuracion
     fi
 }
 
-# Guarda la configuración actual en archivo persistente para mantenerla entre ejecuciones
+# Función para guardar configuración actual
 guardar_configuracion() {
-    # mkdir -p crea el directorio solo si no existe
+    # Crear directorio de configuración si no existe
     mkdir -p "/etc/backup-script"
     
-    # cat con here-document escribe múltiples líneas en el archivo de configuración
+    # Guardar todas las variables de configuración
     cat > "$CONFIG_FILE" << EOF
 # Configuración de Backup Automático
 # Este archivo se actualiza automáticamente - NO EDITAR MANUALMENTE
@@ -68,28 +64,23 @@ REMOTE_BACKUP_DIR="$REMOTE_BACKUP_DIR"
 SSH_KEY="$SSH_KEY"
 EOF
 
-    # chmod 600 asegura que solo root pueda leer/escribir el archivo de configuración
     chmod 600 "$CONFIG_FILE"
-    echo "Configuración guardada en $CONFIG_FILE" >> /var/log/backups.log
+    echo "✅ Configuración guardada en $CONFIG_FILE" >> /var/log/backups.log
 }
 
-# Actualiza una variable de configuración y guarda los cambios en archivo
+# Función para actualizar una variable de configuración
 actualizar_configuracion() {
     local variable="$1"
     local valor="$2"
     
-    # eval permite asignar dinámicamente el valor a la variable especificada
+    # Actualizar variable en memoria
     eval "$variable=\"$valor\""
     
-    # Guarda los cambios en el archivo de configuración persistente
+    # Guardar cambios en archivo
     guardar_configuracion
 }
 
-# =============================================
-# FUNCIONES DE UTILIDAD Y FORMATO
-# =============================================
-
-# Convierte hora en formato 24h a formato AM/PM legible
+# Función para convertir hora 24h a formato AM/PM
 formato_am_pm() {
     local hora_24h="$1"
     if [ "$hora_24h" -eq 0 ]; then
@@ -104,86 +95,129 @@ formato_am_pm() {
     fi
 }
 
-# Obtiene la hora completa formateada para mostrar al usuario
+# Función para obtener la hora en formato legible
 get_cron_hora_completa() {
     local hora_ampm=$(formato_am_pm "$CRON_HORA")
-    # printf "%02d" asegura que los minutos siempre tengan 2 dígitos (ej: 05 en vez de 5)
+    # Asegurar que los minutos tengan 2 dígitos
     local minuto_formateado=$(printf "%02d" "$CRON_MINUTO")
     echo "${CRON_HORA}:${minuto_formateado} ($hora_ampm)"
 }
 
-# Verifica todas las dependencias necesarias para el funcionamiento del sistema
+# Función para obtener solo la hora en formato legible
+get_cron_hora_ampm() {
+    formato_am_pm "$CRON_HORA"
+}
+
+# Función para verificar todas las dependencias del sistema
 verificar_dependencias() {
     local errores=0
     
-    echo "Verificando dependencias del sistema..." >> /var/log/backups.log
+    echo "🔍 Verificando dependencias del sistema..." >> /var/log/backups.log
     
-    # systemctl is-active verifica si el servicio atd está ejecutándose
-    # atd es necesario para programar transferencias remotas retardadas
+    # Verificar servicio atd
     if ! systemctl is-active --quiet atd 2>/dev/null; then
-        echo "SERVICIO ATD: No está activo. Ejecuta: sudo systemctl enable atd && sudo systemctl start atd" >> /var/log/backups.log
+        echo "❌ SERVICIO ATD: No está activo. Ejecuta: sudo systemctl enable atd && sudo systemctl start atd" >> /var/log/backups.log
         ((errores++))
     else
-        echo "SERVICIO ATD: Activo" >> /var/log/backups.log
+        echo "✅ SERVICIO ATD: Activo" >> /var/log/backups.log
     fi
     
-    # Verifica que exista la clave SSH y tenga los permisos correctos (600)
+    # Verificar clave SSH
     if [ ! -f "$SSH_KEY" ]; then
-        echo "CLAVE SSH: No encontrada en $SSH_KEY" >> /var/log/backups.log
+        echo "❌ CLAVE SSH: No encontrada en $SSH_KEY" >> /var/log/backups.log
         ((errores++))
     elif [ "$(stat -c %a "$SSH_KEY" 2>/dev/null)" != "600" ]; then
-        echo "CLAVE SSH: Permisos incorrectos. Ajustando..." >> /var/log/backups.log
+        echo "⚠️  CLAVE SSH: Permisos incorrectos. Ajustando..." >> /var/log/backups.log
         chmod 600 "$SSH_KEY"
-        echo "CLAVE SSH: Permisos corregidos" >> /var/log/backups.log
+        echo "✅ CLAVE SSH: Permisos corregidos" >> /var/log/backups.log
     else
-        echo "CLAVE SSH: Encontrada y con permisos correctos" >> /var/log/backups.log
+        echo "✅ CLAVE SSH: Encontrada y con permisos correctos" >> /var/log/backups.log
     fi
     
-    # Verifica conectividad con el servidor remoto si está habilitado el respaldo remoto
+    # Verificar conectividad remota
     if [ "$REMOTE_BACKUP_ENABLED" = "true" ]; then
-        # ssh con BatchMode=yes evita prompts interactivos, ConnectTimeout=5 limita el tiempo de espera
         if ! ssh -i "$SSH_KEY" -o ConnectTimeout=5 -o BatchMode=yes "$REMOTE_BACKUP_USER@$REMOTE_BACKUP_HOST" "echo 'OK'" &>/dev/null; then
-            echo "CONECTIVIDAD: No se puede conectar a $REMOTE_BACKUP_HOST" >> /var/log/backups.log
+            echo "❌ CONECTIVIDAD: No se puede conectar a $REMOTE_BACKUP_HOST" >> /var/log/backups.log
             ((errores++))
         else
-            echo "CONECTIVIDAD: Conexión remota funcionando" >> /var/log/backups.log
+            echo "✅ CONECTIVIDAD: Conexión remota funcionando" >> /var/log/backups.log
         fi
     fi
     
-    # Verifica que el script actual tenga permisos de ejecución
+    # Verificar permisos de ejecución del script
     if [ ! -x "$Delta" ]; then
-        echo "PERMISOS SCRIPT: No es ejecutable. Ajustando..." >> /var/log/backups.log
+        echo "⚠️  PERMISOS SCRIPT: No es ejecutable. Ajustando..." >> /var/log/backups.log
         chmod +x "$Delta"
-        echo "PERMISOS SCRIPT: Corregidos" >> /var/log/backups.log
+        echo "✅ PERMISOS SCRIPT: Corregidos" >> /var/log/backups.log
     else
-        echo "PERMISOS SCRIPT: Ejecutable" >> /var/log/backups.log
+        echo "✅ PERMISOS SCRIPT: Ejecutable" >> /var/log/backups.log
     fi
     
-    # Resume el resultado de la verificación de dependencias
-    if [ $errores -eq 0 ]; then
-        echo "TODAS LAS DEPENDENCIAS: Verificadas correctamente" >> /var/log/backups.log
+    # Verificar configuración de cron
+    if [ -z "$CRON_HORA" ] || [ -z "$CRON_MINUTO" ]; then
+        echo "❌ CONFIG CRON: Variables CRON_HORA o CRON_MINUTO no configuradas" >> /var/log/backups.log
+        ((errores++))
     else
-        echo "SE ENCONTRARON $errores ERROR(ES) en las dependencias" >> /var/log/backups.log
+        echo "✅ CONFIG CRON: Hora programada: $(get_cron_hora_completa)" >> /var/log/backups.log
+    fi
+    
+    if [ $errores -eq 0 ]; then
+        echo "✅ TODAS LAS DEPENDENCIAS: Verificadas correctamente" >> /var/log/backups.log
+    else
+        echo "❌ SE ENCONTRARON $errores ERROR(ES) en las dependencias" >> /var/log/backups.log
     fi
     
     return $errores
 }
 
-# =============================================
-# FUNCIONES DE BACKUP REMOTO Y TRANSFERENCIA
-# =============================================
-
-# Programa una transferencia remota retardada usando el comando 'at'
-programar_transferencia_remota() {
+# Función para realizar respaldo remoto
+realizar_respaldo_remoto() {
     local archivo_backup="$1"
-    local delay_minutos="${2:-$RSYNC_DELAY_MINUTOS}"
+    local nombre_archivo=$(basename "$archivo_backup")
     
-    # Si el respaldo remoto está deshabilitado, sale silenciosamente
+    # Verificar si está habilitado el respaldo remoto
     if [ "$REMOTE_BACKUP_ENABLED" != "true" ]; then
         return 0
     fi
     
-    # Verifica que el archivo de backup local exista antes de programar transferencia
+    echo "Iniciando respaldo remoto de $nombre_archivo..."
+    
+    # Verificar si el archivo local existe
+    if [ ! -f "$archivo_backup" ]; then
+        echo "ERROR: El archivo local $archivo_backup no existe"
+        return 1
+    fi
+    
+    # Verificar que la clave SSH existe
+    if [ ! -f "$SSH_KEY" ]; then
+        echo "ERROR: Clave SSH no encontrada en $SSH_KEY"
+        return 1
+    fi
+    
+    # Realizar el rsync
+    if rsync -avz -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10" \
+        "$archivo_backup" \
+        "$REMOTE_BACKUP_USER@$REMOTE_BACKUP_HOST:$REMOTE_BACKUP_DIR/" 2>/dev/null; then
+        
+        echo "Respaldo remoto completado: $nombre_archivo"
+        echo "$(date): Respaldo remoto exitoso: $nombre_archivo" >> /var/log/backups.log
+        return 0
+    else
+        echo "ERROR: Falló el respaldo remoto de $nombre_archivo"
+        echo "$(date): ERROR en respaldo remoto: $nombre_archivo" >> /var/log/backups.log
+        return 1
+    fi
+}
+
+# FUNCIÓN CORREGIDA - Sin auto-eliminación prematura
+programar_transferencia_remota() {
+    local archivo_backup="$1"
+    local delay_minutos="${2:-$RSYNC_DELAY_MINUTOS}"
+    
+    if [ "$REMOTE_BACKUP_ENABLED" != "true" ]; then
+        return 0
+    fi
+    
     if [ ! -f "$archivo_backup" ]; then
         echo "ERROR: Archivo no encontrado para transferencia: $archivo_backup" >> /var/log/backups.log
         return 1
@@ -191,17 +225,29 @@ programar_transferencia_remota() {
     
     local nombre_archivo=$(basename "$archivo_backup")
     
-    # Verifica que el servicio atd esté activo para programar trabajos
+    # Verificar que el servicio atd esté activo
     if ! systemctl is-active --quiet atd 2>/dev/null; then
         echo "ERROR: Servicio 'atd' no está activo. No se puede programar transferencia." >> /var/log/backups.log
         return 1
     fi
     
-    # mktemp crea un archivo temporal único para el script de transferencia
+    # Verificar clave SSH
+    if [ ! -f "$SSH_KEY" ]; then
+        echo "ERROR: Clave SSH no encontrada en $SSH_KEY" >> /var/log/backups.log
+        return 1
+    fi
+    
+    # Verificar permisos de clave SSH
+    if [ "$(stat -c %a "$SSH_KEY" 2>/dev/null)" != "600" ]; then
+        echo "ADVERTENCIA: Permisos de clave SSH incorrectos. Ajustando a 600..." >> /var/log/backups.log
+        chmod 600 "$SSH_KEY"
+    fi
+    
+    # Crear script temporal en /tmp (más confiable para at)
     local temp_script
     temp_script=$(mktemp /tmp/rsync_backup_XXXXXX.sh)
     
-    # Genera un script temporal que se ejecutará mediante 'at'
+    # Script con auto-limpieza AL FINAL de la ejecución
     cat > "$temp_script" << SCRIPT_EOF
 #!/bin/bash
 # Script temporal para transferencia rsync
@@ -216,14 +262,21 @@ SSH_KEY="$SSH_KEY"
 
 echo "\$(date): [AT-TRANSFER] Iniciando transferencia programada de $nombre_archivo" >> "\$LOG_FILE"
 
-# Verifica que el archivo todavía exista al momento de la ejecución
+# Verificar que el archivo todavía existe
 if [ ! -f "\$BACKUP_FILE" ]; then
     echo "\$(date): [AT-TRANSFER] ERROR: Archivo local desapareció: $nombre_archivo" >> "\$LOG_FILE"
     rm -f "$temp_script"
     exit 1
 fi
 
-# Realiza la transferencia usando rsync sobre SSH
+# Verificar conectividad con el servidor remoto
+if ! ssh -i "\$SSH_KEY" -o ConnectTimeout=5 -o BatchMode=yes "\$REMOTE_USER@\$REMOTE_HOST" "echo 'Conectado'" &>/dev/null; then
+    echo "\$(date): [AT-TRANSFER] ERROR: No hay conectividad con servidor remoto" >> "\$LOG_FILE"
+    rm -f "$temp_script"
+    exit 1
+fi
+
+# Realizar transferencia
 if /usr/bin/rsync -avz -e "ssh -i \$SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10" \\
     "\$BACKUP_FILE" \\
     "\$REMOTE_USER@\$REMOTE_HOST:\$REMOTE_DIR/" >> "\$LOG_FILE" 2>&1; then
@@ -232,520 +285,41 @@ else
     echo "\$(date): [AT-TRANSFER] ERROR en transferencia: $nombre_archivo" >> "\$LOG_FILE"
 fi
 
-# Auto-limpieza: elimina el script temporal después de ejecutarse
+# AUTO-LIMPIEZA: Eliminar script temporal AL FINAL
 rm -f "$temp_script"
 SCRIPT_EOF
     
-    # Hace el script temporal ejecutable
     chmod +x "$temp_script"
     
-    # Programa la ejecución del script con 'at' después del delay especificado
+    # Programar con at
     local tiempo_at="now + $delay_minutos minutes"
     if echo "$temp_script" | at "$tiempo_at" 2>/dev/null; then
-        echo "Transferencia remota programada: $nombre_archivo" >> /var/log/backups.log
+        local job_id=$(atq | head -n 1 | awk '{print $1}')
+        echo "✅ Transferencia remota programada. Job ID: $job_id" >> /var/log/backups.log
         return 0
     else
-        echo "ERROR: No se pudo programar transferencia con at" >> /var/log/backups.log
+        echo "❌ ERROR: No se pudo programar transferencia con at" >> /var/log/backups.log
         rm -f "$temp_script"
         return 1
     fi
 }
 
-# Prueba la conexión con el servidor remoto de backups
+# Función para probar conexión remota
 probar_conexion_remota() {
     echo "Probando conexión con servidor remoto..."
     
-    # Intenta ejecutar un comando simple en el servidor remoto
     if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
         "$REMOTE_BACKUP_USER@$REMOTE_BACKUP_HOST" "echo 'Conexión exitosa'" 2>/dev/null; then
-        echo "Conexión remota funcionando correctamente"
+        echo "✅ Conexión remota funcionando correctamente"
         return 0
     else
-        echo "Error en conexión remota"
+        echo "❌ Error en conexión remota"
         return 1
     fi
 }
 
-# =============================================
-# FUNCIONES DE GESTIÓN DE DIRECTORIOS Y ARCHIVOS
-# =============================================
 
-# Crea todos los directorios y archivos necesarios para el funcionamiento del sistema
-crear_dir_backup(){
-    # Crea el directorio principal de backups si no existe
-    if [ ! -d "$dir_backup" ]; then
-        mkdir -p "$dir_backup"
-        chmod 700 "$dir_backup"  # Solo root puede acceder
-        echo "Directorio de backups creado: $dir_backup"
-    fi
-
-    # Crea el archivo de log si no existe
-    if [ ! -f "/var/log/backups.log" ]; then
-        touch "/var/log/backups.log"
-        chmod 644 "/var/log/backups.log"  # Lectura para todos, escritura solo owner
-    fi
-    
-    # Crea el directorio de configuración si no existe
-    if [ ! -d "/etc/backup-script" ]; then
-        mkdir -p "/etc/backup-script"
-        chmod 700 "/etc/backup-script"  # Solo root puede acceder
-    fi
-    
-    # Crea el archivo de lista de backups automáticos si no existe
-    if [ ! -f "$backup_list" ]; then
-        touch "$backup_list"
-        chmod 600 "$backup_list"  # Solo root puede leer/escribir
-        # Agrega encabezado y ejemplos al archivo
-        echo "# Lista de usuarios y grupos para backup automatico" > "$backup_list"
-        echo "# Formato: usuario o @grupo" >> "$backup_list"
-        echo "# Ejemplo:" >> "$backup_list"
-        echo "# usuario1" >> "$backup_list"
-        echo "# @developers" >> "$backup_list"
-    fi
-}
-
-# =============================================
-# FUNCIONES DE VERIFICACIÓN DE USUARIOS Y GRUPOS
-# =============================================
-
-# Verifica si un usuario existe en el sistema
-# id command retorna 0 si el usuario existe, 1 si no existe
-usuario_existe() { 
-    local usuario="$1"
-    id "$usuario" &>/dev/null
-}
-
-# Verifica si un grupo existe en el sistema usando getent
-grupo_existe() {
-    local grupo="$1"
-    getent group "$grupo" &>/dev/null
-}
-
-# Obtiene la lista de usuarios pertenecientes a un grupo
-obtener_usuarios_de_grupo() {
-    local grupo="$1"
-    # getent group obtiene la entrada del grupo, cut extrae el campo 4 (miembros)
-    # tr convierte las comas en saltos de línea para procesar cada usuario por separado
-    getent group "$grupo" | cut -d: -f4 | tr ',' '\n'
-}
-
-# =============================================
-# FUNCIONES DE INTERFAZ DE USUARIO Y MENÚS
-# =============================================
-
-# Lee entrada del usuario con opción de cancelar (0)
-leer_con_cancelar() {
-    local prompt="$1"
-    local variable="$2"
-    echo -n "$prompt (o '0' para cancelar): "
-    read $variable
-    if [ "${!variable}" = "0" ]; then
-        echo "Operación cancelada."
-        return 1
-    fi
-    return 0
-}
-
-# Verifica si el backup automático está activo en crontab
-backup_automatico_activo(){
-    # crontab -l lista las tareas programadas, grep -q busca silenciosamente
-    crontab -l 2>/dev/null | grep -q "$Delta"
-}
-
-# Muestra el menú principal del sistema
-menu_alpha(){
-    clear  # Limpia la pantalla para una interfaz limpia
-    echo "=== GESTOR DE BACKUPS ==="
-    echo "1. Crear backup manual"
-    
-    # Muestra el estado actual del backup automático
-    if backup_automatico_activo; then
-        echo "2. DESACTIVAR backup diario automático  [ACTIVO]"
-    else
-        echo "2. ACTIVAR backup diario automático   [INACTIVO]"
-    fi
-    echo "3. Restaurar backup"
-    echo "4. Gestionar lista de backups automáticos"
-    echo "5. Configurar respaldo remoto"
-    echo "6. Probar backup automático (ejecuta ahora)"
-    echo "7. Verificar dependencias del sistema"
-    echo "0. Salir"
-    echo
-    echo -n "Seleccione opción (0 para salir): "
-}
-
-# =============================================
-# FUNCIONES DE GESTIÓN DE LISTA DE BACKUPS AUTOMÁTICOS
-# =============================================
-
-# Muestra el menú de gestión de lista de backups automáticos
-menu_gestion_backup_auto() {
-    clear
-    echo "=== GESTIÓN DE BACKUPS AUTOMÁTICOS ==="
-    echo "1. Ver lista actual"
-    echo "2. Añadir usuario a la lista"
-    echo "3. Añadir grupo a la lista"
-    echo "4. Eliminar elemento de la lista"
-    echo "0. Volver al menú principal"
-    echo
-    echo -n "Seleccione opción: "
-}
-
-# Muestra la lista actual de elementos para backup automático
-ver_lista_backup_auto() {
-    echo "=== LISTA ACTUAL DE BACKUPS AUTOMÁTICOS ==="
-    if [ ! -s "$backup_list" ]; then
-        echo "La lista está vacía."
-        echo "Los backups automáticos no se ejecutarán hasta que añada elementos."
-    else
-        # grep -v '^#' excluye líneas comentadas, nl enumera las líneas resultantes
-        # -w 2 establece ancho de 2 dígitos para números, -s '. ' usa punto como separador
-        grep -v '^#' "$backup_list" | grep -v '^$' | nl -w 2 -s '. '
-    fi
-    echo
-}
-
-# Añade un usuario a la lista de backups automáticos
-añadir_usuario_backup_auto() {
-    if ! leer_con_cancelar "Ingrese nombre de usuario a añadir" usuario; then
-        return 1
-    fi
-    
-    if usuario_existe "$usuario"; then
-        # Verifica si el usuario ya está en la lista para evitar duplicados
-        if grep -q "^$usuario$" "$backup_list"; then
-            echo "El usuario $usuario ya está en la lista."
-        else
-            echo "$usuario" >> "$backup_list"
-            echo "Usuario $usuario añadido a la lista de backups automáticos."
-        fi
-    else
-        echo "El usuario $usuario no existe."
-    fi
-}
-
-# Añade un grupo a la lista de backups automáticos
-añadir_grupo_backup_auto() {
-    if ! leer_con_cancelar "Ingrese nombre del grupo a añadir" grupo; then
-        return 1
-    fi
-    
-    if grupo_existe "$grupo"; then
-        grupo_line="@$grupo"
-        # Verifica si el grupo ya está en la lista
-        if grep -q "^$grupo_line$" "$backup_list"; then
-            echo "El grupo $grupo ya está en la lista."
-        else
-            echo "$grupo_line" >> "$backup_list"
-            echo "Grupo $grupo añadido a la lista de backups automáticos."
-        fi
-    else
-        echo "El grupo $grupo no existe."
-    fi
-}
-
-# Elimina un elemento de la lista de backups automáticos
-eliminar_elemento_backup_auto() {
-    ver_lista_backup_auto
-    
-    if [ ! -s "$backup_list" ]; then
-        return 1
-    fi
-    
-    echo
-    if ! leer_con_cancelar "Ingrese el número del elemento a eliminar" numero; then
-        return 1
-    fi
-    
-    # Obtiene el elemento específico basado en el número ingresado
-    elemento=$(grep -v '^#' "$backup_list" | grep -v '^$' | sed -n "${numero}p")
-    
-    if [ -z "$elemento" ]; then
-        echo "Número inválido."
-        return 1
-    fi
-    
-    echo "¿Eliminar '$elemento' de la lista?"
-    echo -n "Confirmar (s/n): "
-    read confirmacion
-    
-    if [ "$confirmacion" = "s" ]; then
-        # Crea archivo temporal sin el elemento y reemplaza el original
-        temp_file=$(mktemp)
-        grep -v "^$elemento$" "$backup_list" > "$temp_file"
-        mv "$temp_file" "$backup_list"
-        echo "Elemento '$elemento' eliminado."
-    else
-        echo "Operación cancelada."
-    fi
-}
-
-# Menú principal de gestión de lista de backups automáticos
-gestionar_backup_auto() {
-    while true; do
-        menu_gestion_backup_auto
-        read opcion
-        
-        case $opcion in
-            1)
-                ver_lista_backup_auto
-                ;;
-            2)
-                añadir_usuario_backup_auto
-                ;;
-            3)
-                añadir_grupo_backup_auto
-                ;;
-            4)
-                eliminar_elemento_backup_auto
-                ;;
-            0)
-                echo "Volviendo al menú principal..."
-                return 0
-                ;;
-            *)
-                echo "Opción inválida"
-                ;;
-        esac
-        
-        echo
-        echo "Presione Enter para continuar..."
-        read
-    done
-}
-
-# =============================================
-# FUNCIONES DE CREACIÓN DE BACKUPS
-# =============================================
-
-# Crea backup de todos los usuarios pertenecientes a un grupo
-crear_backup_grupo(){
-    if ! leer_con_cancelar "Ingrese nombre del grupo" grupo; then
-        return 1
-    fi
-    
-    if grupo_existe "$grupo"; then
-        # Genera timestamp único para el backup
-        fecha=$(date '+%Y%m%d_%H%M%S')
-        
-        echo "Creando backup del grupo: $grupo"
-        echo "Usuarios en el grupo:"
-        
-        # Contador temporal para llevar registro de usuarios procesados
-        local temp_counter=$(mktemp)
-        echo "0" > "$temp_counter"
-        
-        # Procesa cada usuario del grupo individualmente
-        while IFS= read -r usuario; do
-            if [ -n "$usuario" ] && usuario_existe "$usuario"; then
-                home_dir=$(getent passwd "$usuario" | cut -d: -f6)
-                if [ -d "$home_dir" ]; then
-                    echo "  - Creando backup de: $usuario"
-                    archivo_backup="${dir_backup}/backup_${usuario}_grupo_${fecha}.tar.bz2"
-                    
-                    # Crea backup comprimido del directorio home del usuario
-                    if tar -cjf "$archivo_backup" -C / "$home_dir" 2>/dev/null; then
-                        echo "    Backup creado: $(basename "$archivo_backup")"
-                        echo "$(date): Backup manual de grupo $grupo - usuario $usuario - $archivo_backup" >> /var/log/backups.log
-                        # Incrementa el contador de usuarios procesados
-                        local current_count=$(cat "$temp_counter")
-                        echo $((current_count + 1)) > "$temp_counter"
-                        # Programa transferencia remota si está habilitada
-                        programar_transferencia_remota "$archivo_backup"
-                    else
-                        echo "    Error al crear backup de $usuario"
-                    fi
-                fi
-            else
-                echo "  - Usuario $usuario no existe, omitiendo"
-            fi
-        done < <(obtener_usuarios_de_grupo "$grupo")
-        
-        # Obtiene y muestra el total de usuarios procesados
-        local usuarios_procesados=$(cat "$temp_counter")
-        rm -f "$temp_counter"
-        
-        echo "Backup de grupo completado: $usuarios_procesados usuarios procesados"
-        
-    else
-        echo "El grupo $grupo no existe."
-        return 1
-    fi
-}
-
-# Menú principal para creación de backups manuales
-crear_backup(){
-    while true; do
-        echo "¿Qué tipo de backup desea crear?"
-        echo "1. Backup de usuario individual"
-        echo "2. Backup de grupo (backups individuales por usuario)"
-        echo "0. Volver al menú principal"
-        read -p "Seleccione opción: " tipo_backup
-
-        case $tipo_backup in
-            1)
-                if ! leer_con_cancelar "Ingrese nombre de usuario" usuario; then
-                    break
-                fi
-
-                if usuario_existe "$usuario"; then
-                    # getent obtiene información del usuario desde bases de datos del sistema
-                    home_dir=$(getent passwd "$usuario" | cut -d: -f6)
-                    
-                    # Genera nombre de archivo con timestamp para evitar colisiones
-                    fecha=$(date '+%Y%m%d_%H%M%S')
-                    archivo_backup="/var/users_backups/backup_${usuario}_${fecha}.tar.bz2"
-                    
-                    echo "Creando backup de $home_dir"
-                    # tar -cjf crea archivo comprimido: c=crear, j=bzip2, f=archivo
-                    if tar -cjf "$archivo_backup" -C / "$home_dir" 2>/dev/null; then
-                        echo "Backup creado: $archivo_backup"
-                        echo "$(date): Backup manual de $usuario - $archivo_backup" >> /var/log/backups.log
-                        # Programa transferencia remota si está habilitada
-                        programar_transferencia_remota "$archivo_backup"
-                    else
-                        echo "Error al crear el backup"
-                    fi
-                else 
-                    echo "El usuario $usuario no existe."
-                fi
-                break
-                ;;
-            2)
-                crear_backup_grupo
-                break
-                ;;
-            0)
-                echo "Volviendo al menú principal..."
-                return 1
-                ;;
-            *)
-                echo "Opción inválida"
-                ;;
-        esac
-    done
-}
-
-# =============================================
-# FUNCIÓN DE BACKUP DIARIO AUTOMÁTICO
-# =============================================
-
-# Ejecuta el backup automático diario según la lista configurada
-backup_diario(){
-    local fecha=$(date '+%Y%m%d_%H%M%S')  # Timestamp único para esta ejecución
-    local usuarios_procesados=0
-    local archivos_creados=()
-    local exit_code=0
-
-    echo "$(date): [BACKUP-DIARIO] Iniciando backup automático - PID: $$" >> /var/log/backups.log
-    echo "$(date): [BACKUP-DIARIO] Fecha: $fecha" >> /var/log/backups.log
-
-    # Verifica configuración crítica antes de proceder
-    if [ -z "$CRON_HORA" ] || [ -z "$CRON_MINUTO" ]; then
-        echo "ERROR: Variables CRON_HORA o CRON_MINUTO no configuradas" >> /var/log/backups.log
-        return 1
-    fi
-
-    # Verifica que exista la lista de backups y tenga contenido
-    if [ ! -f "$backup_list" ]; then
-        echo "ERROR: Archivo de lista no encontrado: $backup_list" >> /var/log/backups.log
-        return 1
-    fi
-
-    if [ ! -s "$backup_list" ]; then
-        echo "INFO: Lista vacía, no hay backups para realizar" >> /var/log/backups.log
-        return 0
-    fi
-
-    echo "INFO: Leyendo lista de backups: $backup_list" >> /var/log/backups.log
-
-    # Procesa cada línea del archivo de lista de backups
-    while IFS= read -r linea; do
-        # Salta líneas vacías o comentarios
-        [[ -z "$linea" || "$linea" =~ ^# ]] && continue
-        
-        echo "INFO: Procesando línea: $linea" >> /var/log/backups.log
-
-        if [[ "$linea" =~ ^@ ]]; then
-            # Es un grupo - procesa todos los usuarios del grupo
-            grupo="${linea#@}"
-            if grupo_existe "$grupo"; then
-                echo "GRUPO: Procesando grupo: $grupo" >> /var/log/backups.log
-                
-                # Procesa cada usuario del grupo
-                while IFS= read -r usuario; do
-                    if [ -n "$usuario" ] && usuario_existe "$usuario"; then
-                        home_dir=$(getent passwd "$usuario" | cut -d: -f6)
-                        if [ -d "$home_dir" ]; then
-                            archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
-                            echo "INFO: Creando backup de $usuario en $archivo_backup" >> /var/log/backups.log
-                            
-                            # Crea backup comprimido del directorio home
-                            if tar -cjf "$archivo_backup" -C / "$home_dir" >> /var/log/backups.log 2>&1; then
-                                echo "EXITO: Backup creado: $usuario" >> /var/log/backups.log
-                                ((usuarios_procesados++))
-                                archivos_creados+=("$archivo_backup")
-                                
-                                # Programa transferencia remota si está habilitada
-                                if [ "$REMOTE_BACKUP_ENABLED" = "true" ]; then
-                                    programar_transferencia_remota "$archivo_backup" "$RSYNC_DELAY_MINUTOS"
-                                fi
-                            else
-                                echo "ERROR: Error creando backup: $usuario" >> /var/log/backups.log
-                                exit_code=1
-                            fi
-                        else
-                            echo "ERROR: El directorio home de $usuario no existe: $home_dir" >> /var/log/backups.log
-                        fi
-                    else
-                        echo "ERROR: Usuario $usuario no existe, omitiendo" >> /var/log/backups.log
-                    fi
-                done < <(obtener_usuarios_de_grupo "$grupo")
-            else
-                echo "ERROR: Grupo no existe: $grupo" >> /var/log/backups.log
-                exit_code=1
-            fi
-        else
-            # Es un usuario individual
-            usuario="$linea"
-            if usuario_existe "$usuario"; then
-                home_dir=$(getent passwd "$usuario" | cut -d: -f6)
-                if [ -d "$home_dir" ]; then
-                    archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
-                    echo "INFO: Creando backup de $usuario en $archivo_backup" >> /var/log/backups.log
-                    
-                    if tar -cjf "$archivo_backup" -C / "$home_dir" >> /var/log/backups.log 2>&1; then
-                        echo "EXITO: Backup creado: $usuario" >> /var/log/backups.log
-                        ((usuarios_procesados++))
-                        archivos_creados+=("$archivo_backup")
-                        
-                        if [ "$REMOTE_BACKUP_ENABLED" = "true" ]; then
-                            programar_transferencia_remota "$archivo_backup" "$RSYNC_DELAY_MINUTOS"
-                        fi
-                    else
-                        echo "ERROR: Error creando backup: $usuario" >> /var/log/backups.log
-                        exit_code=1
-                    fi
-                else
-                    echo "ERROR: El directorio home de $usuario no existe: $home_dir" >> /var/log/backups.log
-                fi
-            else
-                echo "ERROR: Usuario no existe: $usuario" >> /var/log/backups.log
-                exit_code=1
-            fi
-        fi
-    done < "$backup_list"
-
-    echo "EXITO: Completado: $usuarios_procesados usuarios procesados" >> /var/log/backups.log
-    
-    return $exit_code
-}
-
-# =============================================
-# FUNCIÓN DE CONFIGURACIÓN DE RESPALDO REMOTO
-# =============================================
-
-# Menú de configuración para opciones de respaldo remoto
+# Función para configurar respaldo remoto (MODIFICADA)
 configurar_respaldo_remoto() {
     while true; do
         clear
@@ -804,7 +378,7 @@ configurar_respaldo_remoto() {
                 echo "Hora actual: $(get_cron_hora_completa)"
                 echo
                 
-                # Configuración de hora
+                # Configurar hora
                 echo -n "Nueva hora (0-23, actual: $CRON_HORA): "
                 read nueva_hora
                 if [[ "$nueva_hora" =~ ^[0-9]+$ ]] && [ "$nueva_hora" -ge 0 ] && [ "$nueva_hora" -le 23 ]; then
@@ -812,6 +386,7 @@ configurar_respaldo_remoto() {
                     echo "Hora actualizada a $nueva_hora"
                 else
                     echo "Error: Hora debe ser entre 0 y 23"
+                    # Si la hora es inválida, preguntar si quiere continuar
                     echo -n "¿Continuar configurando los minutos? (s/n): "
                     read continuar
                     if [ "$continuar" != "s" ]; then
@@ -819,7 +394,7 @@ configurar_respaldo_remoto() {
                     fi
                 fi
                 
-                # Configuración de minuto
+                # Configurar minuto
                 echo -n "Nuevo minuto (0-59, actual: $CRON_MINUTO): "
                 read nuevo_minuto
                 if [[ "$nuevo_minuto" =~ ^[0-9]+$ ]] && [ "$nuevo_minuto" -ge 0 ] && [ "$nuevo_minuto" -le 59 ]; then
@@ -832,7 +407,7 @@ configurar_respaldo_remoto() {
                 echo "Hora de backup actualizada a: $(get_cron_hora_completa)"
                 echo "$(date): Hora de backup cambiada a $(get_cron_hora_completa)" >> /var/log/backups.log
                 
-                # Si el backup automático está activo, actualiza cron con la nueva hora
+                # Si el backup automático está activo, actualizar cron
                 if backup_automatico_activo; then
                     echo "Actualizando programación en cron..."
                     toggle_backup_automatico  # Desactivar
@@ -853,65 +428,518 @@ configurar_respaldo_remoto() {
     done
 }
 
-# =============================================
-# FUNCIÓN DE ACTIVACIÓN/DESACTIVACIÓN DE BACKUP AUTOMÁTICO
-# =============================================
+#funcion para crear el directorio dir_backup si no existe
+crear_dir_backup(){
+    # si no existe un directorio (dir_backup) entonces lo crea
+    # el -d verifica si es un directorio 
+    if [ ! -d "$dir_backup" ]
+    then
+    mkdir -p "$dir_backup"
+    chmod 700 "$dir_backup"
+    echo "Directorio de backups creado: $dir_backup"
+    fi
 
-# Activa o desactiva el backup automático en crontab
+ #***** si no existe el archivo de log, lo creamo
+    if [ ! -f "/var/log/backups.log" ]; then
+        touch "/var/log/backups.log"
+        chmod 644 "/var/log/backups.log"
+    fi
+    
+    #***** crear directorio de configuracion si no existe
+    if [ ! -d "/etc/backup-script" ]; then
+        mkdir -p "/etc/backup-script"
+        chmod 700 "/etc/backup-script"
+    fi
+    
+    #***** crear archivo de lista de backups automaticos si no existe
+    if [ ! -f "$backup_list" ]; then
+        touch "$backup_list"
+        chmod 600 "$backup_list"
+        echo "# Lista de usuarios y grupos para backup automatico" > "$backup_list"
+        echo "# Formato: usuario o @grupo" >> "$backup_list"
+        echo "# Ejemplo:" >> "$backup_list"
+        echo "# usuario1" >> "$backup_list"
+        echo "# @developers" >> "$backup_list"
+    fi
+}
+
+# se encarga de verificar si el backup esta up and running :D, crontab -l te da una lista con las tareas Cron actuales y busca alguna linea que contenga la ruta del script ( grep te devuelve 0 (true) si no la encuentra y 1 (false) si la encuentra)
+backup_automatico_activo(){
+    crontab -l 2>/dev/null | grep -q "$Delta"
+}
+
+# funcion para mostrar el menu
+menu_alpha(){
+    clear # clear al principio porque nadie quiere que le salga un menu con la pantalla llena de basura *thumbs up*
+    echo "=== GESTOR DE BACKUPS ==="
+    echo "1. Crear backup manual"
+    
+    # agarrando la funcion BAC decimos de una manera bonita si esta activo o no
+    if backup_automatico_activo; then
+        echo "2. DESACTIVAR backup diario automático  [ACTIVO]"
+    else
+        echo "2. ACTIVAR backup diario automático   [INACTIVO]"
+    fi
+    echo "3. Restaurar backup"
+    echo "4. Gestionar lista de backups automáticos"
+    echo "5. Configurar respaldo remoto"
+    echo "6. Probar backup automático (ejecuta ahora)"
+    echo "7. Verificar dependencias del sistema"
+    echo "0. Salir"
+    echo
+    echo -n "Seleccione opción (0 para salir): "
+}
+
+# bubbles burried in this jungle
+# lo mismo que hicimos en admUsuario
+# **investigar id, tambien se pueda hacer con grep -q "^${usuario}:" /etc/passwd
+usuario_existe() { 
+    local usuario="$1"
+    id "$usuario" &>/dev/null
+}
+
+# Función para verificar si un grupo existe
+# usa getent group que busca en la base de datos de grupos del sistema
+grupo_existe() {
+    local grupo="$1"
+    getent group "$grupo" &>/dev/null
+}
+
+# Función para obtener los usuarios de un grupo
+obtener_usuarios_de_grupo() {
+    local grupo="$1"
+    # getent group grupo | cut -d: -f4 te da la lista de usuarios separados por comas
+    # tr ',' '\n' convierte las comas en saltos de linea para tener un usuario por linea
+    getent group "$grupo" | cut -d: -f4 | tr ',' '\n'
+}
+
+#***** funcion para leer entrada con opcion de cancelar
+leer_con_cancelar() {
+    local prompt="$1"
+    local variable="$2"
+    echo -n "$prompt (o '0' para cancelar): "
+    read $variable
+    if [ "${!variable}" = "0" ]; then
+        echo "Operación cancelada."
+        return 1
+    fi
+    return 0
+}
+
+#***** funcion para mostrar menu de gestion de lista automatica
+menu_gestion_backup_auto() {
+    clear
+    echo "=== GESTIÓN DE BACKUPS AUTOMÁTICOS ==="
+    echo "1. Ver lista actual"
+    echo "2. Añadir usuario a la lista"
+    echo "3. Añadir grupo a la lista"
+    echo "4. Eliminar elemento de la lista"
+    echo "0. Volver al menú principal"
+    echo
+    echo -n "Seleccione opción: "
+}
+
+#***** funcion para ver la lista actual de backups automaticos
+ver_lista_backup_auto() {
+    echo "=== LISTA ACTUAL DE BACKUPS AUTOMÁTICOS ==="
+    if [ ! -s "$backup_list" ]; then
+        echo "La lista está vacía."
+        echo "Los backups automáticos no se ejecutarán hasta que añada elementos."
+    else
+        # Mostrar solo lineas que no son comentarios y no están vacías
+        grep -v '^#' "$backup_list" | grep -v '^$' | nl -w 2 -s '. '
+    fi
+    echo
+}
+
+#***** funcion para añadir usuario a la lista de backups automaticos
+añadir_usuario_backup_auto() {
+    if ! leer_con_cancelar "Ingrese nombre de usuario a añadir" usuario; then
+        return 1
+    fi
+    
+    if usuario_existe "$usuario"; then
+        # Verificar si el usuario ya está en la lista
+        if grep -q "^$usuario$" "$backup_list"; then
+            echo "El usuario $usuario ya está en la lista."
+        else
+            echo "$usuario" >> "$backup_list"
+            echo "Usuario $usuario añadido a la lista de backups automáticos."
+        fi
+    else
+        echo "El usuario $usuario no existe."
+    fi
+}
+
+#***** funcion para añadir grupo a la lista de backups automaticos
+añadir_grupo_backup_auto() {
+    if ! leer_con_cancelar "Ingrese nombre del grupo a añadir" grupo; then
+        return 1
+    fi
+    
+    if grupo_existe "$grupo"; then
+        # Verificar si el grupo ya está en la lista
+        grupo_line="@$grupo"
+        if grep -q "^$grupo_line$" "$backup_list"; then
+            echo "El grupo $grupo ya está en la lista."
+        else
+            echo "$grupo_line" >> "$backup_list"
+            echo "Grupo $grupo añadido a la lista de backups automáticos."
+        fi
+    else
+        echo "El grupo $grupo no existe."
+    fi
+}
+
+#***** funcion para eliminar elemento de la lista de backups automaticos
+eliminar_elemento_backup_auto() {
+    ver_lista_backup_auto
+    
+    if [ ! -s "$backup_list" ]; then
+        return 1
+    fi
+    
+    echo
+    if ! leer_con_cancelar "Ingrese el número del elemento a eliminar" numero; then
+        return 1
+    fi
+    
+    # Obtener el elemento a eliminar
+    elemento=$(grep -v '^#' "$backup_list" | grep -v '^$' | sed -n "${numero}p")
+    
+    if [ -z "$elemento" ]; then
+        echo "Número inválido."
+        return 1
+    fi
+    
+    echo "¿Eliminar '$elemento' de la lista?"
+    echo -n "Confirmar (s/n): "
+    read confirmacion
+    
+    if [ "$confirmacion" = "s" ]; then
+        # Crear archivo temporal sin el elemento
+        temp_file=$(mktemp)
+        grep -v "^$elemento$" "$backup_list" > "$temp_file"
+        mv "$temp_file" "$backup_list"
+        echo "Elemento '$elemento' eliminado."
+    else
+        echo "Operación cancelada."
+    fi
+}
+
+#***** funcion para gestionar la lista de backups automaticos
+gestionar_backup_auto() {
+    while true; do
+        menu_gestion_backup_auto
+        read opcion
+        
+        case $opcion in
+            1)
+                ver_lista_backup_auto
+                ;;
+            2)
+                añadir_usuario_backup_auto
+                ;;
+            3)
+                añadir_grupo_backup_auto
+                ;;
+            4)
+                eliminar_elemento_backup_auto
+                ;;
+            0)
+                echo "Volviendo al menú principal..."
+                return 0
+                ;;
+            *)
+                echo "Opción inválida"
+                ;;
+        esac
+        
+        echo
+        echo "Presione Enter para continuar..."
+        read
+    done
+}
+
+# CORREGIDA: Función para crear backup de grupo con contador correcto
+crear_backup_grupo(){
+    if ! leer_con_cancelar "Ingrese nombre del grupo" grupo; then
+        return 1
+    fi
+    
+    if grupo_existe "$grupo"; then
+        fecha=$(date '+%Y%m%d_%H%M%S')
+        
+        echo "Creando backup del grupo: $grupo"
+        echo "Usuarios en el grupo:"
+        
+        # Contador para usuarios procesados - CORREGIDO: usar archivo temporal para el contador
+        local temp_counter=$(mktemp)
+        echo "0" > "$temp_counter"
+        
+        # Obtener usuarios del grupo y crear backup INDIVIDUAL para cada uno
+        # CORREGIDO: Usar while read sin pipeline para mantener el contexto
+        while IFS= read -r usuario; do
+            if [ -n "$usuario" ] && usuario_existe "$usuario"; then
+                home_dir=$(getent passwd "$usuario" | cut -d: -f6)
+                if [ -d "$home_dir" ]; then
+                    echo "  - Creando backup de: $usuario"
+                    archivo_backup="${dir_backup}/backup_${usuario}_grupo_${fecha}.tar.bz2"
+                    
+                    # Crear backup individual del usuario
+                    if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null
+                    then
+                        echo "    Backup creado: $(basename "$archivo_backup")"
+                        echo "$(date): Backup manual de grupo $grupo - usuario $usuario - $archivo_backup" >> /var/log/backups.log
+                        # Incrementar contador
+                        local current_count=$(cat "$temp_counter")
+                        echo $((current_count + 1)) > "$temp_counter"
+                        # Respaldo remoto programado con at (método simplificado)
+                        programar_transferencia_remota "$archivo_backup"
+                    else
+                        echo "    Error al crear backup de $usuario"
+                    fi
+                fi
+            else
+                echo "  - Usuario $usuario no existe, omitiendo"
+            fi
+        done < <(obtener_usuarios_de_grupo "$grupo")
+        
+        local usuarios_procesados=$(cat "$temp_counter")
+        rm -f "$temp_counter"
+        
+        echo "Backup de grupo completado: $usuarios_procesados usuarios procesados"
+        
+    else
+        echo "El grupo $grupo no existe."
+        return 1
+    fi
+}
+
+crear_backup(){
+    while true; do
+        echo "¿Qué tipo de backup desea crear?"
+        echo "1. Backup de usuario individual"
+        echo "2. Backup de grupo (backups individuales por usuario)"
+        echo "0. Volver al menú principal"
+        read -p "Seleccione opción: " tipo_backup
+
+        case $tipo_backup in
+            1)
+                if ! leer_con_cancelar "Ingrese nombre de usuario" usuario; then
+                    break
+                fi
+
+                if usuario_existe "$usuario" 
+                then
+                    #getent (get entry) te da las entradas de datos del sistema
+                    #lo deberiamos usar por el tema de backups entre maquinas (el getent), si no se deberia usar grep 
+                    #
+                    home_dir=$(getent passwd "$usuario" | cut -d: -f6)
+                    
+                    #Creamos el nombre del archivo de backup
+                    #Guardamos una personalizacion del comando date en una variable fecha 
+                    #Lo guardamos sin espacios 
+                    fecha=$(date '+%Y%m%d_%H%M%S')
+                    archivo_backup="/var/users_backups/backup_${usuario}_${fecha}.tar.bz2"
+                    
+                    # Creando el backup
+                    # tar empaqueta lo que esta en la var archivo_backup, crea un nuevo arch con -c, con j lo comprimimos con bzip2, y -f le decimos el nombre del arch 
+                    echo "Creando backup de $home_dir"
+                    if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
+                        echo "Backup creado: $archivo_backup"
+                        echo "$(date): Backup manual de $usuario - $archivo_backup" >> /var/log/backups.log
+                        # Respaldo remoto programado con at (método simplificado)
+                        programar_transferencia_remota "$archivo_backup"
+                    else
+                        echo "Error al crear el backup"
+                    fi
+                else 
+                    echo "El usuario $usuario no existe."
+                fi
+                break
+                ;;
+            2)
+                crear_backup_grupo
+                break
+                ;;
+            0)
+                echo "Volviendo al menú principal..."
+                return 1
+                ;;
+            *)
+                echo "Opción inválida"
+                ;;
+        esac
+    done
+}
+
+# FUNCIÓN BACKUP_DIARIO CORREGIDA - Basada en el script que SÍ funciona
+backup_diario(){
+    local fecha=$(date '+%Y%m%d_%H%M%S')  # Agregar hora, minutos y segundos
+    local usuarios_procesados=0
+    local archivos_creados=()
+    local exit_code=0
+
+    echo "🔄 [BACKUP-DIARIO] Iniciando backup automático - PID: $$" >> /var/log/backups.log
+    echo "🔄 [BACKUP-DIARIO] Fecha: $fecha" >> /var/log/backups.log
+
+    # Validar configuración crítica
+    if [ -z "$CRON_HORA" ] || [ -z "$CRON_MINUTO" ]; then
+        echo "❌ ERROR: Variables CRON_HORA o CRON_MINUTO no configuradas" >> /var/log/backups.log
+        return 1
+    fi
+
+    # Verificar si el archivo de lista existe y tiene contenido
+    if [ ! -f "$backup_list" ]; then
+        echo "❌ [BACKUP-DIARIO] Archivo de lista no encontrado: $backup_list" >> /var/log/backups.log
+        return 1
+    fi
+
+    if [ ! -s "$backup_list" ]; then
+        echo "ℹ️  [BACKUP-DIARIO] Lista vacía, no hay backups para realizar" >> /var/log/backups.log
+        return 0
+    fi
+
+    echo "ℹ️  [BACKUP-DIARIO] Leyendo lista de backups: $backup_list" >> /var/log/backups.log
+
+    # Leer la  lista de asd backups automáticos
+    while IFS= read -r linea; do
+        # Saltar líneas vacías o comentarios
+        [[ -z "$linea" || "$linea" =~ ^# ]] && continue
+        
+        echo "ℹ️  [BACKUP-DIARIO] Procesando línea: $linea" >> /var/log/backups.log
+
+        if [[ "$linea" =~ ^@ ]]; then
+            # Es un grupo
+            grupo="${linea#@}"
+            if grupo_existe "$grupo"; then
+                echo "👥 [BACKUP-DIARIO] Procesando grupo: $grupo" >> /var/log/backups.log
+                
+                # Obtener usuarios del grupo - CORREGIDO: método más robusto
+                while IFS= read -r usuario; do
+                    if [ -n "$usuario" ] && usuario_existe "$usuario"; then
+                        home_dir=$(getent passwd "$usuario" | cut -d: -f6)
+                        if [ -d "$home_dir" ]; then
+                            # CORREGIDO: Usar timestamp completo para evitar duplicados
+                            archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
+                            echo "ℹ️  [BACKUP-DIARIO] Creando backup de $usuario en $archivo_backup" >> /var/log/backups.log
+                            
+                            # CORREGIDO: Usar el mismo método que en el script funcional
+                            if tar -cjf "$archivo_backup" -C / "$home_dir" >> /var/log/backups.log 2>&1; then
+                                echo "✅ [BACKUP-DIARIO] Backup creado: $usuario" >> /var/log/backups.log
+                                ((usuarios_procesados++))
+                                archivos_creados+=("$archivo_backup")
+                                
+                                # Programar transferencia remota inmediatamente
+                                if [ "$REMOTE_BACKUP_ENABLED" = "true" ]; then
+                                    programar_transferencia_remota "$archivo_backup" "$RSYNC_DELAY_MINUTOS"
+                                fi
+                            else
+                                echo "❌ [BACKUP-DIARIO] Error creando backup: $usuario" >> /var/log/backups.log
+                                exit_code=1
+                            fi
+                        else
+                            echo "❌ [BACKUP-DIARIO] El directorio home de $usuario no existe: $home_dir" >> /var/log/backups.log
+                        fi
+                    else
+                        echo "❌ [BACKUP-DIARIO] Usuario $usuario no existe, omitiendo" >> /var/log/backups.log
+                    fi
+                done < <(obtener_usuarios_de_grupo "$grupo")
+            else
+                echo "❌ [BACKUP-DIARIO] Grupo no existe: $grupo" >> /var/log/backups.log
+                exit_code=1
+            fi
+        else
+            # Es un usuario individual
+            usuario="$linea"
+            if usuario_existe "$usuario"; then
+                home_dir=$(getent passwd "$usuario" | cut -d: -f6)
+                if [ -d "$home_dir" ]; then
+                    # CORREGIDO: Usar timestamp completo
+                    archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
+                    echo "ℹ️  [BACKUP-DIARIO] Creando backup de $usuario en $archivo_backup" >> /var/log/backups.log
+                    
+                    # CORREGIDO: Usar el mismo método que en el script funcional
+                    if tar -cjf "$archivo_backup" -C / "$home_dir" >> /var/log/backups.log 2>&1; then
+                        echo "✅ [BACKUP-DIARIO] Backup creado: $usuario" >> /var/log/backups.log
+                        ((usuarios_procesados++))
+                        archivos_creados+=("$archivo_backup")
+                        
+                        # Programar transferencia remota inmediatamente
+                        if [ "$REMOTE_BACKUP_ENABLED" = "true" ]; then
+                            programar_transferencia_remota "$archivo_backup" "$RSYNC_DELAY_MINUTOS"
+                        fi
+                    else
+                        echo "❌ [BACKUP-DIARIO] Error creando backup: $usuario" >> /var/log/backups.log
+                        exit_code=1
+                    fi
+                else
+                    echo "❌ [BACKUP-DIARIO] El directorio home de $usuario no existe: $home_dir" >> /var/log/backups.log
+                fi
+            else
+                echo "❌ [BACKUP-DIARIO] Usuario no existe: $usuario" >> /var/log/backups.log
+                exit_code=1
+            fi
+        fi
+    done < "$backup_list"
+
+    echo "✅ [BACKUP-DIARIO] Completado: $usuarios_procesados usuarios procesados" >> /var/log/backups.log
+    
+    return $exit_code
+}
+
+# CORREGIDA: función para activar/desactivar el backup automatico con validaciones
 toggle_backup_automatico(){
     if backup_automatico_activo; then
-        # DESACTIVAR - elimina la entrada del script actual de crontab
+        # DESACTIVAR - eliminar de crontab
         (crontab -l 2>/dev/null | grep -v "$Delta") | crontab -
-        echo "Backup automático DESACTIVADO"
-        echo "$(date): Backup automático desactivado" >> /var/log/backups.log
+        echo "🔴 Backup automático DESACTIVADO"
+        echo "$(date): 🔴 Backup automático desactivado" >> /var/log/backups.log
     else
-        # Verifica dependencias antes de activar
+        # Verificar dependencias antes de activar
         echo "Verificando dependencias antes de activar backup automático..." >> /var/log/backups.log
         if ! verificar_dependencias; then
-            echo "No se puede activar backup automático debido a errores en dependencias"
-            echo "Revisa /var/log/backups.log para más detalles"
+            echo "❌ No se puede activar backup automático debido a errores en dependencias"
+            echo "❌ Revisa /var/log/backups.log para más detalles"
             return 1
         fi
         
-        # Muestra advertencia si la lista está vacía
+        # Mostrar advertencia si la lista está vacía
         if [ ! -f "$backup_list" ] || ! grep -v '^#' "$backup_list" | grep -v '^$' | read; then
-            echo "ADVERTENCIA: La lista de backups automáticos está vacía!"
-            echo "No se realizarán backups hasta que añada usuarios/grupos."
-            echo "Puede gestionar la lista en la opción 4 del menú principal."
+            echo "⚠️  ¡ADVERTENCIA: La lista de backups automáticos está vacía!"
+            echo "   No se realizarán backups hasta que añada usuarios/grupos."
+            echo "   Puede gestionar la lista en la opción 4 del menú principal."
             echo
         fi
         
-        # Crea entrada de cron para ejecución diaria a la hora especificada
+        # Programar ejecución DIARIA a la hora específica
         local entrada_cron="$CRON_MINUTO $CRON_HORA * * * $Delta automatico"
         (crontab -l 2>/dev/null; echo "$entrada_cron") | crontab -
         
-        echo "Backup automático ACTIVADO"
-        echo "Se ejecutará diariamente a las $(get_cron_hora_completa)"
-        echo "Las transferencias remotas se programarán con at"
-        echo "$(date): Backup automático activado - $entrada_cron" >> /var/log/backups.log
+        echo "🟢 Backup automático ACTIVADO"
+        echo "   Se ejecutará diariamente a las $(get_cron_hora_completa)"
+        echo "   Las transferencias remotas se programarán con at"
+        echo "$(date): 🟢 Backup automático activado - $entrada_cron" >> /var/log/backups.log
         
-        # Muestra la entrada de cron actual para confirmación
+        # Mostrar entrada de cron actual
         echo
-        echo "Entrada de cron actual:"
+        echo "📅 Entrada de cron actual:"
         crontab -l | grep "$Delta"
     fi
 }
 
-# =============================================
-# FUNCIÓN DE RESTAURACIÓN DE BACKUPS
-# =============================================
-
-# Restaura un backup seleccionado por el usuario
+# funcion para restaurar backups existentes DUH
 restaurar_backup(){
     while true; do
         echo "Backups disponibles:"
-        # ls -1 lista un archivo por línea, nl enumera con formato bonito
-        # -w 2 establece ancho de 2 dígitos, -s '. ' usa punto como separador
+        # -1 te lo da en lista, con un archivo por linea 
+        # nl = number lines se encarga de enumerar las lineas, -w 2 te da un ancho de dos digitos para los numeros -s es el separador despues del num, que en este caso es un . 
         ls -1 "$dir_backup"/*.tar.bz2 2>/dev/null | nl -w 2 -s '. '
 
-        # $? contiene el exit status del último comando (ls)
-        # Si no hay backups, ls retorna error y $? será diferente de 0
-        if [ $? -ne 0 ]; then
+        # $? guarda la salida del utimo comando, osea el ls que acabamos de hacer, si no hay backups retorna 1 y termina la ejecuccion
+        if [ $? -ne 0 ]
+        then
             echo "No hay backups disponibles."
             echo "Presione Enter para continuar..."
             read
@@ -922,24 +950,28 @@ restaurar_backup(){
         echo -n "Seleccione el numero del backup a restaurar (0 para volver): "
         read numero 
 
-        # Opción para volver al menú principal
+        # Opción para volver
         if [ "$numero" = "0" ]; then
             echo "Volviendo al menú principal..."
             return 1
         fi
 
-        # sed -n "${numero}p" extrae solo la línea correspondiente al número seleccionado
+        # con ls -1 volvemos a listar los archivos de dir_backup 
+        # p = print no es una p de caracter
+        # sed nos muestra todas las lineas con -n no muestra nada, solo el numero que eligio el usuario (el directorio entero )
         archivo_backup=$(ls -1 "$dir_backup"/*.tar.bz2 | sed -n "${numero}p")
 
-        if [ -z "$archivo_backup" ]; then
+        # si archivo backup esta vacio o es invalido entonces se termina la ejecucion
+        if [ -z "$archivo_backup" ]
+        then
             echo "Numero invalido"
             continue
         fi
         
-        # basename extrae solo el nombre del archivo sin la ruta completa
+        # usamos basename solo para agarrar el nombre del backup que queremos EJ: backup_user.tar.bz2 envez de la direccion entera
         nombre_archivo=$(basename "$archivo_backup")
         
-        # Expresión regular para extraer el nombre de usuario del nombre del archivo
+        # CORREGIDO: Extraemos el usuario de manera más inteligente
         # Para backup individual: backup_alumno_20241210_143022.tar.bz2 -> usuario=alumno
         # Para backup de grupo: backup_alumno_grupo_20241210_143022.tar.bz2 -> usuario=alumno
         if [[ "$nombre_archivo" =~ ^backup_([^_]+)_ ]]; then
@@ -949,59 +981,71 @@ restaurar_backup(){
             continue
         fi
 
-        echo "Usuario del backup: $usuario"
+        echo "usuario del backup: $usuario"
 
-        # Verifica que el usuario exista en el sistema antes de restaurar
-        if ! usuario_existe "$usuario"; then
-            echo "ERROR: El usuario $usuario no existe en el sistema"
+        # usando la funcion de usr_exst determina que si dicho usuario no existe se termina la ejecucion 
+        if ! usuario_existe "$usuario"
+        then
+            echo "ERROR: UNF; el usuario $usuario no existe en el sistema"
             echo "Presione Enter para continuar..."
             read
             continue
         fi
 
-        # Obtiene el directorio home del usuario desde /etc/passwd
+        #home destino es el directorio de usuario de un usuario, lo agarramos haciendole un cut a la linea passwd del usuario en el campo 6 que es donde esta el dir de usuario
         home_destino=$(getent passwd "$usuario" | cut -d':' -f6)
 
         echo 
         echo "¿Restaurar backup de $usuario en $home_destino?"
         echo "¡ADVERTENCIA: se van a sobreescribir los archivos existentes!"
-        echo -n "Confirmar (s/n): "
+        echo -n "desea continuar (s/n/0 para volver): "
         read confirmacion 
         
-        if [ "$confirmacion" != "s" ]; then
+        if [ "$confirmacion" = "0" ]; then
+            continue
+        elif [ "$confirmacion" != "s" ]; then
             echo "Restauracion cancelada"
             continue
         fi
 
-        # Crea directorio temporal para extraer el backup
+        #crea un directorio temporal en /tmp
         temp_dir=$(mktemp -d)
 
         echo "Restaurando backup..."
 
-        # Extrae el backup en el directorio temporal
-        if tar -xjf "$archivo_backup" -C "$temp_dir" 2>/dev/null; then
-            # Busca la estructura de directorios dentro del backup extraído
-            if [ -d "$temp_dir/home/$usuario" ]; then
-                dir_origen="$temp_dir/home/$usuario" 
-            elif [ -d "$temp_dir/$usuario" ]; then
-                dir_origen="$temp_dir/$usuario"
+        # extraemos el backup en el directorio temporal
+        if tar -xjf "$archivo_backup" -C "$temp_dir" 2>/dev/null
+            then
+            #Buscamos donde estan los archivos de usuario
+            #aca buscamos si esta con /home/y el usuario
+            if [ -d "$temp_dir/home/$usuario" ]
+            then
+            dir_origen="$temp_dir/home/$usuario" 
+            #aca buscamos si esta solo con el usuario
+            elif [ -d "$temp_dir/$usuario" ]
+            then
+            dir_origen="$temp_dir/$usuario"
+            #y aca si esta en archivos sueltos
             else
-                dir_origen="$temp_dir"
+            dir_origen="$temp_dir/$usuario"
             fi
 
-            # rsync sincroniza los archivos del backup con el directorio home del usuario
-            # -a preserva permisos y atributos, -v modo verbose
-            echo "Copiando archivos a $home_destino..."
+            # aca copiamos los archivos al origen real
+            # primero copiamos las carpetas y archivos visivles y luego hacemos lo mismo con las invisibles
+            echo "copiando archivos a $home_destino..."
+            #*************investigar en mayor Profundidad 
+            #************************** rsync sincroniza directorios de manera eficiente
             rsync -av "$dir_origen/" "$home_destino"/ 2>/dev/null
 
-            # Asegura que el usuario sea dueño de todos los archivos restaurados
+            # reparamos los permisos con un change owner recursivo en todo el directorio
             chown -R "$usuario:$usuario" "$home_destino"
 
             echo "Restauración completada"
 
-            # Limpia el directorio temporal
+            # Limpiamos temp_dir y borramos todo lo que tiene dentro
             rm -rf "$temp_dir"
-        else
+
+             else
             echo "ERROR: No se pudo extraer el backup"
             rm -rf "$temp_dir"
         fi
@@ -1011,27 +1055,22 @@ restaurar_backup(){
         break
     done
 }
-
-# =============================================
-# INICIALIZACIÓN Y PUNTO DE ENTRADA PRINCIPAL
-# =============================================
-
-# Carga la configuración persistente al inicio
+# Cargar configuración persistente
 cargar_configuracion
 
-# Verifica privilegios y crea directorios necesarios
+# punto de entrada del script - verifica usuario y crea directorios necesarios
 check_user
 crear_dir_backup
 
-# Manejo de modos de ejecución
+# ***** Manejo de modos de ejecución
 if [ "$1" = "automatico" ]; then
-    # Modo automático desde cron - ejecución no interactiva
+    # Modo automático desde cron - CORREGIDO: ejecución diaria única
     {
         echo "================================================"
-        echo "$(date): INICIANDO BACKUP AUTOMÁTICO DIARIO"
+        echo "$(date): [CRON] INICIANDO BACKUP AUTOMÁTICO DIARIO"
         echo "================================================"
         
-        # Verifica que los archivos necesarios existan
+        # Verificar que los archivos necesarios existen
         echo "Verificando archivos necesarios..."
         if [ ! -f "$backup_list" ]; then
             echo "ERROR: No existe el archivo de lista: $backup_list"
@@ -1043,7 +1082,7 @@ if [ "$1" = "automatico" ]; then
             exit 0
         fi
         
-        # Ejecuta el backup diario automático
+        # Ejecutar backup diario
         echo "Ejecutando backup_diario..."
         if backup_diario; then
             echo "Backup automático diario completado exitosamente"
@@ -1052,57 +1091,52 @@ if [ "$1" = "automatico" ]; then
         fi
         
         echo "================================================"
-        echo "$(date): FINALIZANDO BACKUP AUTOMÁTICO DIARIO"
+        echo "$(date): [CRON] FINALIZANDO BACKUP AUTOMÁTICO DIARIO"
         echo "================================================"
     } >> /var/log/backups.log 2>&1
     exit 0
+
+else
+    # Modo interactivo normal - ELIMINADA la verificación horaria automática
+    # No se verifica la hora para evitar duplicación con cron
+    :
 fi
 
-# =============================================
-# BUCLE PRINCIPAL - MODO INTERACTIVO
-# =============================================
-
-# Bucle principal del modo interactivo con menú
 while true; do
     menu_alpha
     read opcion
 
     case $opcion in
         1)
-            # Crear backup manual
+            # crear backup directamente sin lock
             crear_backup
             ;;
         2)
-            #   Activar/desactivar backup  automático
+            # No necesita lock porque solo modifica crontab
             toggle_backup_automatico
             ;;
         3)
-            # Restaurar backup existente
+            # restaurar backup directamente sin lock
             restaurar_backup
             ;;
         4)
-            # Gestionar lista  de backups autom áticos
             gestionar_backup_auto
             ;;
         5)
-            # Configurar opciones de respaldo remoto
             configurar_respaldo_remoto
             ;;
         6)
-            # Ejecutar backup automático de prueba
             echo "Ejecutando backup automático de prueba..."
             backup_diario
             ;;
         7)
-            # Verificar dependencias del sistema
             echo "Ejecutando verificación de dependencias..."
             verificar_dependencias
             echo "Verificación completada. Revisa /var/log/backups.log"
             ;;
         0)
-            # Salir del programa
-            echo "Cerrando programa"
-            exit 0 
+             echo "cerrando programa"
+             exit 0 
             ;;
         *)
             echo "Opción inválida"
