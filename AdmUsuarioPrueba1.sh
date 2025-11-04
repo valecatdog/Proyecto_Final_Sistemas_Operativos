@@ -618,7 +618,6 @@ del_grupo(){
         fi
         
     fi
-    set +f
     gestion_grupos
 }
 
