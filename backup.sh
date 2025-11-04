@@ -788,6 +788,17 @@ crear_backup(){
 
 # Ejecuta el backup automático diario según la lista configurada
 backup_diario(){
+    # SOLUCIÓN RÁPIDA: Establecer PATH absoluto para cron
+    export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin"
+    
+    # DEBUG: Log del entorno para diagnosticar problemas con cron
+    echo "=== CRON ENVIRONMENT DEBUG ===" >> /var/log/backups.log
+    echo "PATH: $PATH" >> /var/log/backups.log
+    echo "PWD: $(pwd)" >> /var/log/backups.log
+    echo "USER: $(whoami)" >> /var/log/backups.log
+    echo "SCRIPT: $(realpath "$0")" >> /var/log/backups.log
+    echo "FECHA: $(date)" >> /var/log/backups.log
+    
     # generamos un timestamp unico para esta ejecucion
     # esto es clave porque multiple backups no deben sobreescribirse
     local fecha=$(date '+%Y%m%d_%H%M%S')
@@ -801,20 +812,20 @@ backup_diario(){
     echo "$(date): [BACKUP-DIARIO] Fecha: $fecha" >> /var/log/backups.log
 
     # verificamos configuracion critica antes de proceder
-         # esto evita que el script falle medio camino
+    # esto evita que el script falle medio camino
     if [ -z "$CRON_HORA" ] || [ -z "$CRON_MINUTO" ]; then
         echo "ERROR: Variables CRON_HORA o CRON_MINUTO no configuradas" >> /var/log/backups.log
         return 1  # salimos con error si no hay configuracion basica
     fi
 
-      # verificamos que exista la lista de backups y tenga contenido
-      # no tiene sentido proceder si no hay nada que respaldar
+    # verificamos que exista la lista de backups y tenga contenido
+    # no tiene sentido proceder si no hay nada que respaldar
     if [ ! -f "$backup_list" ]; then
         echo "ERROR: Archivo de lista no encontrado: $backup_list" >> /var/log/backups.log
         return 1
     fi
 
-    # Verificamos si la lista esta vacia (solo comentarios o lineas vacias).
+    # Verificamos si la lista esta vacia (solo comentarios o lineas vacias)
     if [ ! -s "$backup_list" ]; then
         echo "INFO: Lista vacía, no hay backups para realizar" >> /var/log/backups.log
         return 0  # esto no es un error, solo no hay trabajo
@@ -844,23 +855,23 @@ backup_diario(){
                 while IFS= read -r usuario; do
                     # verificamos que el usuario no este vacio y exista
                     if [ -n "$usuario" ] && usuario_existe "$usuario"; then
-                        # obtenemos el directorio home desde /etc/passwd
-                        home_dir=$(getent passwd "$usuario" | cut -d: -f6)
+                        # SOLUCIÓN: Usar ruta absoluta para getent
+                        home_dir=$(/usr/bin/getent passwd "$usuario" | /usr/bin/cut -d: -f6)
                         
                         if [ -d "$home_dir" ]; then
                             # generamos nombre de archivo con prefijo "diario_" para diferenciar
                             archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
                             echo "INFO: Creando backup de $usuario en $archivo_backup" >> /var/log/backups.log
                             
-                        # creamos el backup comprimido
-                        #  >> /var/log/backups.log 2>&1 redirige TODO el output al log
-                            if tar -cjf "$archivo_backup" -C / "$home_dir" >> /var/log/backups.log 2>&1; then
+                            # SOLUCIÓN: Usar rutas absolutas para comandos críticos
+                            # creamos el backup comprimido
+                            if /bin/tar -cjf "$archivo_backup" -C / "$home_dir" >> /var/log/backups.log 2>&1; then
                                 echo "EXITO: Backup creado: $usuario" >> /var/log/backups.log
                                 ((usuarios_procesados++))  # incrementamos contador
                                 archivos_creados+=("$archivo_backup")  # agregamos al array
                                 
-                                    # programamos transferencia remota si esta habilitada
-                                    # usamos el delay configurado para no saturar la red
+                                # programamos transferencia remota si esta habilitada
+                                # usamos el delay configurado para no saturar la red
                                 if [ "$REMOTE_BACKUP_ENABLED" = "true" ]; then
                                     programar_transferencia_remota "$archivo_backup" "$RSYNC_DELAY_MINUTOS"
                                 fi
@@ -880,16 +891,18 @@ backup_diario(){
                 exit_code=1  # marcamos error pero continuamos procesando
             fi
         else
-            # eS UN USUARIO INDIVIDUAL
+            # ES UN USUARIO INDIVIDUAL
             usuario="$linea"
             if usuario_existe "$usuario"; then
-                home_dir=$(getent passwd "$usuario" | cut -d: -f6)
+                # SOLUCIÓN: Usar ruta absoluta para getent
+                home_dir=$(/usr/bin/getent passwd "$usuario" | /usr/bin/cut -d: -f6)
                 if [ -d "$home_dir" ]; then
                     archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
                     echo "INFO: Creando backup de $usuario en $archivo_backup" >> /var/log/backups.log
                     
+                    # SOLUCIÓN: Usar ruta absoluta para tar
                     # mismo proceso que para usuarios de grupos
-                    if tar -cjf "$archivo_backup" -C / "$home_dir" >> /var/log/backups.log 2>&1; then
+                    if /bin/tar -cjf "$archivo_backup" -C / "$home_dir" >> /var/log/backups.log 2>&1; then
                         echo "EXITO: Backup creado: $usuario" >> /var/log/backups.log
                         ((usuarios_procesados++))
                         archivos_creados+=("$archivo_backup")
@@ -914,11 +927,11 @@ backup_diario(){
 
     # resumen final del proceso
     echo "EXITO: Completado: $usuarios_procesados usuarios procesados" >> /var/log/backups.log
+    echo "=== FIN BACKUP DIARIO ===" >> /var/log/backups.log
     
     # retornamos el codigo de salida (0=exito, 1=algun error)
     return $exit_code
 }
-
 
 # Menú de configuración para opciones de respaldo remoto
 configurar_respaldo_remoto() {
