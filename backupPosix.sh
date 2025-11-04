@@ -42,7 +42,7 @@ backup_local() {
 
     ARCHIVE_PATH="$BACKUP_DIR/$FILE_NAME"
     
-    # Se mantiene igual ya que tar es POSIX, pero se cambia la redirección
+    # Se mantiene igual ya que tar es POSIX , pero se cambia la redirección
     if tar -cjf "$ARCHIVE_PATH" -C / "$TARGET_PATH" >> "$LOG_FILE" 2>&1; then
         echo "Backup local creado exitosamente: $ARCHIVE_PATH" >> "$LOG_FILE"
         programar_rsync "$ARCHIVE_PATH"

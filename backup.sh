@@ -1081,7 +1081,7 @@ while true; do
             restaurar_backup
             ;;
         4)
-            # Gestionar lista de backups automáticos
+            # Gestionar lista de backups autom áticos
             gestionar_backup_auto
             ;;
         5)
