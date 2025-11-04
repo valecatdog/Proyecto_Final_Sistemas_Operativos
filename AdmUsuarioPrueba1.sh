@@ -480,7 +480,7 @@ archivo_procesar_addDel(){
             ind=$((ind+1))
         fi
     done
-    if [ -z "${usuariosTrabajar[*]}" ]
+    if [ "${#usuariosTrabajar[*]}" -ne 0 ]
     then
 
         read -rp "opcion/es (no ingrese nada para retroceder): " opciones
