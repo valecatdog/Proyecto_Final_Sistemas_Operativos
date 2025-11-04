@@ -151,9 +151,17 @@ backup_automatico_activo(){
 usuario_existe(){ id "$1" &>/dev/null; }
 grupo_existe(){ getent group "$1" &>/dev/null; }
 obtener_usuarios_de_grupo(){ getent group "$1" | cut -d: -f4 | tr ',' '\n'; }
-
-leer_con_cancelar(){ local prompt="$1"; local var="$2"; echo -n "$prompt (o 0 para cancelar): "; read "$var"; [ "${!var}" = "0" ] && { echo "Operación cancelada."; return 1; } return 0; }
-
+leer_con_cancelar(){
+  local prompt="$1"
+  local var="$2"
+  echo -n "$prompt (o 0 para cancelar): "
+  read -r "$var"
+  if [ "${!var}" = "0" ]; then
+    echo "Operación cancelada."
+    return 1
+  fi
+  return 0
+}
 # --- Gestión de lista automática ---
 ver_lista_backup_auto(){
   echo "=== LISTA DE BACKUPS ==="
