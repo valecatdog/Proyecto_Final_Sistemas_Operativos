@@ -9,11 +9,6 @@
 #SUGERENCIAS
 : '
 
--hacer los nobres con una funcion y no como los estoy haiendo ahora para 2 parametros
-
--¿cuales son las condiciones para los nombres? ¿que caracteres pueden tener?
-
--podria mejorar los nombres de las funciones
 
 -verificar que los usuarios/grupos no coincidan con cosas que no se deberian borrar (cosas que vienen con el sistema)
 '
@@ -232,7 +227,7 @@ usuario_existe() {
         return 1
     fi
 }
-iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii9iiiiiiiiii8888
+
 #CORREGIDO Y COMENTADO
 #recibe usuario completo
 add_usuario(){
@@ -292,12 +287,13 @@ del_usuario(){
         apellido=$(echo "$1" | cut -d: -f2)
         user=$(echo "$1" | cut -d: -f3)
 
-    if usuario_existe "$1"
+    if usuario_existe "$1" && [ "$(id -u "$1" 2>/dev/null)" -ge 1000 ] && [ "$(id -u "$1" 2>/dev/null)" -le 65000 ]
     then
-        sudo userdel -r "$user"
+        : 'sudo userdel -r "$user"
         read -n1 -t2 -rsp "Usuario $user ($nombre $apellido) eliminado correctamente del sistema"
         printf "\n"
-        return
+        return '
+        read -n1 -t2 -rsp "ESTA MAAAAAAAAAAAL"
     else
          read -n1 -t2 -rsp "ERROR: el usuario $user ($nombre $apellido) no existe en el sistema"
          printf "\n"
