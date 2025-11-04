@@ -29,7 +29,7 @@ backup_local() {
         TARGET_PATH="/home/$TARGET"
         FILE_NAME="${TARGET}_$(date +%Y%m%d_%H%M%S).tar.bz2"
         echo "Iniciando respaldo de usuario: $TARGET" >> "$LOG_FILE"
-    # getent no es POSIX estándar, pero es común. Alternativa sería grep
+    # getent no es POSIX estándar , pero es común. Alternativa sería grep
     elif getent group "$TARGET" >/dev/null 2>&1; then
         echo "Advertencia: El respaldo de grupos no está implementado en este script, solo usuarios." >> "$LOG_FILE"
         return 1

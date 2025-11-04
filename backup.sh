@@ -1073,7 +1073,7 @@ while true; do
             crear_backup
             ;;
         2)
-            # Activar/desactivar backup automático
+            #   Activar/desactivar backup  automático
             toggle_backup_automatico
             ;;
         3)
@@ -1081,7 +1081,7 @@ while true; do
             restaurar_backup
             ;;
         4)
-            # Gestionar lista de backups autom áticos
+            # Gestionar lista  de backups autom áticos
             gestionar_backup_auto
             ;;
         5)
