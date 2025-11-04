@@ -287,13 +287,12 @@ del_usuario(){
         apellido=$(echo "$1" | cut -d: -f2)
         user=$(echo "$1" | cut -d: -f3)
 
-    if usuario_existe "$1" && [ "$(id -u "$1" 2>/dev/null)" -ge 1000 ] && [ "$(id -u "$1" 2>/dev/null)" -le 65000 ]
+    if usuario_existe "$1" && [ "$(id -u "$1" 2>/dev/null)" -ge 1000 ] && [ "$(id -u "$1" 2>/dev/null)" -le 65000 ] &>/dev/null
     then
-        : 'sudo userdel -r "$user"
+        sudo userdel -r "$user"
         read -n1 -t2 -rsp "Usuario $user ($nombre $apellido) eliminado correctamente del sistema"
         printf "\n"
-        return '
-        read -n1 -t2 -rsp "ESTA MAAAAAAAAAAAL"
+        return 
     else
          read -n1 -t2 -rsp "ERROR: el usuario $user ($nombre $apellido) no existe en el sistema o es posible trabajar con el"
          printf "\n"
