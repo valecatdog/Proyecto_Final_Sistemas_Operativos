@@ -30,8 +30,6 @@ check_user() {
     fi
 }
 
-# Archivo de configuración persistente
-CONFIG_FILE="/etc/backup-script/backup-config.conf"
 
 # Función para cargar configuración desde archivo
 cargar_configuracion() {
@@ -775,14 +773,15 @@ crear_backup(){
     done
 }
 
-# FUNCIÓN BACKUP_DIARIO SIMPLIFICADA - SIN LOCKFILE
+## FUNCIÓN BACKUP_DIARIO CORREGIDA - Basada en el script que SÍ funciona
 backup_diario(){
-    local fecha=$(date '+%Y%m%d')
+    local fecha=$(date '+%Y%m%d_%H%M%S')  # Agregar hora, minutos y segundos
     local usuarios_procesados=0
     local archivos_creados=()
     local exit_code=0
 
     echo "🔄 [BACKUP-DIARIO] Iniciando backup automático - PID: $$" >> /var/log/backups.log
+    echo "🔄 [BACKUP-DIARIO] Fecha: $fecha" >> /var/log/backups.log
 
     # Validar configuración crítica
     if [ -z "$CRON_HORA" ] || [ -z "$CRON_MINUTO" ]; then
@@ -791,42 +790,61 @@ backup_diario(){
     fi
 
     # Verificar si el archivo de lista existe y tiene contenido
-    if [ ! -f "$backup_list" ] || [ ! -s "$backup_list" ]; then
+    if [ ! -f "$backup_list" ]; then
+        echo "❌ [BACKUP-DIARIO] Archivo de lista no encontrado: $backup_list" >> /var/log/backups.log
+        return 1
+    fi
+
+    if [ ! -s "$backup_list" ]; then
         echo "ℹ️  [BACKUP-DIARIO] Lista vacía, no hay backups para realizar" >> /var/log/backups.log
         return 0
     fi
+
+    echo "ℹ️  [BACKUP-DIARIO] Leyendo lista de backups: $backup_list" >> /var/log/backups.log
 
     # Leer la lista de backups automáticos
     while IFS= read -r linea; do
         # Saltar líneas vacías o comentarios
         [[ -z "$linea" || "$linea" =~ ^# ]] && continue
         
+        echo "ℹ️  [BACKUP-DIARIO] Procesando línea: $linea" >> /var/log/backups.log
+
         if [[ "$linea" =~ ^@ ]]; then
             # Es un grupo
             grupo="${linea#@}"
             if grupo_existe "$grupo"; then
                 echo "👥 [BACKUP-DIARIO] Procesando grupo: $grupo" >> /var/log/backups.log
                 
-                # Evitar process substitution - usar método compatible
-                local usuarios_del_grupo
-                usuarios_del_grupo=$(obtener_usuarios_de_grupo "$grupo")
-                
+                # Obtener usuarios del grupo - CORREGIDO: método más robusto
                 while IFS= read -r usuario; do
                     if [ -n "$usuario" ] && usuario_existe "$usuario"; then
                         home_dir=$(getent passwd "$usuario" | cut -d: -f6)
                         if [ -d "$home_dir" ]; then
+                            # CORREGIDO: Usar timestamp completo para evitar duplicados
                             archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
-                            if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
+                            echo "ℹ️  [BACKUP-DIARIO] Creando backup de $usuario en $archivo_backup" >> /var/log/backups.log
+                            
+                            # CORREGIDO: Usar el mismo método que en el script funcional
+                            if tar -cjf "$archivo_backup" -C / "$home_dir" >> /var/log/backups.log 2>&1; then
                                 echo "✅ [BACKUP-DIARIO] Backup creado: $usuario" >> /var/log/backups.log
                                 ((usuarios_procesados++))
                                 archivos_creados+=("$archivo_backup")
+                                
+                                # Programar transferencia remota inmediatamente
+                                if [ "$REMOTE_BACKUP_ENABLED" = "true" ]; then
+                                    programar_transferencia_remota "$archivo_backup" "$RSYNC_DELAY_MINUTOS"
+                                fi
                             else
                                 echo "❌ [BACKUP-DIARIO] Error creando backup: $usuario" >> /var/log/backups.log
                                 exit_code=1
                             fi
+                        else
+                            echo "❌ [BACKUP-DIARIO] El directorio home de $usuario no existe: $home_dir" >> /var/log/backups.log
                         fi
+                    else
+                        echo "❌ [BACKUP-DIARIO] Usuario $usuario no existe, omitiendo" >> /var/log/backups.log
                     fi
-                done <<< "$usuarios_del_grupo"
+                done < <(obtener_usuarios_de_grupo "$grupo")
             else
                 echo "❌ [BACKUP-DIARIO] Grupo no existe: $grupo" >> /var/log/backups.log
                 exit_code=1
@@ -837,15 +855,26 @@ backup_diario(){
             if usuario_existe "$usuario"; then
                 home_dir=$(getent passwd "$usuario" | cut -d: -f6)
                 if [ -d "$home_dir" ]; then
+                    # CORREGIDO: Usar timestamp completo
                     archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
-                    if tar -cjf "$archivo_backup" "$home_dir" 2>/dev/null; then
+                    echo "ℹ️  [BACKUP-DIARIO] Creando backup de $usuario en $archivo_backup" >> /var/log/backups.log
+                    
+                    # CORREGIDO: Usar el mismo método que en el script funcional
+                    if tar -cjf "$archivo_backup" -C / "$home_dir" >> /var/log/backups.log 2>&1; then
                         echo "✅ [BACKUP-DIARIO] Backup creado: $usuario" >> /var/log/backups.log
                         ((usuarios_procesados++))
                         archivos_creados+=("$archivo_backup")
+                        
+                        # Programar transferencia remota inmediatamente
+                        if [ "$REMOTE_BACKUP_ENABLED" = "true" ]; then
+                            programar_transferencia_remota "$archivo_backup" "$RSYNC_DELAY_MINUTOS"
+                        fi
                     else
                         echo "❌ [BACKUP-DIARIO] Error creando backup: $usuario" >> /var/log/backups.log
                         exit_code=1
                     fi
+                else
+                    echo "❌ [BACKUP-DIARIO] El directorio home de $usuario no existe: $home_dir" >> /var/log/backups.log
                 fi
             else
                 echo "❌ [BACKUP-DIARIO] Usuario no existe: $usuario" >> /var/log/backups.log
@@ -854,62 +883,10 @@ backup_diario(){
         fi
     done < "$backup_list"
 
-    # Programar transferencias remotas
-    if [ ${#archivos_creados[@]} -gt 0 ] && [ "$REMOTE_BACKUP_ENABLED" = "true" ]; then
-        echo "📤 [BACKUP-DIARIO] Programando ${#archivos_creados[@]} transferencias remotas" >> /var/log/backups.log
-        for archivo in "${archivos_creados[@]}"; do
-            if ! programar_transferencia_remota "$archivo" "$RSYNC_DELAY_MINUTOS"; then
-                echo "❌ [BACKUP-DIARIO] Error programando transferencia: $(basename "$archivo")" >> /var/log/backups.log
-                exit_code=1
-            fi
-        done
-    fi
-
     echo "✅ [BACKUP-DIARIO] Completado: $usuarios_procesados usuarios procesados" >> /var/log/backups.log
     
     return $exit_code
 }
-
-# CORREGIDA: función para activar/desactivar el backup automatico con validaciones
-toggle_backup_automatico(){
-    if backup_automatico_activo; then
-        # DESACTIVAR - eliminar de crontab
-        (crontab -l 2>/dev/null | grep -v "$Delta") | crontab -
-        echo "🔴 Backup automático DESACTIVADO"
-        echo "$(date): 🔴 Backup automático desactivado" >> /var/log/backups.log
-    else
-        # Verificar dependencias antes de activar
-        echo "Verificando dependencias antes de activar backup automático..." >> /var/log/backups.log
-        if ! verificar_dependencias; then
-            echo "❌ No se puede activar backup automático debido a errores en dependencias"
-            echo "❌ Revisa /var/log/backups.log para más detalles"
-            return 1
-        fi
-        
-        # Mostrar advertencia si la lista está vacía
-        if [ ! -f "$backup_list" ] || ! grep -v '^#' "$backup_list" | grep -v '^$' | read; then
-            echo "⚠️  ¡ADVERTENCIA: La lista de backups automáticos está vacía!"
-            echo "   No se realizarán backups hasta que añada usuarios/grupos."
-            echo "   Puede gestionar la lista en la opción 4 del menú principal."
-            echo
-        fi
-        
-        # Programar ejecución DIARIA a la hora específica
-        local entrada_cron="$CRON_MINUTO $CRON_HORA * * * $Delta automatico"
-        (crontab -l 2>/dev/null; echo "$entrada_cron") | crontab -
-        
-        echo "🟢 Backup automático ACTIVADO"
-        echo "   Se ejecutará diariamente a las $(get_cron_hora_completa)"
-        echo "   Las transferencias remotas se programarán con at"
-        echo "$(date): 🟢 Backup automático activado - $entrada_cron" >> /var/log/backups.log
-        
-        # Mostrar entrada de cron actual
-        echo
-        echo "📅 Entrada de cron actual:"
-        crontab -l | grep "$Delta"
-    fi
-}
-
 # funcion para restaurar backups existentes DUH
 restaurar_backup(){
     while true; do
