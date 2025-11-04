@@ -460,7 +460,7 @@ archivo_procesar_addDel(){
     #despliega todos los usuarios
     usuariosTrabajar=()
 
-    echo "-1. Todos"
+    echo "-T. Todos"
     for ((i = 0; i < ${#listaUsuarios[@]}; i++)); do
         IFS=':' read -r nombre apellido user <<< "${listaUsuarios[i]}"
 
@@ -488,7 +488,7 @@ archivo_procesar_addDel(){
             return
         else
         #Si sí se ingresaron usuarios
-            if echo "$opciones" | grep -qw "-1"
+            if echo "$opciones" | grep -qw "T"
             then
                 for ((i=0; i<${#usuariosTrabajar[@]}; i++)); do
                     if [ "$1" = add ]; then
