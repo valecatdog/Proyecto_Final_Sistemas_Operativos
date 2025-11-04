@@ -31,6 +31,7 @@ check_user() {
 }
 
 
+
 # Función para cargar configuración desde archivo
 cargar_configuracion() {
     if [ -f "$CONFIG_FILE" ]; then
@@ -773,7 +774,7 @@ crear_backup(){
     done
 }
 
-## FUNCIÓN BACKUP_DIARIO CORREGIDA - Basada en el script que SÍ funciona
+# FUNCIÓN BACKUP_DIARIO CORREGIDA - Basada en el script que SÍ funciona
 backup_diario(){
     local fecha=$(date '+%Y%m%d_%H%M%S')  # Agregar hora, minutos y segundos
     local usuarios_procesados=0
@@ -887,6 +888,47 @@ backup_diario(){
     
     return $exit_code
 }
+
+# CORREGIDA: función para activar/desactivar el backup automatico con validaciones
+toggle_backup_automatico(){
+    if backup_automatico_activo; then
+        # DESACTIVAR - eliminar de crontab
+        (crontab -l 2>/dev/null | grep -v "$Delta") | crontab -
+        echo "🔴 Backup automático DESACTIVADO"
+        echo "$(date): 🔴 Backup automático desactivado" >> /var/log/backups.log
+    else
+        # Verificar dependencias antes de activar
+        echo "Verificando dependencias antes de activar backup automático..." >> /var/log/backups.log
+        if ! verificar_dependencias; then
+            echo "❌ No se puede activar backup automático debido a errores en dependencias"
+            echo "❌ Revisa /var/log/backups.log para más detalles"
+            return 1
+        fi
+        
+        # Mostrar advertencia si la lista está vacía
+        if [ ! -f "$backup_list" ] || ! grep -v '^#' "$backup_list" | grep -v '^$' | read; then
+            echo "⚠️  ¡ADVERTENCIA: La lista de backups automáticos está vacía!"
+            echo "   No se realizarán backups hasta que añada usuarios/grupos."
+            echo "   Puede gestionar la lista en la opción 4 del menú principal."
+            echo
+        fi
+        
+        # Programar ejecución DIARIA a la hora específica
+        local entrada_cron="$CRON_MINUTO $CRON_HORA * * * $Delta automatico"
+        (crontab -l 2>/dev/null; echo "$entrada_cron") | crontab -
+        
+        echo "🟢 Backup automático ACTIVADO"
+        echo "   Se ejecutará diariamente a las $(get_cron_hora_completa)"
+        echo "   Las transferencias remotas se programarán con at"
+        echo "$(date): 🟢 Backup automático activado - $entrada_cron" >> /var/log/backups.log
+        
+        # Mostrar entrada de cron actual
+        echo
+        echo "📅 Entrada de cron actual:"
+        crontab -l | grep "$Delta"
+    fi
+}
+
 # funcion para restaurar backups existentes DUH
 restaurar_backup(){
     while true; do
