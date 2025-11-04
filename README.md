@@ -1,1 +1,0 @@
-mmmmmmm apól

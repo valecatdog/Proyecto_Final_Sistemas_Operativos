@@ -24,15 +24,15 @@ le dice al shell que use es_ES.UTF-8 como codificación para todo. lo agregamos 
 no manejan por si solos la misma cantidad de caracteress y eso genera un problema en la ejecucion
 '
 
-#ESPACIO PARA FUNCIONES
-#NO CORREGIDO NO COMENTADO
-#CORREGIDO NO COMENTADO
-
+#FALTA PARTE ARU
 menu_principal(){
+    #mientras la variable valido sea falsa se ejecuta el while (permite ingresar opciones incorrectas y seguir)
     valido="false"
     while [ "$valido" = false ]
         do
+            #menu
             clear
+            #clear limpia la pantalla. asi queda mas prolijo
             echo "==ELIJA UN MODO== "
             printf "\n"
             echo "CTRL+C. Salir"
@@ -40,12 +40,18 @@ menu_principal(){
             echo "2. Gestion de backups"
             printf "\n"
             read -rp "Opcion: " opcion
+            #r es raw (no expande \), p para mostrar texto
             printf "\n--------------------------------\n\n"
             #el echo no expande el \n, printf si
 
+            #segun el valor de opcion lo que se haga
             case $opcion in
+            #usamos numeros en los case por comodidad, podria haber sido perfectamente letras como a b c
                 1)
+                    #si es 1, se manda el menu usuaris grupos
                     menu_usuarios_grupos
+                    return
+                    #return para asegurarnos de que no siga corriendo esta funcion despues de ido al otro menu
                 ;;
                 
                 2)
@@ -54,6 +60,7 @@ menu_principal(){
                     echo "te extraño"
                 ;;
                 
+                #si se ingresa cualquier cosa que no sea de las que se especifico hace esto
                 *)
                     read -t2 -n1 -rsp "Error: opción incorrecta" 
                     : 't (timeout): tiempo de espera; -n (num. of char.): permite escribir sol un caracter. es util porque si el usuario
@@ -63,15 +70,19 @@ menu_principal(){
                     '
                 ;;
         esac    
-
+    #cierre del case
      done
+     #cierre del while
 
 }
 
 
 menu_usuarios_grupos(){
+    #un while uqe se ejecuta por siempre. como usamos funciones y return para salir, el while se va a cortar
+    #(no es necesaria una variable)
     while true 
     do
+        #menu
         clear
         echo "==GESTION DE USUARIOS Y GRUPOS=="
         printf "\n\n"
@@ -85,8 +96,12 @@ menu_usuarios_grupos(){
         printf "\n"
         read -rp "Opcion: " opcionCase1
         
+        #las variables que see van a switchear en el case tienen distintos nombres cada vez para
+        #evitar errores
         case $opcionCase1 in
+        #tambien usamos numeros en el case
             0)
+            #funciona como el case anterior y todos los demas case
                 menu_principal
                 break
             ;;
@@ -117,6 +132,7 @@ menu_usuarios_grupos(){
 }
 
 gestion_usuarios(){
+    #lo mismo que el anterior. no pusimos el do al costado por nada en particular 
     while true; do
         clear
         echo "==GESTION DE USUARIOS=="
@@ -144,7 +160,9 @@ gestion_usuarios(){
                 printf "\n"
                 read -rp "Ingrese la ruta del archivo a procesar (no ingresar nada para cancelar): " archivo
                 if [ -n "$archivo" ]; then
+                #-n es si NO esta vacio
                     archivo_procesar "$archivo"
+                    #le pasamos una variable como parametro para que trabaje con ella
                     return
                 else
                     gestion_usuarios
@@ -158,12 +176,16 @@ gestion_usuarios(){
                 printf "\n"
                     read -rp "Ingrese el nombre y apellido del usuario (no ingresar nada para cancelar): " nombre apellido
                     if [ -z "$nombre" ] && [ -z "$apellido" ]
+                    #-z significa "si esta vacio"
                     then
                         gestion_usuarios
                         return
                     elif [ -n "$nombre" ] && [ -n "$apellido" ]
+                    #elif es "else if", otro if
+                    #-n es "si NO esta vacio"
                     then
                         ingreso_usuario "$nombre" "$apellido"
+                        #aca le pasamos variables como parametros a una funcion para que trabaje con ellas
                         return
                     else
                         read -n1 -t1 -rsp "ERROR: procure escribir el nombre y el apellido del usuario"
@@ -176,7 +198,7 @@ gestion_usuarios(){
                 echo "==LISTADO DE USUARIOS=="
                 echo "*este listado solo contiene usuarios estandar"
                 printf "\n"
-
+            
                 getent passwd | awk -F: '$3 >= 1000 && $3 <= 60000 { print $3 ". " $1 }'
                 : ' getent passwd es lo mismo que cat /etc/passwd
                 -F: funciona como un cut -d: 
@@ -196,8 +218,6 @@ gestion_usuarios(){
 
 }
 
-#CORREGIDO Y COMENTADO
-#recibe nombre y apellido
 generar_usuario() {
     local nombre
     local apellido
