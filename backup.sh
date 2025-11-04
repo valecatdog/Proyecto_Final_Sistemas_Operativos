@@ -1305,7 +1305,7 @@ if [ "$1" = "automatico" ]; then
             exit 0
         fi
         
-        # Ejecuta el backup diario automático
+        # Ejecuta el backup diario automático 
         echo "Ejecutando backup_diario..."
         if backup_diario; then
             echo "Backup automático diario completado exitosamente"

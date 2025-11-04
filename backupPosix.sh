@@ -12,7 +12,7 @@ programar_rsync() {
     
     echo "Programando transferencia remota para $ARCHIVO_LOCAL a $TIEMPO_AT..." >> "$LOG_FILE"
 
-    # DIFERENCIA: Añadir opciones SSH para rsync con clave específica
+    # DIFERENCIA: Añadir opciones SSH para rsync con clave específic a
     echo "/usr/bin/rsync -avz -e \"ssh -i $SSH_KEY -o StrictHostKeyChecking=no\" \"$ARCHIVO_LOCAL\" \"$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/\" >> \"$LOG_FILE\" 2>&1" | at "$TIEMPO_AT"
     
     echo "Transferencia remota programada con 'at'."
