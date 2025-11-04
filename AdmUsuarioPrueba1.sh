@@ -295,7 +295,7 @@ del_usuario(){
         return '
         read -n1 -t2 -rsp "ESTA MAAAAAAAAAAAL"
     else
-         read -n1 -t2 -rsp "ERROR: el usuario $user ($nombre $apellido) no existe en el sistema"
+         read -n1 -t2 -rsp "ERROR: el usuario $user ($nombre $apellido) no existe en el sistema o es posible trabajar con el"
          printf "\n"
          return
     fi
