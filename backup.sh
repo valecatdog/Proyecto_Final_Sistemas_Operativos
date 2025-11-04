@@ -1,11 +1,10 @@
-#! /bin/bash
+#!/bin/bash
 
 #en esta variable guardamos la direccion de donde se van a guardar los backups
 dir_backup="/var/users_backups"
 # Delta es el valor actual de este scrit, lo conseguimos con realpath
 # tambien podriamos usar la direccion actual del script y ya, pero esto le da mas flexibilidad
 Delta=$(realpath "$0")
-lockfile="/var/lock/backup-script.lock"
 # Archivo de configuracion para la lista de backups automaticos
 backup_list="/etc/backup-script/auto-backup-list.conf"
 REMOTE_BACKUP_USER="respaldo_user"
@@ -20,31 +19,6 @@ CRON_MINUTO="10"        # Minuto (0-59)
 
 # Nueva variable para el delay de rsync (minutos después del backup)
 RSYNC_DELAY_MINUTOS="5"
-
-#**investigar mas a detalle
-cleanup() {
-    echo "$(date): [CLEANUP] Ejecutando limpieza..." >> /var/log/backups.log
-    # Eliminar lockfile si existe
-    if [ -f "$lockfile" ]; then
-        local current_pid=$$
-        local lock_pid=$(cat "$lockfile" 2>/dev/null)
-        
-        # Solo eliminar si el lockfile es de este proceso o el proceso ya no existe
-        if [ "$lock_pid" = "$current_pid" ] || [ -z "$lock_pid" ] || ! ps -p "$lock_pid" > /dev/null 2>&1; then
-            rm -f "$lockfile"
-            echo "$(date): [CLEANUP] Lockfile removido (PID: $lock_pid, Current: $current_pid)" >> /var/log/backups.log
-        else
-            echo "$(date): [CLEANUP] Lockfile NO removido - pertenece a proceso activo PID: $lock_pid" >> /var/log/backups.log
-        fi
-    fi
-    # Eliminar directorio temporal si existe
-    if [ -n  "$temp_dir" ] && [ -d "$temp_dir" ]; then
-        rm -rf "$temp_dir"
-        echo "$(date): [CLEANUP] Directorio temporal removido: $temp_dir" >> /var/log/backups.log
-    fi
-}
-#****** trap se encarga de ejecutar cleanup cuando el script termina (EXIT) o recibe señales (INT, TERM)
-trap cleanup EXIT INT TERM
 
 #**** funcion para verificar que el script se ejecute como root
 check_user() {
@@ -143,53 +117,6 @@ verificar_dependencias() {
     fi
     
     return $errores
-}
-
-# funcion para adquirir el lock y evitar ejecuciones simultaneas
-acquire_lock() {
-    if [ -f "$lockfile" ]; then
-        local lock_pid=$(cat "$lockfile" 2>/dev/null)
-        if [ -n "$lock_pid" ] && ps -p "$lock_pid" > /dev/null 2>&1; then
-            echo "ERROR: El script ya se está ejecutando en otro proceso (PID: $lock_pid)"
-            echo "Lockfile encontrado: $lockfile"
-            echo "Si estás seguro de que no hay otra ejecución, puedes eliminar manualmente:"
-            echo "sudo rm -f $lockfile"
-            return 1
-        else
-            # Lockfile obsoleto, eliminarlo
-            echo "$(date): [LOCK] Eliminando lockfile obsoleto (PID $lock_pid no existe)" >> /var/log/backups.log
-            rm -f "$lockfile"
-        fi
-    fi
-    
-    # Crear nuevo lockfile
-    echo $$ > "$lockfile"
-    echo "$(date): [LOCK] Lock adquirido por PID $$" >> /var/log/backups.log
-    return 0
-}
-
-#**** funcion para liberar el lock
-release_lock() {
-    if [ -f "$lockfile" ]; then
-        rm -f "$lockfile"
-        echo "$(date): [LOCK] Lock liberado por PID $$" >> /var/log/backups.log
-    fi
-}
-
-#***** funcion que ejecuta cualquier comando con lock para evitar races
-execute_with_lock() {
-    if ! acquire_lock; then
-        return 1
-    fi
-    
-    # Ejecutar la función pasada como parámetro
-    "$@"
-    local result=$?
-    
-    # Liberar lock después de la operación
-    release_lock
-    
-    return $result
 }
 
 # Función para realizar respaldo remoto
@@ -786,14 +713,8 @@ crear_backup(){
     done
 }
 
-#***** FUNCIÓN BACKUP_DIARIO CORREGIDA - Sin conflicto de traps
+# FUNCIÓN BACKUP_DIARIO SIMPLIFICADA - SIN LOCKFILE
 backup_diario(){
-    # Adquirir lock de manera segura
-    if ! acquire_lock; then
-        echo "❌ ERROR: No se pudo adquirir lock, backup automático omitido" >> /var/log/backups.log
-        return 1
-    fi
-    
     local fecha=$(date '+%Y%m%d')
     local usuarios_procesados=0
     local archivos_creados=()
@@ -804,14 +725,12 @@ backup_diario(){
     # Validar configuración crítica
     if [ -z "$CRON_HORA" ] || [ -z "$CRON_MINUTO" ]; then
         echo "❌ ERROR: Variables CRON_HORA o CRON_MINUTO no configuradas" >> /var/log/backups.log
-        release_lock
         return 1
     fi
 
     # Verificar si el archivo de lista existe y tiene contenido
     if [ ! -f "$backup_list" ] || [ ! -s "$backup_list" ]; then
         echo "ℹ️  [BACKUP-DIARIO] Lista vacía, no hay backups para realizar" >> /var/log/backups.log
-        release_lock
         return 0
     fi
 
@@ -885,9 +804,6 @@ backup_diario(){
     fi
 
     echo "✅ [BACKUP-DIARIO] Completado: $usuarios_procesados usuarios procesados" >> /var/log/backups.log
-    
-    # Liberar lock
-    release_lock
     
     return $exit_code
 }
@@ -1109,15 +1025,16 @@ while true; do
 
     case $opcion in
         1)
-        # crear backup con lock para evitar ejecuciones simultaneas again
-            execute_with_lock crear_backup
+            # crear backup directamente sin lock
+            crear_backup
             ;;
         2)
             # No necesita lock porque solo modifica crontab
             toggle_backup_automatico
             ;;
         3)
-            execute_with_lock restaurar_backup
+            # restaurar backup directamente sin lock
+            restaurar_backup
             ;;
         4)
             gestionar_backup_auto
@@ -1127,7 +1044,7 @@ while true; do
             ;;
         6)
             echo "Ejecutando backup automático de prueba..."
-            execute_with_lock backup_diario
+            backup_diario
             ;;
         7)
             echo "Ejecutando verificación de dependencias..."
