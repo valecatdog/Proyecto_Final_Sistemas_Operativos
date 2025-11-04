@@ -188,20 +188,11 @@ add_usuario(){
 
     if ! usuario_existe "$1"; then
         letraNombre=$(echo "$nombre" | cut -c1 | tr '[:lower:]' '[:upper:]')
-        #extraemos la primera letra del nombre (como antes) y si esta en minuscula la pasamos a mayuscula
         letraApellido=$(echo "$apellido" | cut -c1 | tr '[:upper:]' '[:lower:]')
-        #extraemos la primera letra del apellido (como antes) y si esta en mayuscula la pasamos a minuscula
         passwd="$letraNombre${letraApellido}#123456"
-        #la contraseña va a se la letraNombre+letraApellido+#123456 (como pide la consigna)
 
-        #ingresar usuario
         sudo useradd -mc "$nombre $apellido" "$user"
-        : 'aniadimos el usuario con useradd. -m crea el directorio del usuario si no existe y
-        -c agrema un comentario (nombre apellido). aunque el script deberia ser ejecutado con sudo, en caso
-        de olvido, lo agregamos de todas formas 
-        '
         echo "$user":"$passwd" | sudo chpasswd 
-        #chpasswd, que asigna contrasenias, espera recibir parametros por entrada estandar. por eso el pipe
         sudo chage -d 0 "$user"
 
         read -n1 -t2 -rsp "Usuario $user creado correctamente. Contraseña: $passwd"
