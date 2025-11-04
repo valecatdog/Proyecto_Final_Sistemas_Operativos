@@ -37,7 +37,7 @@ check_user() {
 
 # Carga la configuración desde archivo persistente o crea una nueva con valores por defecto
 cargar_configuracion() {
-    if [ -f "$CONFIG_FILE" ]; then
+    if [ -f "$CONFIG_FILE" ] && [ -r "$CONFIG_FILE" ]; then
         # source ejecuta el archivo de configuración como si fuera parte del script
         # ¡ESTO SOBRESCRIBE LOS VALORES POR DEFECTO CON LOS GUARDADOS!
         source "$CONFIG_FILE"
@@ -53,9 +53,10 @@ guardar_configuracion() {
     mkdir -p "/etc/backup-script"
     
     # cat con here-document escribe múltiples líneas en el archivo de configuración
-    cat > "$CONFIG_FILE" << EOF
-# Configuración de Backup Automático
-# Este archivo se actualiza automáticamente - NO EDITAR MANUALMENTE
+    
+    # Configuración de Backup Automático
+    # Este archivo se actualiza automáticamente - NO EDITAR MANUALMENTE
+    cat > "$CONFIG_FILE" << EOF 
 
 CRON_HORA="$CRON_HORA"
 CRON_MINUTO="$CRON_MINUTO"
@@ -172,6 +173,8 @@ verificar_dependencias() {
         # ConnectTimeout=5 limita el tiempo de espera a 5 segundos (no colgar)
         # "echo 'OK'" para probar que funciona
         # &>/dev/null redirige TODO el output a /dev/null 
+        # -o es para que despues de 5 segundos max para recibir la conexion
+        # -i le dice que vas a usar una direccion de clave privada, y no una por defecto
         if ! ssh -i "$SSH_KEY" -o ConnectTimeout=5 -o BatchMode=yes "$REMOTE_BACKUP_USER@$REMOTE_BACKUP_HOST" "echo 'OK'" &>/dev/null; then
             echo "CONECTIVIDAD: No se puede conectar a $REMOTE_BACKUP_HOST" >> /var/log/backups.log
             ((errores++))
@@ -429,7 +432,7 @@ menu_alpha(){
 
 
 #muestra el menu de gestión de lista de backups automáticos
-# es un menu, no hay mucho que explicar, ejem...
+# es un menu, no hay mucho que explicar, ejem... 
 menu_gestion_backup_auto() {
     clear
     echo "=== GESTIÓN DE BACKUPS AUTOMÁTICOS ==="
@@ -1072,7 +1075,30 @@ configurar_respaldo_remoto() {
     done
 }
 
-
+# Función para ejecutar backup automático INMEDIATAMENTE (para pruebas)
+ejecutar_backup_automatico_ahora() {
+    echo "Ejecutando backup automático de prueba..."
+    echo "Leyendo lista: $backup_list"
+    
+    if [ ! -f "$backup_list" ] || [ ! -s "$backup_list" ]; then
+        echo "ERROR: La lista de backups está vacía o no existe"
+        echo "Use la opción 4 para añadir usuarios/grupos primero"
+        return 1
+    fi
+    
+    echo "Contenido de la lista:"
+    grep -v '^#' "$backup_list" | grep -v '^$' | nl -w 2 -s '. '
+    echo
+    
+    # Ejecutar el backup diario
+    if backup_diario; then
+        echo "Backup automático ejecutado exitosamente"
+        echo "Revisa /var/log/backups.log para detalles"
+    else
+        echo "Error en backup automático"
+        echo "Revisa /var/log/backups.log para más información"
+    fi
+}
 
 # Reemplaza toggle_backup_automatico por esta función:
 configurar_backup_automatico() {
@@ -1085,6 +1111,7 @@ configurar_backup_automatico() {
     fi
     
     # Verificar si la lista está vacía (solo advertencia)
+    # -v: las que no coinciden. ^# es empieza con #, el otro es que empieza y termina
     if [ ! -f "$backup_list" ] || ! grep -v '^#' "$backup_list" | grep -v '^$' | read; then
         echo "ADVERTENCIA: La lista de backups automáticos está vacía"
         echo "No se realizarán backups hasta que añada usuarios/grupos."
@@ -1101,14 +1128,17 @@ configurar_backup_automatico() {
     # Eliminar cualquier entrada existente y agregar la nueva
     (crontab -l 2>/dev/null | grep -v "$Delta"; echo "$entrada_cron") | crontab -
     
-    echo "Backup automático CONFIGURADO"
+      echo "Backup automático CONFIGURADO"
     echo "Se ejecutará diariamente a las $(get_cron_hora_completa)"
     echo "$(date): Backup automático configurado - $entrada_cron" >> /var/log/backups.log
     
     # Mostrar confirmación
-    echo
     echo "Entrada de cron actual:"
     crontab -l | grep "$Delta"
+    
+    # Preguntar si quiere probar ahora
+
+    ejecutar_backup_automatico_ahora
 }
 
 # Restaura un backup seleccionado por el usuario
@@ -1325,7 +1355,7 @@ while true; do
         6)
             # ejecutar backup automático de prueba
             echo "Ejecutando backup automático de prueba..."
-            backup_diario
+            ejecutar_backup_automatico_ahora
             ;;
         7)
             # vrificar dependencias del sistema
@@ -1337,3 +1367,6 @@ while true; do
             # Salir del plograma
             echo "Cerrando programa"
             exit 0 
+    esac
+done
+
