@@ -26,7 +26,7 @@ menu_principal() {
             2)
                 valido="true"
                 # Cargar el script de backup
-                . ./backup.sh
+                . ./backup2.sh
             ;;
             *)
                 echo "Error: opción incorrecta"
