@@ -18,8 +18,6 @@ REMOTE_BACKUP_DIR="/backups/usuarios"   #--- directorio destino en servidor remo
 SSH_KEY="/root/.ssh/backup_key"         #--- ruta de la clave SSH para autenticacion 
 
 
-cargar_configuracion
-
 # Variables de rutas y directorios del sistema
 dir_backup="/var/users_backups"         #--- Directorio local donde se almacenan los backups
 Delta=$(realpath "$0")                  # ---Ruta absoluta del script actual para referencias
@@ -446,93 +444,161 @@ menu_gestion_backup_auto() {
 # Muestra la lista actual de elementos para backup automático
 ver_lista_backup_auto() {
     echo "=== LISTA ACTUAL DE BACKUPS AUTOMÁTICOS ==="
+    
+    # primero verificamos si el archivo existe y tiene contenido
+    # [ ! -s ] verifica que el archivo existe Y tiene tamaño > 0
     if [ ! -s "$backup_list" ]; then
         echo "La lista está vacía."
         echo "Los backups automáticos no se ejecutarán hasta que añada elementos."
+        echo "Use las opciones 2 o 3 para añadir usuarios o grupos."
     else
-        # grep -v '^#' excluye líneas comentadas, nl enumera las líneas resultantes
-        # -w 2 establece ancho de 2 dígitos para números, -s '. ' usa punto como separador
+        # aqui procesamos el archivo de lista para mostrarlo bonito:
+        # grep -v '^#' = excluye lineas que empiezan con # (comentarios)
+        # grep -v '^$' = excluye lineas vacias
+        # nl -w 2 -s '. ' = numero las lineas con ancho 2 y separador ". "
         grep -v '^#' "$backup_list" | grep -v '^$' | nl -w 2 -s '. '
+        
+        # ejemplo de output:
+        # 1. usuario1
+        # 2. @grupo_developers
+        # 3. usuario2
     fi
-    echo
+    echo  # linea en blanco para separar
 }
-
 # Añade un usuario a la lista de backups automáticos
 añadir_usuario_backup_auto() {
+    # pedimos el nombre de usuario con opcion de cancelar
     if ! leer_con_cancelar "Ingrese nombre de usuario a añadir" usuario; then
-        return 1
+        return 1  # salimos si el usuario cancela
     fi
     
+    # verificamos que el usuario realmente exista en el sistema
+    # no tiene sentido hacer backup de usuarios fantasmas
     if usuario_existe "$usuario"; then
-        # Verifica si el usuario ya está en la lista para evitar duplicados
+        # verificamos si el usuario ya está en la lista para evitar duplicados
+        # grep -q busca silenciosamente (no muestra output)
+        # ^$usuario$ = busca exactamente el usuario (no subcadenas)
         if grep -q "^$usuario$" "$backup_list"; then
             echo "El usuario $usuario ya está en la lista."
+            echo "No se permiten duplicados."
         else
+            # añadimos el usuario al final del archivo
             echo "$usuario" >> "$backup_list"
             echo "Usuario $usuario añadido a la lista de backups automáticos."
+            echo "Se hará backup automático de /home/$usuario diariamente."
+            
+            # loggeamos el cambio para auditoria
+            echo "$(date): Usuario $usuario añadido a lista automática" >> /var/log/backups.log
         fi
     else
+        # el usuario no existe, informamos al usuario
         echo "El usuario $usuario no existe."
+        echo "Verifique que el nombre esté escrito correctamente."
+        echo "Puede ver usuarios existentes con: getent passwd"
     fi
 }
 
 # Añade un grupo a la lista de backups automáticos
 añadir_grupo_backup_auto() {
+    # pedimos el nombre del grupo con opcion de cancelar
     if ! leer_con_cancelar "Ingrese nombre del grupo a añadir" grupo; then
         return 1
     fi
     
+    # verificamos que el grupo exista en el sistema
     if grupo_existe "$grupo"; then
+        # preparamos la linea para el archivo: @nombre_grupo
         grupo_line="@$grupo"
-        # Verifica si el grupo ya está en la lista
+        
+        # verificamos si el grupo ya está en la lista
         if grep -q "^$grupo_line$" "$backup_list"; then
             echo "El grupo $grupo ya está en la lista."
+            echo "No se permiten duplicados."
         else
+            # añadimos el grupo al archivo con formato @grupo
             echo "$grupo_line" >> "$backup_list"
             echo "Grupo $grupo añadido a la lista de backups automáticos."
+            echo "Se hará backup de TODOS los usuarios del grupo $grupo diariamente."
+            
+            # mostramos cuantos usuarios tiene el grupo para confirmacion
+            local cantidad_usuarios=$(obtener_usuarios_de_grupo "$grupo" | wc -l)
+            echo "El grupo $grupo tiene $cantidad_usuarios usuarios."
+            
+            # loggeamos el cambio
+            echo "$(date): Grupo $grupo añadido a lista automática" >> /var/log/backups.log
         fi
     else
+        # el grupo no existe
         echo "El grupo $grupo no existe."
+        echo "Verifique que el nombre esté escrito correctamente."
+        echo "Puede ver grupos existentes con: getent group"
     fi
 }
 
-    # Elimina un elemento de la lista de backups automáticos
+# Elimina un elemento de la lista de backups automáticos
 eliminar_elemento_backup_auto() {
+    # primero mostramos la lista actual para que el usuario vea que hay
     ver_lista_backup_auto
     
+    # verificamos si la lista esta vacia - no tiene sentido continuar
     if [ ! -s "$backup_list" ]; then
-        return 1
+        echo "No hay elementos para eliminar."
+        return 1  # salimos de la funcion
     fi
     
     echo
+    # pedimos el numero del elemento a eliminar con opcion de cancelar
     if ! leer_con_cancelar "Ingrese el número del elemento a eliminar" numero; then
-        return 1
+        return 1  # usuario cancelo
     fi
     
-    # Obtiene el elemento específico basado en el número ingresado
+    # aqui viene la magia: extraemos el elemento especifico basado en el numero
+    # grep -v '^# = excluye comentrios
+    # grep -v '^$'= excluye lineas vacias  
+    # sed -n ${numero}p" = imprime solo la linea numero $numero
     elemento=$(grep -v '^#' "$backup_list" | grep -v '^$' | sed -n "${numero}p")
     
+    # verificamos que el numero sea valido (que sed encontro algo)
     if [ -z "$elemento" ]; then
         echo "Número inválido."
+        echo "Por favor ingrese un número de la lista mostrada."
         return 1
     fi
-    
+
+    # mostramos que elemento vamos a eliminar y pedimos confirmacion
+     # esto es importante porque la eliminacion es permanente
     echo "¿Eliminar '$elemento' de la lista?"
+    echo "¡Atención: Esto afectará los backups automáticos!"
     echo -n "Confirmar (s/n): "
     read confirmacion
     
+    # verificamos la confirmacion del usuario
     if [ "$confirmacion" = "s" ]; then
-        # Crea archivo temporal sin el elemento y reemplaza el original
-        temp_file=$(mktemp)
+        # para poder eliminiar
+        # creamos un archivo temporal sin el elemento a eliminar
+        temp_file=$(mktemp)  # mktemp crea un archivo temporal unico y seguro
+        
+        # grep -v "^$elemento$" busca TODAS las lineas que NO sean exactamente el elemento
+        # y las guarda en el archivo temporal(excluye el elemento)
         grep -v "^$elemento$" "$backup_list" > "$temp_file"
+        
+        # reemplazamos el archivo original con el temporal (que ya no tiene el elemento)
         mv "$temp_file" "$backup_list"
+        
         echo "Elemento '$elemento' eliminado."
+        echo "Los backups automáticos ya no incluirán este elemento."
+        
+        # loggeamos la eliminacion para auditoria
+        echo "$(date): Elemento $elemento eliminado de lista automática" >> /var/log/backups.log
+        
     else
+        # usuario se arrepintio o cancelo :(
         echo "Operación cancelada."
     fi
 }
 
 # Menú principal de gestión de lista de backups automáticos
+# si, definitivamente es otro menu
 gestionar_backup_auto() {
     while true; do
         menu_gestion_backup_auto
