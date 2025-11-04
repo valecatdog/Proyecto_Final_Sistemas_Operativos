@@ -1,4 +1,5 @@
 #!/bin/sh
+# el shebangg se define como sh para posix a diferencia del bash para bash .
 BACKUP_DIR="/var/users_backups"
 LOG_FILE="/var/log/backup.log"
 REMOTE_USER="respaldo_user"
