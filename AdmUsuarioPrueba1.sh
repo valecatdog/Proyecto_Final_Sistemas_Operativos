@@ -482,7 +482,6 @@ archivo_procesar_addDel(){
     done
     if [ "${#usuariosTrabajar[*]}" -ne 0 ]
     then
-
         read -rp "opcion/es (no ingrese nada para retroceder): " opciones
         
         #Si no se ingreso nada (te devuelve al menu)
@@ -505,18 +504,8 @@ archivo_procesar_addDel(){
                     else
                         del_usuario "${usuariosTrabajar[$opcion]}"
                     fi
-                else
-                    opcionesInvalidas+=" $opcion"
                 fi
-            done
-
-            if [ -n "$opcionesInvalidas" ]
-            then
-            #NO SE SI ESTO DE DEV NULL ESTA BIEN ASI
-                read -n1 -t1 -rsp "Las opciones invalidas ingresadas fueron: $(sort "$opcionesInvalidas" | uniq 2>/dev/null)"
-                opcionesInvalidas=""
-            fi
-            
+            done 
         fi
 
         archivo_procesar "$archivo"
