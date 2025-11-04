@@ -1,33 +1,8 @@
 #!/bin/bash
-#ARCHIVO PARA PRUEBAS DEL SCRIPT COMPLETO
-
-#ACTUALMENTE TRABAJANDO EN:
-: '
--hacer que ande para 2 parametros
-'
-
-#SUGERENCIAS
-: '
-
-
--verificar que los usuarios/grupos no coincidan con cosas que no se deberian borrar (cosas que vienen con el sistema)
-'
-
-#EXPLICACIONES
-: '
--los read tienen -r para que no se intrprete lo que se escriba (el shell )
-'
 
 export LC_ALL=es_ES.UTF-8
-: '
-le dice al shell que use es_ES.UTF-8 como codificación para todo. lo agregamos poruqe funciones como tr [:upper:] [:lower:]
-no manejan por si solos la misma cantidad de caracteress y eso genera un problema en la ejecucion
-'
 
-#ESPACIO PARA FUNCIONES
-#NO CORREGIDO NO COMENTADO
-#CORREGIDO NO COMENTADO
-
+#FALTA PONER LO DE ARU
 menu_principal(){
     valido="false"
     while [ "$valido" = false ]
@@ -41,7 +16,6 @@ menu_principal(){
             printf "\n"
             read -rp "Opcion: " opcion
             printf "\n--------------------------------\n\n"
-            #el echo no expande el \n, printf si
 
             case $opcion in
                 1)
@@ -49,25 +23,19 @@ menu_principal(){
                 ;;
                 
                 2)
-                #MODO GESTION DE BACKUPS,  LO HACER ARU
                     valido="true"
-                    echo "te extraño"
+                    . backup.sh
+                    return
                 ;;
                 
                 *)
                     read -t2 -n1 -rsp "Error: opción incorrecta" 
-                    : 't (timeout): tiempo de espera; -n (num. of char.): permite escribir sol un caracter. es util porque si el usuario
-                    toca una tecla puede terminar el tiempo de espera antes, y previene que lo que el usuario escriba
-                    se quede guardado para el proximo read (o sea ue limpia la entrada y previene errores); -s (secret/
-                    silent): no muestra lo que escribe el usuario; -r (raw): no interpreta; -p (prompt): muestra el texto
-                    '
                 ;;
         esac    
 
      done
 
 }
-
 
 menu_usuarios_grupos(){
     while true 
@@ -81,7 +49,6 @@ menu_usuarios_grupos(){
         echo "1. Crear o eliminar usuarios"
         echo "2. Crear o eliminar grupos"
         echo "3. Incorporar o remover usuarios de grupos"
-        #evitamos palabras con enie a toda costa para prevenir errores
         printf "\n"
         read -rp "Opcion: " opcionCase1
         
@@ -91,19 +58,16 @@ menu_usuarios_grupos(){
                 break
             ;;
             1)
-                #crear/eliminar users
                 gestion_usuarios
                 return
             ;;
 
             2)
-                #crear/eliminar grupos
                 gestion_grupos
                 return
             ;;
 
             3)
-            #usuarios&grupos
                 gestion_usuarios_grupos
                 return
             ;;
@@ -178,12 +142,6 @@ gestion_usuarios(){
                 printf "\n"
 
                 getent passwd | awk -F: '$3 >= 1000 && $3 <= 60000 { print $3 ". " $1 }'
-                : ' getent passwd es lo mismo que cat /etc/passwd
-                -F: funciona como un cut -d: 
-                $ 3 es el 3er campo (tiene los uid). verifica que sea  >= 1000 (ahi empiezan los usuarios normales)
-                60000 es aproximadamente el numero donde terminan los usuarios normales 
-                { print $ 1 } imprime el primer campo (el nombre de usuario)
-                '
                 printf "\n"
                 read -n 1 -srp "------Presione cualquier tecla para continuar------"
             ;;
@@ -196,28 +154,19 @@ gestion_usuarios(){
 
 }
 
-#CORREGIDO Y COMENTADO
-#recibe nombre y apellido
 generar_usuario() {
     local nombre
     local apellido
     local user
     local primeraLetra
-    #se hace por separado porque al ponerle local de una se pierde el valor de retorno ($?, si es 0, 1 etc)
 
     nombre="$1"
-    #la variable nombre toma el valor del primer parametro 
     apellido="$2"
     primeraLetra=$(echo "$nombre" | cut -c1)
-    #no se puede hacer cut -c1 $nombre poruqe cut no trabaja con el valor de las variables, por eso se usa un pipe
     user="$primeraLetra$apellido"
-    #creamos el user del usuario con la primera letra del nombre y el apellido
     usuario_completo="${nombre}:${apellido}:$user"
-    #usamos el formato nombre:apellido:user porque es lo mas comodo para trababarlo en el resto del script
 }
 
-#CORREGIDO Y COMENTADO
-#recibe usuario completo
 usuario_existe() {
     local user
     user="$(echo "$1" | cut -d: -f3)"
@@ -228,8 +177,6 @@ usuario_existe() {
     fi
 }
 
-#CORREGIDO Y COMENTADO
-#recibe usuario completo
 add_usuario(){
     local user
     local nombre
@@ -240,7 +187,6 @@ add_usuario(){
     user="$(echo "$1" | cut -d: -f3)"
 
     if ! usuario_existe "$1"; then
-        #generar contraseña
         letraNombre=$(echo "$nombre" | cut -c1 | tr '[:lower:]' '[:upper:]')
         #extraemos la primera letra del nombre (como antes) y si esta en minuscula la pasamos a mayuscula
         letraApellido=$(echo "$apellido" | cut -c1 | tr '[:upper:]' '[:lower:]')
@@ -257,7 +203,6 @@ add_usuario(){
         echo "$user":"$passwd" | sudo chpasswd 
         #chpasswd, que asigna contrasenias, espera recibir parametros por entrada estandar. por eso el pipe
         sudo chage -d 0 "$user"
-        #chage -d establece a fecha del ultimo cambio de la contrasenia, y 0 hace qeu expire inmediatamente
 
         read -n1 -t2 -rsp "Usuario $user creado correctamente. Contraseña: $passwd"
         printf "\n"
@@ -265,19 +210,11 @@ add_usuario(){
     else
         read -n1 -t3 -rsp "Error: el usuario $user ($nombre $apellido) ya existe en el sistema"
         printf "\n"
-        : 'informa que el usuario ya existe, no se puede crear
-        -n1: acepta un caracter. sirve para que la proxima vez qeu se haga un read, lo que se escribe en este no
-        "contamine" el otro (limpia el buffer). -t1: tiempo de espera de un segundo, -r: no interpreta lo que
-        escribe el usuario. -s: no muestra lo que se escribe. -p: para mosrtar el mensaje. Como no nos interesa
-        si el usuario escribe algo no especificamos una variable para que se guarde
-        '
         echo "$1" >> cre_usuarios.log 
         return
     fi
 }
 
-#CORREGIDO NO COMENTADO
-#recibe usuario completo
 del_usuario(){
     local nombre
     local apellido
@@ -300,9 +237,6 @@ del_usuario(){
     fi
 }
 
-#PARA USUARIOS INDIVIDUALES----------------------------
-#NO CORREGIDO NO COMENTADO
-#recibe nombre y apellido
 ingreso_usuario(){
     local nombre
     local apellido
@@ -349,26 +283,14 @@ ingreso_usuario(){
         return
     fi  
 }
-#-------------------------------------------------------
 
-
-#PARA ARCHIVOS-------------------------------------------
-#CORREGIDO NO COMENTADO
 verificar_archivo(){
     clear
     archivo="$1"
-    #guardo en la variable archivo  el valor del primer parametro ingresado (su ruta)
-    : 'le puse comillas porque el valor de la variable puede contener espacios (no deberia) o caracteres especiales (*$?etc). Lo preciso para poder 
-    #trabajar con la variable aunque hagan eso que dije'
-   
-    #verifica que se haya pasado un archivo valido. En otro caso, te sigue preguntando hasta que se lo ingreses
 
-
-    #empezando con el valor de la variable en falso, hace lo siguiente hasta que valido sea true
     until false
     do
         if [ -f "$archivo" ] && [ -r "$archivo" ] &&  grep -qE '^[[:alpha:]]+[[:space:]]+[[:alpha:]]+' "$archivo" 
-        #velifica que "archivo" sea un archivo valido (existente, legible y que contenga 2 o mas palabras (nomb y apell))
         then
             return 0
         elif [ -z "$archivo" ]
@@ -382,20 +304,15 @@ verificar_archivo(){
             clear
         fi
     done
-    #fin del until
 }
 
-#NO CORREGIDO NO COMENTADO, TIENE LA FUNCION archivo_procesar_addDel QUE NO SE SI ANDA
 archivo_procesar(){
     listaUsuarios=()
     archivo=$1
-    #definimos una lista para almacenar usuarios
 
     if ! verificar_archivo "$archivo"; then
-    #si el archivo que se le pasa no devuelve 0 (error) te lleva al menu (pasa cuando se ingresa un archivo vacio)
         gestion_usuarios
     else
-        #explicar
         while read -r nombre apellido _
         do
             generar_usuario "$nombre" "$apellido"
@@ -403,7 +320,6 @@ archivo_procesar(){
         done< <(awk 'NF >= 2 {print $1, $2}' "$archivo")
 
         while  true; do
-            #CAPAZ QUE HABRIA UQE HACER ALGO PARA RETROCEDER? 0?
             clear
             echo "==PROCESAR UN ARCHIVO==" 
             echo "*archivo: $archivo"
@@ -413,7 +329,6 @@ archivo_procesar(){
             echo "1. Crear usuarios"
             echo "2. Eliminar usuarios del sistema"
             read -rp "Opcion: " opcion
-            #el echo no expande el \n, printf si
 
             case $opcion in
                 0)
@@ -440,8 +355,6 @@ archivo_procesar(){
     fi
 }
 
-#LAS OPCIONES INCORRECTAS NO SE MUESRTAN
-#NO PROBADO NO COMENTADO
 archivo_procesar_addDel(){
     local usuariosTrabajar=()
     local ind
@@ -455,9 +368,8 @@ archivo_procesar_addDel(){
     else
         echo "Elegido: 2. Eliminar usuarios del sistema"
     fi
-#PROBANDO
+
     echo "Con qué usuarios desea trabajar? (ingrese sus numeros separados por espacios o nada para volver al menu anterior):"
-    #despliega todos los usuarios
     usuariosTrabajar=()
 
     echo "-T. Todos"
@@ -480,14 +392,11 @@ archivo_procesar_addDel(){
     then
         read -rp "opcion/es (no ingrese nada para retroceder): " opciones
         
-        #Si no se ingreso nada (te devuelve al menu)
-        #aca lo que hice fue poner el if para que si esta vacio te coso
         if [ -z "$opciones" ]
         then   
             archivo_procesar "$archivo"
             return
         else
-        #Si sí se ingresaron usuarios
             if echo "$opciones" | grep -qw "T"
             then
                 for ((i=0; i<${#usuariosTrabajar[@]}; i++)); do
@@ -500,7 +409,6 @@ archivo_procesar_addDel(){
             fi
 
             opciones=$(echo "$opciones" | tr -s ' ')
-            #si hay varios espacion en blanco seguidos los convertimos en uno para evitar errores
             for opcion in $opciones; do
                 if [[ "$opcion" =~ ^[0-9]+$ ]] && (( opcion >= 0 && opcion < ${#usuariosTrabajar[@]} )); then
                     if [ "$1" = add ]
@@ -519,9 +427,7 @@ archivo_procesar_addDel(){
         read -n1 -t1 -rsp "No hay usuarios trabajar con esta opcion"
     fi
 }
-#-----------------------------------------------------
 
-#GRUPOS------------------
 gestion_grupos(){
     while true
     do
@@ -572,17 +478,10 @@ del_grupo(){
     echo "==GESTION DE GRUPOS=="
     echo "Eliminar un grupo"
     printf "\n\n"
-    #obtengo todos los grupos de usuarios y los guardo en una lista
     mapfile -t listaGrupos < <(getent group | awk -F: '$3 >= 1000 && $3 < 60000 {print $1}')
-    : 'tambien conocido como readarray, s un comando que lee lineas de texto y las guarda en un array. con awk
-    lo qeu hacemos es filtrar la lista de gruops (getent group), haciendo qeu solo muestre el nombre de los grupos
-    de usuario. -t le agrega saltos de linea al final a cada elemento
-    '
-    #muestro la lista con el indice
     echo "Que grupos desea eliminar? (ingrese sus numeros separados por espacios):"
 
 
-    #es como un for each de java, desplegamos grupos
     for ((i=0; i<${#listaGrupos[@]}; i++)); do
         echo "${i}. ${listaGrupos[$i]}"
     done
@@ -591,17 +490,13 @@ del_grupo(){
     set -f
     read -rp "opcion/es (no ingrese nada para retroceder): " opciones
     
-    #Si no se ingreso nada (te devuelve al menu)
     if [ -z "$opciones" ]
     then   
         gestion_grupos
         return
     else
-    #Si sí se ingresaron grupos
         opciones=$(echo "$opciones" | tr -s ' ')
-        #si hay varios espacion en blanco seguidos los convertimos en uno para evitar errores
         for opcion in $opciones; do
-                            #arreglar esto
             if  [[ "$opcion" =~ ^[0-9]+$ ]] && (( "$opcion" >= 0 && "$opcion" < ${#listaGrupos[@]})) > /dev/null; then 
                 sudo groupdel "${listaGrupos["$opcion"]}"
                 read -n1 -t1 -srp "Se ha eliminado el grupo $opcion con exito"
@@ -611,10 +506,8 @@ del_grupo(){
         done
         if [ -n "$opcionesInvalidas" ]
         then
-            # desactivo la expansion de comdines por ahora, proque si  no al mostrar opciones incorrectas los expande
             read -n1 -t1 -rsp "Las opciones invalidas ingresadas fueron: $(echo "$opcionesInvalidas" | sort | uniq 2>/dev/null)"
             opcionesInvalidas=""
-            #activo expansion de comodines
         fi
         
     fi
@@ -636,7 +529,6 @@ add_grupo(){
             gestion_grupos
             return
         else
-            #los nombres pueden empezar con letras o guiones bajos, y el resto puede ser letras, nuemros o guiones -_
             if [[ "$nombre" =~ ^[a-zA-Z_][a-zA-Z0-9_-]+$ ]] && ! grupo_existe "$nombre"; then
                 sudo groupadd "$nombre"
                 read -n1 -t1 -srp "El grupo $nombre fue creado con exito"
@@ -699,7 +591,6 @@ admin_usergroup_manual_user(){
             return
         elif [[ $usuario =~ ^[A-Za-z]+$ ]]
         then
-        #hay 2 ifs en vez de uno para poder indicarle especificamente al usuario que error hay
             if usuario_existe_user "$usuario"; then
                 admin_usergroup_manual_grupo
                 return
@@ -814,8 +705,6 @@ admin_usergroup_archivo(){
                             listaUsuarios+=("$palabra")
                         fi
                     done
-
-                    read -t3 -n2 -srp "DEBUG: usuarios: ${listaUsuarios[*]}"
 
                     if [ -n "${listaUsuarios[*]}" ]; then
                         admin_usergroup_archivo_grupo
@@ -946,30 +835,21 @@ grupo_existe(){
         return 1
     fi   
 }
-#TERMINA ESPACIO DE FUNCIONES#########################################################################
 
-#NO SE SI ANDA ESTO, NO LO PROBE DESPUES DE PASAR LAS COSAS A FUNCIONES
-
-#ESTRUCTURA PRINCIPAL---------------------------------
 clear
-#SI NO SE INGRESAN PARAMETROS
 if (($# == 0))
 then
     menu_principal
 
-#SI SE INGRESA 1 PARAMETRO
 elif (($# == 1))
 then
     archivo_procesar "$1" 
 
-#SI SE INGRESAN 2 PARAMETROS
 elif (($# == 2))
 then
     ingreso_usuario "$1" "$2"
 
-#CANTIDAD INCORRECTA DE PARAMETROS
 else
     echo "Se ha ingresado una cantidad invalida de parametros"
 
-#FI DE LA ESTRUCTURA PRINCIPAL
 fi
