@@ -1,25 +1,26 @@
 #!/bin/bash
 
-#en esta variable guardamos la direccion de donde se van a guardar los backups
-dir_backup="/var/users_backups"
-# Delta es el valor actual de este scrit, lo conseguimos con realpath
-# tambien podriamos usar la direccion actual del script y ya, pero esto le da mas flexibilidad
-Delta=$(realpath "$0")
+# Archivo de configuración persistente
+CONFIG_FILE="/etc/backup-script/backup-config.conf"
+
 # Archivo de configuracion para la lista de backups automaticos
-backup_list="/etc/backup-script/auto-backup-list.conf"
+CRON_HORA="3"
+CRON_MINUTO="10"
+# Nueva variable para el delay de rsync (minutos después del backup)
+RSYNC_DELAY_MINUTOS="5"
+REMOTE_BACKUP_ENABLED="true"
 REMOTE_BACKUP_USER="respaldo_user"
 REMOTE_BACKUP_HOST="192.168.0.93"
 REMOTE_BACKUP_DIR="/backups/usuarios"
 SSH_KEY="/root/.ssh/backup_key"
-REMOTE_BACKUP_ENABLED=true
 
-# Configuración de hora para backup automático
-CRON_HORA="3"           # Hora en formato 24h (0-23)
-CRON_MINUTO="10"        # Minuto (0-59)
 
-# Nueva variable para el delay de rsync (minutos después del backup)
-RSYNC_DELAY_MINUTOS="5"
-
+#en esta variable guardamos la direccion de donde se van a guardar los backups
+dir_backup="/var/users_backups"
+# tambien podriamos usar la direccion actual del script y ya, pero esto le da mas flexibilidad
+# Delta es el valor actual de este scrit, lo conseguimos con realpath
+Delta=$(realpath "$0")
+backup_list="/etc/backup-script/auto-backup-list.conf"
 #**** funcion para verificar que el script se ejecute como root
 check_user() {
     if [ "$(whoami)" != "root" ]; then
@@ -27,6 +28,57 @@ check_user() {
         echo "Uso: sudo $0"
         exit 1
     fi
+}
+
+# Archivo de configuración persistente
+CONFIG_FILE="/etc/backup-script/backup-config.conf"
+
+# Función para cargar configuración desde archivo
+cargar_configuracion() {
+    if [ -f "$CONFIG_FILE" ]; then
+        # Cargar configuración desde archivo
+        source "$CONFIG_FILE"
+        echo "✅ Configuración cargada desde $CONFIG_FILE" >> /var/log/backups.log
+    else
+        # Valores por defecto si el archivo no existe
+        guardar_configuracion
+    fi
+}
+
+# Función para guardar configuración actual
+guardar_configuracion() {
+    # Crear directorio de configuración si no existe
+    mkdir -p "/etc/backup-script"
+    
+    # Guardar todas las variables de configuración
+    cat > "$CONFIG_FILE" << EOF
+# Configuración de Backup Automático
+# Este archivo se actualiza automáticamente - NO EDITAR MANUALMENTE
+
+CRON_HORA="$CRON_HORA"
+CRON_MINUTO="$CRON_MINUTO"
+RSYNC_DELAY_MINUTOS="$RSYNC_DELAY_MINUTOS"
+REMOTE_BACKUP_ENABLED="$REMOTE_BACKUP_ENABLED"
+REMOTE_BACKUP_USER="$REMOTE_BACKUP_USER"
+REMOTE_BACKUP_HOST="$REMOTE_BACKUP_HOST"
+REMOTE_BACKUP_DIR="$REMOTE_BACKUP_DIR"
+SSH_KEY="$SSH_KEY"
+EOF
+
+    chmod 600 "$CONFIG_FILE"
+    echo "✅ Configuración guardada en $CONFIG_FILE" >> /var/log/backups.log
+}
+
+# Función para actualizar una variable de configuración
+actualizar_configuracion() {
+    local variable="$1"
+    local valor="$2"
+    
+    # Actualizar variable en memoria
+    eval "$variable=\"$valor\""
+    
+    # Guardar cambios en archivo
+    guardar_configuracion
 }
 
 # Función para convertir hora 24h a formato AM/PM
@@ -267,7 +319,8 @@ probar_conexion_remota() {
     fi
 }
 
-# Función para configurar respaldo remoto
+
+# Función para configurar respaldo remoto (MODIFICADA)
 configurar_respaldo_remoto() {
     while true; do
         clear
@@ -289,10 +342,10 @@ configurar_respaldo_remoto() {
         case $opcion in
             1)
                 if [ "$REMOTE_BACKUP_ENABLED" = "true" ]; then
-                    REMOTE_BACKUP_ENABLED="false"
+                    actualizar_configuracion "REMOTE_BACKUP_ENABLED" "false"
                     echo "Respaldo remoto DESACTIVADO"
                 else
-                    REMOTE_BACKUP_ENABLED="true"
+                    actualizar_configuracion "REMOTE_BACKUP_ENABLED" "true"
                     echo "Respaldo remoto ACTIVADO"
                 fi
                 ;;
@@ -308,12 +361,14 @@ configurar_respaldo_remoto() {
                 echo "  Habilitado: $REMOTE_BACKUP_ENABLED"
                 echo "  Delay transferencia: $RSYNC_DELAY_MINUTOS minutos"
                 echo "  Hora de backup: $(get_cron_hora_completa)"
+                echo
+                echo "Archivo de configuración: $CONFIG_FILE"
                 ;;
             4)
                 echo -n "Nuevo delay en minutos (actual: $RSYNC_DELAY_MINUTOS): "
                 read nuevo_delay
                 if [[ "$nuevo_delay" =~ ^[0-9]+$ ]] && [ "$nuevo_delay" -gt 0 ]; then
-                    RSYNC_DELAY_MINUTOS="$nuevo_delay"
+                    actualizar_configuracion "RSYNC_DELAY_MINUTOS" "$nuevo_delay"
                     echo "Delay de transferencia actualizado a $RSYNC_DELAY_MINUTOS minutos"
                 else
                     echo "Error: Debe ingresar un número positivo"
@@ -328,7 +383,7 @@ configurar_respaldo_remoto() {
                 echo -n "Nueva hora (0-23, actual: $CRON_HORA): "
                 read nueva_hora
                 if [[ "$nueva_hora" =~ ^[0-9]+$ ]] && [ "$nueva_hora" -ge 0 ] && [ "$nueva_hora" -le 23 ]; then
-                    CRON_HORA="$nueva_hora"
+                    actualizar_configuracion "CRON_HORA" "$nueva_hora"
                     echo "Hora actualizada a $nueva_hora"
                 else
                     echo "Error: Hora debe ser entre 0 y 23"
@@ -344,7 +399,7 @@ configurar_respaldo_remoto() {
                 echo -n "Nuevo minuto (0-59, actual: $CRON_MINUTO): "
                 read nuevo_minuto
                 if [[ "$nuevo_minuto" =~ ^[0-9]+$ ]] && [ "$nuevo_minuto" -ge 0 ] && [ "$nuevo_minuto" -le 59 ]; then
-                    CRON_MINUTO="$nuevo_minuto"
+                    actualizar_configuracion "CRON_MINUTO" "$nuevo_minuto"
                     echo "Minuto actualizado a $nuevo_minuto"
                 else
                     echo "Error: Minuto debe ser entre 0 y 59"
@@ -352,6 +407,13 @@ configurar_respaldo_remoto() {
                 
                 echo "Hora de backup actualizada a: $(get_cron_hora_completa)"
                 echo "$(date): Hora de backup cambiada a $(get_cron_hora_completa)" >> /var/log/backups.log
+                
+                # Si el backup automático está activo, actualizar cron
+                if backup_automatico_activo; then
+                    echo "Actualizando programación en cron..."
+                    toggle_backup_automatico  # Desactivar
+                    toggle_backup_automatico  # Reactivar con nueva hora
+                fi
                 ;;
             0)
                 return 0
@@ -974,6 +1036,8 @@ restaurar_backup(){
         break
     done
 }
+# Cargar configuración persistente
+cargar_configuracion
 
 # punto de entrada del script - verifica usuario y crea directorios necesarios
 check_user
