@@ -282,14 +282,12 @@ del_usuario(){
     local nombre
     local apellido
     local user
-    local uid
     
     nombre=$(echo "$1" | cut -d: -f1)
     apellido=$(echo "$1" | cut -d: -f2)
     user=$(echo "$1" | cut -d: -f3)
 
-    uid=$(id -u "$1" &>/dev/null) 
-    if usuario_existe "$1" && [ -n "$uid" ] && [ "$uid" -ge 1000 ] && [ "$uid" -le 65000 ] &>/dev/null
+    if usuario_existe "$1" && [ "$(id -u "$1" 2>/dev/null)" -ge 1000 ] && [ "$(id -u "$1" 2>/dev/null)" -le 65000 ] &>/dev/null
     then
         sudo userdel -r "$user"
         read -n1 -t2 -rsp "Usuario $user ($nombre $apellido) eliminado correctamente del sistema"
