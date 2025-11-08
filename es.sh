@@ -305,7 +305,7 @@ archivo_procesar(){
     else
         while read -r nombre apellido _
         do
-            if [[ "$user" =~ ^[a-zA-Z]+$ ]]; then
+            if [[ "$nombre$apellido" =~ ^[a-zA-Z]+$ ]]; then
                 generar_usuario "$nombre" "$apellido"
                 listaUsuarios+=("$usuario_completo")
             else 
