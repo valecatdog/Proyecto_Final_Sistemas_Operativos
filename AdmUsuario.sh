@@ -305,8 +305,10 @@ archivo_procesar(){
     else
         while read -r nombre apellido _
         do
-            generar_usuario "$nombre" "$apellido"
-            listaUsuarios+=("$usuario_completo")
+            if [[ "$nombre" =~ ^[a-zA-Z]+$ ]] && [[ "$apellido" =~ ^[a-zA-Z]+$ ]]; then
+                generar_usuario "$nombre" "$apellido"
+                listaUsuarios+=("$usuario_completo")
+        fi
         done< <(awk 'NF >= 2 {print $1, $2}' "$archivo")
 
         while  true; do
