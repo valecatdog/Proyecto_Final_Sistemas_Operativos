@@ -1,0 +1,17 @@
+Valentina Correa
+valentina Correa
+Arturo Sifredo Francisco
+Diego  Campos
+Nicolas     Chemino
+
+Arturo
+Nahuel \t Santos
+* Lamas
+[a-zA-Z] Goldman
+echo "mensaje"
+who users
+123 456
+d aemon
+Alejandro 43*\n
+
+

@@ -4,8 +4,7 @@ export LC_ALL=es_ES.UTF-8
 
 #FALTA PONER LO DE ARU
 menu_principal(){
-    valido="false"
-    while [ "$valido" = false ]
+    while true 
         do
             clear
             echo "==ELIJA UN MODO== "
@@ -20,16 +19,16 @@ menu_principal(){
             case $opcion in
                 1)
                     menu_usuarios_grupos
+                    return
                 ;;
                 
                 2)
-                    valido="true"
-                    . backup.sh
+                    ./backup.sh
                     return
                 ;;
                 
                 *)
-                    read -t2 -n1 -rsp "Error: opción incorrecta" 
+                    read -t2 -n1 -rsp "ERROR: opción incorrecta"
                 ;;
         esac    
 
@@ -73,7 +72,7 @@ menu_usuarios_grupos(){
             ;;
 
             *)
-                read -t2 -n1 -rsp "Error: opción incorrecta"
+                read -t2 -n1 -rsp "ERROR: opción incorrecta"
             ;;
         esac
 
@@ -99,7 +98,7 @@ gestion_usuarios(){
         case $opcionCase11 in
             0)
                 menu_usuarios_grupos 
-                return 0
+                return 
             ;;
 
             1)

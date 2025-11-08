@@ -39,7 +39,7 @@ menu_principal(){
                 2)
                 #MODO GESTION DE BACKUPS,  LO HACE
                     valido="true"
-                    . backup.sh
+                    ./backup.sh
                     #lo ejecutamos asi para que interactue con las variables de este script (y se pueda it y volver)
                 ;;
                 #para todos las otras cosas que se puedan ingresar, hace esto
