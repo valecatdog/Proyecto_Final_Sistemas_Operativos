@@ -172,7 +172,7 @@ usuario_existe() {
     if ! getent passwd "$user" >/dev/null; then
         return 1
     else 
-        return 1
+        return 0
     fi
 }
 
@@ -214,7 +214,7 @@ del_usuario(){
     apellido=$(echo "$1" | cut -d: -f2)
     user=$(echo "$1" | cut -d: -f3)
 
-    if usuario_existe "$1" 
+    if usuario_existe "$1" && [ "$(id -u "$user" 2>/dev/null)" -ge 1000 ] && [ "$(id -u "$user" 2>/dev/null)" -le 65000 ]
     then
         sudo userdel -r "$user"
         read -n1 -t2 -rsp "Usuario $user ($nombre $apellido) eliminado correctamente del sistema"
