@@ -2,5 +2,4 @@
 \nhola
 $(echo chau)
 ./AdmUsuario.sh
-NChemino
-ncheminosiestabienesteusuarionoexiste
+noexistooo
