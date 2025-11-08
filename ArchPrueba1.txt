@@ -8,7 +8,8 @@ Arturo
 Nahuel \t Santos
 * Lamas
 [a-zA-Z] Goldman
-echo "mensaje"
+"echo mensaje"
+´echo mensaje´
 who users
 123 456
 d aemon

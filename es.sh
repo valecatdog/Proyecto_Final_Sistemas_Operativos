@@ -305,8 +305,12 @@ archivo_procesar(){
     else
         while read -r nombre apellido _
         do
-            generar_usuario "$nombre" "$apellido"
-            listaUsuarios+=("$usuario_completo")
+            if [[ "$user" =~ ^[a-zA-Z]+$ ]]; then
+                generar_usuario "$nombre" "$apellido"
+                listaUsuarios+=("$usuario_completo")
+            else 
+                read -t2 -n1 -srp "ERROR: el formato de nombre es incorrecto"
+        fi
         done< <(awk 'NF >= 2 {print $1, $2}' "$archivo")
 
         while  true; do
