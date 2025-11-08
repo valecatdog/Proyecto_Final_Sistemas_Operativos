@@ -769,7 +769,7 @@ aniadir_quitar_usergrupo_archivo(){
                 noAgregados=()
                 for u in "${listaUsuarios[@]}"
                 do
-                    if ! sudo gpasswd -a "$u" "$2" &>/dev/null; then
+                    if ! sudo gpasswd -a "$u" "$2" ; then
                        noAgregados+=("$u")
                     fi
                 done
