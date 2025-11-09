@@ -23,10 +23,30 @@ dir_backup="/var/users_backups"         #--- Directorio local donde se almacenan
 Delta=$(realpath "$0")                  # ---Ruta absoluta del script actual para referencias 
 backup_list="/etc/backup-script/auto-backup-list.conf"  # Lista de usuarios/grupos para backup automático
 
+# Colores de codigo ANSI https://gist.github.com/JBlond/2fea43a3049b38287e5e9cefc87b2124
+#\e escape lo que hace es decir "esto que sigue es un comando para la terminal" m al final aplica los atributos
+negro='\e[0;30m'
+rojo='\e[0;31m'
+verde='\e[0;32m'
+amarillo='\e[0;33m'
+azul='\e[0;34m'
+purpura='\e[0;35m'
+cyan='\e[0;36m'
+blanco='\e[0;37m'
+BOLD='\e[1m'
 
+C_EXITO="$verde"
+C_ADVERTENCIA="$amarillo"
+C_ERROR="$rojo"
+C_INFO="$azul"
+C_MENU="$blanco"
+C_OPCION="$cyan"
+C_TITULO="$BOLD$azul"
+C_ESTADO_ACTIVO="$BOLD$verde"
+C_ESTADO_INACTIVO="$BOLD$rojo"
 
 # Verifica que el script se ejecute con privilegios de root
-# esto es recotra redundante 
+# esto es recontra redundante, pero lo dejo por si las moscas, son solo 7 lineas detodas formas 
 check_user() {
     if [ "$(whoami)" != "root" ]; then
         echo "ERROR: Este script debe ejecutarse con sudo o como root"
@@ -58,14 +78,14 @@ guardar_configuracion() {
     # Este archivo se actualiza automáticamente - NO EDITAR MANUALMENTE
     cat > "$CONFIG_FILE" << EOF 
 
-CRON_HORA="$CRON_HORA"
-CRON_MINUTO="$CRON_MINUTO"
-RSYNC_DELAY_MINUTOS="$RSYNC_DELAY_MINUTOS"
-REMOTE_BACKUP_ENABLED="$REMOTE_BACKUP_ENABLED"
-REMOTE_BACKUP_USER="$REMOTE_BACKUP_USER"
-REMOTE_BACKUP_HOST="$REMOTE_BACKUP_HOST"
-REMOTE_BACKUP_DIR="$REMOTE_BACKUP_DIR"
-SSH_KEY="$SSH_KEY"
+    CRON_HORA="$CRON_HORA"
+    CRON_MINUTO="$CRON_MINUTO"
+    RSYNC_DELAY_MINUTOS="$RSYNC_DELAY_MINUTOS"
+    REMOTE_BACKUP_ENABLED="$REMOTE_BACKUP_ENABLED"
+    REMOTE_BACKUP_USER="$REMOTE_BACKUP_USER"
+    REMOTE_BACKUP_HOST="$REMOTE_BACKUP_HOST"
+    REMOTE_BACKUP_DIR="$REMOTE_BACKUP_DIR"
+    SSH_KEY="$SSH_KEY"
 EOF
 
     # chmod 600 asegura que solo root pueda leer/escribir el archivo de configuración
@@ -134,7 +154,7 @@ get_cron_hora_completa() {
 
 
 # Verifica todas las dependencias necesarias para el funcionamiento del sistema
-# Esta funcion es MUY importante para todo lo que sea debuggin y ver donde fallo asi evitar errores sileciosos como el lockfile que estuvo dando error como 14 horas y no entendia porque :)
+# Esta funcion es MUY importante para todo lo que sea debuggin y ver donde fallo asi evitar errores sileciosos como el lockfile que estuvo dando error por 14 horas y no entendia porque :))
 verificar_dependencias() {
     local errores=0  # contador de errores, empezamos en 0 (todo bien)
     
@@ -213,7 +233,7 @@ verificar_dependencias() {
 
 
 # Programa una transferencia remota con 'at' para no bloquear el script principal
-# El 'at' es como un cron para una sola ejecucion, pero mas flexible con tiempos relativos
+# El 'at' es mas o menos como cron pero para una sola ejecucion, mas flexible con tiempos variantes
 programar_transferencia_remota() {
     local archivo_backup="$1"
     local delay_minutos="${2:-$RSYNC_DELAY_MINUTOS}"
@@ -238,59 +258,64 @@ programar_transferencia_remota() {
     fi
     
     # mktemp crea un archivo temporal unico en /tmp
-    # El XXXXXX se reemplaza con caracteres aleatorios para evitar colisiones
+    # El XXXXXX se reemplaza con caracteres aleatorios para evitar colisiones, es una plantilla de aleatoriedad para mktemp, la cant minima de X's que puedes tener son 6 
+    # ejemplo /tmp/rsync_backup_ABC123.sh
     local temp_script
     temp_script=$(mktemp /tmp/rsync_backup_XXXXXX.sh)
 
      # Creamos un script temporal que 'at' va a ejecutar
     
-    # Usamos (<< EOF) para escribir multiples lineas
+    # Usamos << EOF para escribir multiples lineas
     # Las variables se expanden AHORA, cuando creamos el script
-    # Las variables con \$ se expanden DESPUES, cuando se ejecute el script
+    # las variables con \$ se expanden DESPUES, cuando se ejecute el script
     cat > "$temp_script" << SCRIPT_EOF
-#!/bin/bash
-# Script temporal para transferencia rsync
-# Auto-eliminación al finalizar
+    #!/bin/bash
+    # Script temporal para transferencia rsync
+    # Auto-eliminación al finalizar
 
-# Estas variables se serean cuando el script se EJECUTE, no cuando se crea
-LOG_FILE="/var/log/backups.log"
-BACKUP_FILE="$archivo_backup"
-REMOTE_USER="$REMOTE_BACKUP_USER"
-REMOTE_HOST="$REMOTE_BACKUP_HOST"
-REMOTE_DIR="$REMOTE_BACKUP_DIR"
-SSH_KEY="$SSH_KEY"
+    # Estas variables se remplazan cuando el script se EJECUTA, no cuando se crea
+    LOG_FILE="/var/log/backups.log"
+    BACKUP_FILE="$archivo_backup"
+    REMOTE_USER="$REMOTE_BACKUP_USER"
+    REMOTE_HOST="$REMOTE_BACKUP_HOST"
+    REMOTE_DIR="$REMOTE_BACKUP_DIR"
+    SSH_KEY="$SSH_KEY"
 
-# logeamos que empezamo  el \$(date) se evalua cuando corre el script, no ahora
+    # logeamos que empezamo el \$(date) se evalua cuando corre el script, no ahora
+    # basiacamente la variable NO se expande en la ejecuccion, se va literalmente 
+    # [AT-TRANSFER] es simplemente lo que le puse para que cuando le hagas cat al log sepas rapido lo que paso
+    echo "\$(date): [AT-TRANSFER] Iniciando transferencia programada de $nombre_archivo" >> "\$LOG_FILE"
 
-echo "\$(date): [AT-TRANSFER] Iniciando transferencia programada de $nombre_archivo" >> "\$LOG_FILE"
-
-#verificamos que el archivo todavia exista
-# Esto es importante porque pueden pasar 5-15 minutos hasta que se ejecute este script
-# Y en ese tiempo el archivo de backup podria haberse borrado o movido
-# Verifica que el archivo todavía exista al momento de la ejecución
-if [ ! -f "\$BACKUP_FILE" ]; then
+    #verificamos que el archivo todavia exista
+    # Esto es importante porque pueden pasar 5-15 minutos hasta que se ejecute este script
+    # Y en ese tiempo el archivo de backup podria haberse borrado o movido
+    # Verifica que el archivo todavía exista al momento de la ejecución
+    if [ ! -f "\$BACKUP_FILE" ]; then
     echo "\$(date): [AT-TRANSFER] ERROR: Archivo local desapareció: $nombre_archivo" >> "\$LOG_FILE"
     # limpiamos el scrit temporal antes de salr
     rm -f "$temp_script"
     exit 1
-fi
+    fi
 
 
-# Probamos que podemos conectar al servidor remoto antes de intentar rsync
-# Esto nos asegura que rsync se nos quede colgado esperando conexion
-if /usr/bin/rsync -avz -e "ssh -i \$SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10" \\
-    "\$BACKUP_FILE" \\
-    "\$REMOTE_USER@\$REMOTE_HOST:\$REMOTE_DIR/" >> "\$LOG_FILE" 2>&1; then
-    echo "\$(date): [AT-TRANSFER] TRANSFERENCIA EXITOSA: $nombre_archivo" >> "\$LOG_FILE"
-else
-    echo "\$(date): [AT-TRANSFER] ERROR en transferencia: $nombre_archivo" >> "\$LOG_FILE"
-fi
+    # Probamos que podemos conectar al servidor remoto antes de intentar rsync
+    # Esto nos asegura que rsync se nos quede colgado esperando conexion
+    # Esta es la parte de transferencia con rsync en como tal, -z comprime durante la transferencia, -v verbose te dice lo que va haciendo, -a modo archivo, te dice que estamos copiando un archivo (esto realmente es un paquete completo de opciones -a = -rlptgoD, no voy a entrar en detalle pero son todo lo que necesitariamos para copiar y mandar una estructura de usuario)
+    # -e especifica que es un comando remoto de SSH con opciones, -i es tu manera de decir que vas a usar una clave ssh en especifico y no una default, -o es para preguntarte si confias en este host (por eso mismo luego le ponemos StrictHostKeyChecking=no para que se conecte sin preguntar), la razon de porque ponemos el *-o StrictHostKeyChecking=no* es que si lo dejamos sin eso y el scritp no lo detecta en know_hosts se va a trancar, ConectionTimeout ya lo explicamos (aclaro que -o es simplemente Option para decile luego que tiene que hacer)
+    if /usr/bin/rsync -avz -e "ssh -i \$SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10" \\
+        "\$BACKUP_FILE" \\
+        "\$REMOTE_USER@\$REMOTE_HOST:\$REMOTE_DIR/" >> "\$LOG_FILE" 2>&1; then
+     echo "\$(date): [AT-TRANSFER] TRANSFERENCIA EXITOSA: $nombre_archivo" >> "\$LOG_FILE"
+    else
+     echo "\$(date): [AT-TRANSFER] ERROR en transferencia: $nombre_archivo" >> "\$LOG_FILE"
+    fi
 
 
-#el script temporal se elimina a si mismo despues de ejecutarse
-# Si no hicieramos esto, /tmp se llenaria de scripts viejos asquerosos
-# Auto-limpieza: elimina el script temporal después de ejecutarse
-rm -f "$temp_script"
+    #el script temporal se elimina a si mismo despues de ejecutarse
+    # Si no hicieramos esto, /tmp se llenaria de scripts viejos asquerosos
+    # Auto-limpieza: elimina el script temporal después de ejecutarse
+    # -f --force para forzar la eliminacion y que no muestre errores si no existe
+    rm -f "$temp_script"
 SCRIPT_EOF
     
     # HACEMOS EL SCRIPT EJECUTABLE
@@ -303,7 +328,7 @@ SCRIPT_EOF
     # "now + X minutes" = ejecutar dentro de X minutos desde ahora
     local tiempo_at="now + $delay_minutos minutes"
 
-    # Le pasamos el script a 'at' via stdin (con echo y pipe)
+    # Le pasamos el script a at con el echo y el pipe 
     # at lo guarda internamente y lo ejecutara en el tiempo programado
     if echo "$temp_script" | at "$tiempo_at" 2>/dev/null
     then
@@ -372,6 +397,7 @@ crear_dir_backup(){
 
 #   Verifica si un usuario existe en el sistema
 # id command retorna 0 si el usuario existe, 1 si no existe
+# id consulta directamente a passwd 
 usuario_existe() { 
     local usuario="$1"
     id "$usuario" &>/dev/null
@@ -392,14 +418,15 @@ obtener_usuarios_de_grupo() {
 }
 
 
-    # Lee entrada del usuario con opción de cancelar (0)
+# Lee entrada del usuario con opción de cancelar (0)
+# 
 leer_con_cancelar() {
     local prompt="$1"
     local variable="$2"
-    echo -n "$prompt (o '0' para cancelar): "
+    echo -ne "${C_OPCION}$prompt (o '0' para cancelar): ${NC}"
     read -r "$variable"
     if [ "${!variable}" = "0" ]; then
-        echo "Operación cancelada."
+        echo -e "${C_ADVERTENCIA}Operación cancelada.${NC}"
         return 1
     fi
     return 0
@@ -415,23 +442,22 @@ backup_automatico_activo(){
 # Muestra el menú principal del sistema
 menu_alpha(){
     clear  # Limpia la pantalla para una interfaz limpia
-    echo "=== GESTOR DE BACKUPS ==="
-    echo "1. Crear backup manual"
-    
-        # Muestra el estado actual del backup automático
+    echo -e "${C_TITULO}=== GESTOR DE BACKUPS ===${NC}"
+    echo -e "${C_MENU}1. Crear backup manual${NC}"
     if backup_automatico_activo; then
-        echo "backup diario automático  [ACTIVO]"
+        echo -e "${C_MENU}2. Backup diario automático ${C_ESTADO_ACTIVO}[ACTIVO]${NC}"
     else
-        echo "backup diario automático  [INACTIVO]"
+        echo -e "${C_MENU}2. Backup diario automático ${C_ESTADO_INACTIVO}[INACTIVO]${NC}"
     fi
-    echo "3. Restaurar backup"
-        echo "4. Gestionar lista de backups automáticos"
-            echo "5. Configurar respaldo remoto"
-            echo "6. Probar backup automático (ejecuta ahora)"
-            echo "7. Verificar dependencias del sistema"
-            echo "0. Salir"
-            echo
-        echo -n "Seleccione opción (0 para salir): "
+    
+    echo -e "${C_MENU}3. Restaurar backup${NC}"
+    echo -e "${C_MENU}4. Gestionar lista de backups automáticos${NC}"
+    echo -e "${C_MENU}5. Configurar respaldo remoto${NC}"
+    echo -e "${C_MENU}6. Probar backup automático (ejecuta ahora)${NC}"
+    echo -e "${C_MENU}7. Verificar dependencias del sistema${NC}"
+    echo -e "${C_MENU}0. Salir${NC}"
+    echo
+    echo -ne "${C_OPCION}Seleccione opción (0 para salir): ${NC}"
 }
 
 
@@ -439,14 +465,15 @@ menu_alpha(){
 # es un menu, no hay mucho que explicar, ejem... 
 menu_gestion_backup_auto() {
     clear
-    echo "=== GESTIÓN DE BACKUPS AUTOMÁTICOS ==="
-    echo "1. Ver lista actual"
-    echo "2. Añadir usuario a la lista"
-    echo "3. Añadir grupo a la lista"
-    echo "4. Eliminar elemento de la lista"
-    echo "0. Volver al menú principal"
+    echo -e "${C_TITULO}=== GESTIÓN DE BACKUPS AUTOMÁTICOS ===${NC}"
     echo
-    echo -n "Seleccione opción: "
+    echo -e "${C_MENU}1. Ver lista actual${NC}"
+    echo -e "${C_MENU}2. Añadir usuario a la lista${NC}"
+    echo -e "${C_MENU}3. Añadir grupo a la lista${NC}"
+    echo -e "${C_MENU}4. Eliminar elemento de la lista${NC}"
+    echo -e "${C_MENU}0. Volver al menú principal${NC}"
+    echo
+    echo -ne "${C_OPCION}Seleccione opción: ${NC}"
 }
 
 # Muestra la lista actual de elementos para backup automático
@@ -458,20 +485,18 @@ ver_lista_backup_auto() {
     if [ ! -s "$backup_list" ]; then
         echo "La lista está vacía."
         echo "Los backups automáticos no se ejecutarán hasta que añada elementos."
-        echo "Use las opciones 2 o 3 para añadir usuarios o grupos."
+        echo "Use las opciones para añadir usuarios o grupos."
     else
         # aqui procesamos el archivo de lista para mostrarlo bonito:
         # grep -v '^#' = excluye lineas que empiezan con # (comentarios)
-        # grep -v '^$' = excluye lineas vacias
+        # grep-v '^$' = excluye lineas vacias
         # nl -w 2 -s '. ' = numero las lineas con ancho 2 y separador ". "
         grep -v '^#' "$backup_list" | grep -v '^$' | nl -w 2 -s '. '
         
-        # ejemplo de output:
-        # 1. usuario1
-        # 2. @grupo_developers
-        # 3. usuario2
+        # ejemplo de output- 1 usuario1 2. @grupo_developers 3 usuario2
+
     fi
-    echo  # linea en blanco para separar
+    echo  
 }
 # Añade un usuario a la lista de backups automáticos
 añadir_usuario_backup_auto() {
@@ -560,9 +585,9 @@ eliminar_elemento_backup_auto() {
         return 1  # usuario cancelo
     fi
     
-    # aqui viene la magia: extraemos el elemento especifico basado en el numero
+    # extraemos el elemento especifico basado en el numero
     # grep -v '^# = excluye comentrios
-    # grep -v '^$'= excluye lineas vacias  
+    # grep-v '^$'= excluye lineas vacias  
     # sed -n ${numero}p" = imprime solo la linea numero $numero
     elemento=$(grep -v '^#' "$backup_list" | grep -v '^$' | sed -n "${numero}p")
     
@@ -574,7 +599,7 @@ eliminar_elemento_backup_auto() {
     fi
 
     # mostramos que elemento vamos a eliminar y pedimos confirmacion
-     # esto es importante porque la eliminacion es permanente
+     # esto es importante porque la eliminacion va a ser permanente
     echo "¿Eliminar '$elemento' de la lista?"
     echo "¡Atención: Esto afectará los backups automáticos!"
     echo -n "Confirmar (s/n): "
@@ -734,7 +759,7 @@ crear_backup(){
         echo "1. Backup de usuario individual"
         echo "2. Backup de grupo (backups individuales por usuario)"
         echo "0. Volver al menú principal"
-        read -p "Seleccione opción: " tipo_backup
+        read -pr "Seleccione opción: " tipo_backup
 
         case $tipo_backup in
             1)
@@ -762,10 +787,10 @@ crear_backup(){
                     # 2>/dev/null silencia warnings menores pero mantiene errores criticos
                     if tar -cjf "$archivo_backup" -C / "$home_dir" 2>/dev/null; then
                         echo "Backup creado: $archivo_backup"
-                        # registramos en el log para auditoria
+                        # registramos en el log para tener registro
                         echo "$(date): Backup manual de $usuario - $archivo_backup" >> /var/log/backups.log
                           # programamos transferencia remota si esta habilitada
-                          # esto se ejecuta en segundo plano gracias a 'at'
+                          # esto se ejecuta en segundo plano gracias a at
                         programar_transferencia_remota "$archivo_backup"
                     else
                         echo "Error al crear el backup"
@@ -796,10 +821,11 @@ crear_backup(){
 
 # Ejecuta el backup automático diario según la lista configurada
 backup_diario(){
-    # SOLUCIÓN RÁPIDA: Establecer PATH absoluto para cron
+    # Establecer PATH absoluto para cron
     export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin"
     
-    # DEBUG: Log del entorno para diagnosticar problemas con cron
+    # DEBUG Log del entorno para diagnosticar si realmente hay problemas con cron 
+    # esto lo tenemos como debug simplemente, 
     echo "=== CRON ENVIRONMENT DEBUG ===" >> /var/log/backups.log
     echo "PATH: $PATH" >> /var/log/backups.log
     echo "PWD: $(pwd)" >> /var/log/backups.log
@@ -815,11 +841,11 @@ backup_diario(){
     local exit_code=0  # codigo de salida general de la funcion
 
     # Loggeamos el inicio del proceso con el PID para debugging
-    # el PID es util por si hay multiples instancias corriendo
+    # el PID: $$ es simplemente para poder identificar entre multiples procesos, aunque con lo largo que se ha vuelto backups.log ya es complicado ver cualquier cosa
     echo "$(date): [BACKUP-DIARIO] Iniciando backup automático - PID: $$" >> /var/log/backups.log
     echo "$(date): [BACKUP-DIARIO] Fecha: $fecha" >> /var/log/backups.log
 
-    # verificamos configuracion critica antes de proceder
+    # verificamos configuracion critica antes de seguir
     # esto evita que el script falle medio camino
     if [ -z "$CRON_HORA" ] || [ -z "$CRON_MINUTO" ]; then
         echo "ERROR: Variables CRON_HORA o CRON_MINUTO no configuradas" >> /var/log/backups.log
@@ -842,10 +868,10 @@ backup_diario(){
     echo "INFO: Leyendo lista de backups: $backup_list" >> /var/log/backups.log
 
     # aqui viene el nucleo del proceso: leemos cada linea del archivo de configuracion
-    # IFS= read -r preserva espacios y caracteres especiales en los nombres
+    # IFS= read -r raw preserva espacios y caracteres especiales en los nombres
     while IFS= read -r linea; do
         # saltamos lineas vacias o comentarios (las que empiezan con #)
-        # [[ ]] es mas robusto que [ ] para expresiones regulares
+        # [[ ]] para expresiones regulares
         [[ -z "$linea" || "$linea" =~ ^# ]] && continue
         
         echo "INFO: Procesando línea: $linea" >> /var/log/backups.log
@@ -863,7 +889,7 @@ backup_diario(){
                 while IFS= read -r usuario; do
                     # verificamos que el usuario no este vacio y exista
                     if [ -n "$usuario" ] && usuario_existe "$usuario"; then
-                        # SOLUCIÓN: Usar ruta absoluta para getent
+                        # Usamdo ruta absoluta para getent
                         home_dir=$(/usr/bin/getent passwd "$usuario" | /usr/bin/cut -d: -f6)
                         
                         if [ -d "$home_dir" ]; then
@@ -871,7 +897,7 @@ backup_diario(){
                             archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
                             echo "INFO: Creando backup de $usuario en $archivo_backup" >> /var/log/backups.log
                             
-                            # SOLUCIÓN: Usar rutas absolutas para comandos críticos
+                            #  Usar rutas absolutas para comandos críticos
                             # creamos el backup comprimido
                             if /bin/tar -cjf "$archivo_backup" -C / "$home_dir" >> /var/log/backups.log 2>&1; then
                                 echo "EXITO: Backup creado: $usuario" >> /var/log/backups.log
@@ -908,7 +934,7 @@ backup_diario(){
                     archivo_backup="${dir_backup}/diario_${usuario}_${fecha}.tar.bz2"
                     echo "INFO: Creando backup de $usuario en $archivo_backup" >> /var/log/backups.log
                     
-                    # SOLUCIÓN: Usar ruta absoluta para tar
+                    # Usar ruta absoluta para tar
                     # mismo proceso que para usuarios de grupos
                     if /bin/tar -cjf "$archivo_backup" -C / "$home_dir" >> /var/log/backups.log 2>&1; then
                         echo "EXITO: Backup creado: $usuario" >> /var/log/backups.log
@@ -920,6 +946,7 @@ backup_diario(){
                             programar_transferencia_remota "$archivo_backup" "$RSYNC_DELAY_MINUTOS"
                         fi
                     else
+                        # aca guardamos mis ganas de matarme en el log si hay error creando el backup
                         echo "ERROR: Error creando backup: $usuario" >> /var/log/backups.log
                         exit_code=1
                     fi
@@ -931,7 +958,7 @@ backup_diario(){
                 exit_code=1
             fi
         fi
-    done < "$backup_list"  # leemos del archivo de configuracion
+    done < "$backup_list"  # leeyemdo del archivo de configuracion
 
     # resumen final del proceso
     echo "EXITO: Completado: $usuarios_procesados usuarios procesados" >> /var/log/backups.log
@@ -958,7 +985,7 @@ configurar_respaldo_remoto() {
         echo "0. Volver al menú principal"
         echo
         echo -n "Seleccione opción: "
-        read opcion
+        read -r opcion
         
         case $opcion in
             1)
@@ -998,10 +1025,12 @@ configurar_respaldo_remoto() {
                 # configuramos el delay de transferencia
                 # esto evita que todas las transferencias se ejecuten al mismo tiempo
                 echo -n "Nuevo delay en minutos (actual: $RSYNC_DELAY_MINUTOS): "
-                read nuevo_delay
+                read -r nuevo_delay
                 
                 # validamos que sea un numero positivo
-                # [[ =~ ^[0-9]+$ ]] es una regex que verifica solo digitos
+                # [[ =~ ^[0-9]+$ ]] es una expresion regular que verifica solo digitos
+                # desgloce mas o menos de esta regex ^ es simplemente inicio de linea [0-9] es el rango el + es para decirle que tiene que tien que haber 1 o mas
+                # verificamos el primer valor y luego vamos si el nuevo delay es mayor a 0
                 if [[ "$nuevo_delay" =~ ^[0-9]+$ ]] && [ "$nuevo_delay" -gt 0 ]; then
                     actualizar_configuracion "RSYNC_DELAY_MINUTOS" "$nuevo_delay"
                     echo "Delay de transferencia actualizado a $RSYNC_DELAY_MINUTOS minutos"
@@ -1020,7 +1049,7 @@ configurar_respaldo_remoto() {
                 
                 # configuracion de HORA (0-23)
                 echo -n "Nueva hora (0-23, actual: $CRON_HORA): "
-                read nueva_hora
+                read -r nueva_hora
                 
                 # validamos que la hora este en rango valido
                 if [[ "$nueva_hora" =~ ^[0-9]+$ ]] && [ "$nueva_hora" -ge 0 ] && [ "$nueva_hora" -le 23 ]; then
@@ -1032,7 +1061,7 @@ configurar_respaldo_remoto() {
                     
                     # preguntamos si quiere continuar con la configuracion de minutos
                     echo -n "¿Continuar configurando los minutos? (s/n): "
-                    read continuar
+                    read -r continuar
                     if [ "$continuar" != "s" ]; then
                         continue  # volvemos al menu principal
                     fi
@@ -1040,7 +1069,7 @@ configurar_respaldo_remoto() {
                 
                 # configuracion de MINUTO (0-59)
                 echo -n "Nuevo minuto (0-59, actual: $CRON_MINUTO): "
-                read nuevo_minuto
+                read -r nuevo_minuto
                 
                 # validamos que los minutos esten en rango valido
                 if [[ "$nuevo_minuto" =~ ^[0-9]+$ ]] && [ "$nuevo_minuto" -ge 0 ] && [ "$nuevo_minuto" -le 59 ]; then
@@ -1075,7 +1104,7 @@ configurar_respaldo_remoto() {
     
         echo
         echo "Presione Enter para continuar..."
-        read
+        read -r
     done
 }
 
@@ -1156,13 +1185,13 @@ restaurar_backup(){
         if [ $? -ne 0 ]; then
             echo "No hay backups disponibles."
             echo "Presione Enter para continuar..."
-            read
+            read -r
             return 1  # salimos de la funcion
         fi
 
         echo
         echo -n "Seleccione el numero del backup a restaurar (0 para volver): "
-        read numero 
+        read -r numero 
 
         # el usuario puede cancelar la operacion
         if [ "$numero" = "0" ]; then
@@ -1189,6 +1218,8 @@ restaurar_backup(){
         # regex: ^backup busca "backup_" captura todo hasta el siguiente _ 
         # para backup individual: backup_alumno_20241210_143022.tar.bz2 --> usuario=alumno
         # para backup de grupo: backup_alumno_grupo_20241210_143022.tar.bz2 ---> usuario=alumno
+        # desgloce, la expresion empieza por backup, el () es el grupo de captura de captura para el BATCH_REMATCH, [^_] cualquier caracter Exepto guion bajo
+        # BASH_REMATCH es un array que guarda los resultados de una expresion regular, aca seria el grupo de captura
         if [[ "$nombre_archivo" =~ ^backup_([^_]+)_ ]]; then
             usuario="${BASH_REMATCH[1]}"  # BASH_REMATCH[1] contiene lo que capturo el primer ()
         else
@@ -1204,7 +1235,7 @@ restaurar_backup(){
             echo "ERROR: El usuario $usuario no existe en el sistema"
             echo "No se puede restaurar el backup"
             echo "Presione Enter para continuar..."
-            read
+            read -r
             continue
         fi
 
@@ -1217,7 +1248,7 @@ restaurar_backup(){
         echo "¿Restaurar backup de $usuario en $home_destino?"
         echo "¡ADVERTENCIA: se van a sobreescribir los archivos existentes!"
         echo -n "Confirmar (s/n): "
-        read confirmacion 
+        read -r confirmacion 
         
         # confirmacion final del usuario -esto es irreversible
         if [ "$confirmacion" != "s" ]; then
@@ -1330,7 +1361,7 @@ fi
 # Bucle principal del modo interactivo con menú
 while true; do
     menu_alpha
-    read opcion
+    read -r opcion
 
     case $opcion in
         1)
@@ -1371,4 +1402,4 @@ while true; do
     esac
 done
 
-# bateria baja, cargela
+# estas 1400 lineas albergan un nivel de sufrimiento enorme
