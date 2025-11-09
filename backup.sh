@@ -74,22 +74,23 @@ EOF
 }
 
 #actualiza una variable de configuracion y guarda los cambios en archivo
-
+# cuando llamamos a la funcion agarramos 2 parametros, el primero la variable, y el segundo el valor: EJ actualizar_configuracion "CRON_HORA" "2"
 actualizar_configuracion() {
     local variable="$1" # nombre de la variable a cambiar
     local valor="$2" # nuevo valor a asignar
     
-    #magia negra eval nos permite asignar variables dinamicamente
-    # *eval permite ejecutar codigo dinamico y lo usamos porque necesitamos cambiar variables que el nombre no lo conocemos de antemano*
-    #  si $variable es "CRON_HORA" y $valor es "2", se convierte en:
+
+    # antes usabamos eval para insertar codigo dinamico, ahora cambiamos a declare porque alguien podria insertar y ejecutar algo malo malo D: y declare solo define variables y valida sintasix ademas
+    # si $variable es "CRON_HORA" y $valor es "2", se convierte en:
     # CRON_HORA="2"
-    eval "$variable=\"$valor\""
+    # -g se asegura de que sea una variable global y no local a esta funcion
+    declare -g "$variable=$valor"
     
     # despues de cambiar la variable en memoria, la guardamos en disco
     #para que persista entre ejecuciones del script
     guardar_configuracion
     
-    # loggeamos el cambio para tener auditoria
+    # loggeamos el cambio para tenerlo registrado
     echo "$(date): Configuración actualizada - $variable=$valor" >> /var/log/backups.log
 }
 
@@ -1370,3 +1371,4 @@ while true; do
     esac
 done
 
+# bateria baja, cargela
