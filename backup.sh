@@ -41,7 +41,7 @@ C_TITULO="$BOLD$cyan"
 C_ESTADO_ACTIVO="$BOLD$verde"
 C_ESTADO_INACTIVO="$BOLD$rojo"
 
-# Verifica que el script se ejecute con privilegios de root
+# Verifica que el script se ejecute  con privilegios de root
 # esto es recontra redundante, pero lo dejo por si las moscas, son solo 7 lineas detodas formas 
 check_user() {
     if [ "$(whoami)" != "root" ]; then
