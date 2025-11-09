@@ -20,7 +20,7 @@ SSH_KEY="/root/.ssh/backup_key"         #--- ruta de la clave SSH para autentica
 
 # Variables de rutas y directorios del sistema
 dir_backup="/var/users_backups"         #--- Directorio local donde se almacenan los backups
-Delta=$(realpath "$0")                  # ---Ruta absoluta del script actual para referencias
+Delta=$(realpath "$0")                  # ---Ruta absoluta del script actual para referencias 
 backup_list="/etc/backup-script/auto-backup-list.conf"  # Lista de usuarios/grupos para backup automático
 
 
@@ -405,6 +405,7 @@ leer_con_cancelar() {
 }
 
      # Verifica si el backup automático está activo en crontab
+     # se usa en el menu principal para ver si el backup diario esta activo o no
 backup_automatico_activo(){
     # crontab -l lista las tareas programadas, grep -q busca silenciosamente
     crontab -l 2>/dev/null | grep -q "$Delta"
@@ -418,9 +419,9 @@ menu_alpha(){
     
         # Muestra el estado actual del backup automático
     if backup_automatico_activo; then
-        echo "2. DESACTIVAR backup diario automático  [ACTIVO]"
+        echo "backup diario automático  [ACTIVO]"
     else
-        echo "2. ACTIVAR backup diario automático   [INACTIVO]"
+        echo "backup diario automático  [INACTIVO]"
     fi
     echo "3. Restaurar backup"
         echo "4. Gestionar lista de backups automáticos"
