@@ -27,18 +27,19 @@ amarillo='\e[0;33m'
 azul='\e[0;34m'
 purpura='\e[0;35m'
 cyan='\e[0;36m'
+cyanIntenso='\e[0;97m'
 blanco='\e[0;37m'
 BOLD='\e[1m'
 NC='\e[0m'
-blancointenso='\e[0;97m'
+blancoIntenso='\e[0;97m'
 
 C_EXITO="$verde"
 C_ADVERTENCIA="$amarillo"
 C_ERROR="$rojo"
 C_INFO="$azul"
-C_MENU="$BOLD$blancointenso"
+C_MENU="$BOLD$blancoIntenso"
 C_OPCION="$cyan"
-C_TITULO="$BOLD$cyan"
+C_TITULO="$BOLD$cyanIntenso"
 C_ESTADO_ACTIVO="$BOLD$verde"
 C_ESTADO_INACTIVO="$BOLD$rojo"
 
@@ -428,23 +429,23 @@ backup_automatico_activo(){
 
 # Muestra el menú principal del sistema
 menu_alpha(){
-    clear  # Limpia la pantalla para una interfaz limpia
-    echo -e "=== ${C_TITULO}GESTOR DE BACKUPS${NC} ==="
-    echo -e "1. ${C_MENU}Crear backup manual${NC}"
-    if backup_automatico_activo; then
-        echo -e "2. ${C_MENU}Backup diario automático ${C_ESTADO_ACTIVO}[ACTIVO]${NC}"
-    else
-        echo -e "2. ${C_MENU}Backup diario automático ${C_ESTADO_INACTIVO}[INACTIVO]${NC}"
-    fi
-    
-    echo -e "3. ${C_MENU}Restaurar backup${NC}"
-    echo -e "4. ${C_MENU}Gestionar lista de backups automáticos${NC}"
-    echo -e "5. ${C_MENU}Configurar respaldo remoto${NC}"
-    echo -e "6. ${C_MENU}Probar backup automático (ejecuta ahora)${NC}"
-    echo -e "7. ${C_MENU}Verificar dependencias del sistema${NC}"
-    echo -e "0. ${C_MENU}Salir${NC}"
+    clear
+    echo -e "${C_TITULO}=== GESTOR DE BACKUPS ===${NC}"
     echo
-    echo -ne "Seleccione opción ${C_OPCION}(0 para salir)${NC}: "
+    echo -e "${C_MENU}1.${NC} Crear backup manual"
+    if backup_automatico_activo; then
+        echo -e "${C_MENU}2.${NC} Backup diario automático ${C_ESTADO_ACTIVO}[ACTIVO]${NC}"
+    else
+        echo -e "${C_MENU}2.${NC} Backup diario automático ${C_ESTADO_INACTIVO}[INACTIVO]${NC}"
+    fi
+    echo -e "${C_MENU}3.${NC} Restaurar backup"
+    echo -e "${C_MENU}4.${NC} Gestionar lista de backups automáticos"
+    echo -e "${C_MENU}5.${NC} Configurar respaldo remoto"
+    echo -e "${C_MENU}6.${NC} Probar backup automático (ejecuta ahora)"
+    echo -e "${C_MENU}7.${NC} Verificar dependencias del sistema"
+    echo -e "${C_MENU}0.${NC} Salir"
+    echo
+    echo -ne "${C_OPCION}Seleccione opción (0 para salir): ${NC}"
 }
 
 #muestra el menu de gestión de lista de backups automáticos
@@ -453,11 +454,11 @@ menu_gestion_backup_auto() {
     clear
     echo -e "${C_TITULO}=== GESTIÓN DE BACKUPS AUTOMÁTICOS ===${NC}"
     echo
-    echo -e "${C_MENU}1. Ver lista actual${NC}"
-    echo -e "${C_MENU}2. Añadir usuario a la lista${NC}"
-    echo -e "${C_MENU}3. Añadir grupo a la lista${NC}"
-    echo -e "${C_MENU}4. Eliminar elemento de la lista${NC}"
-    echo -e "${C_MENU}0. Volver al menú principal${NC}"
+    echo -e "${C_MENU}1.${NC} Ver lista actual"
+    echo -e "${C_MENU}2.${NC} Añadir usuario a la lista"
+    echo -e "${C_MENU}3.${NC} Añadir grupo a la lista"
+    echo -e "${C_MENU}4.${NC} Eliminar elemento de la lista"
+    echo -e "${C_MENU}0.${NC} Volver al menú principal"
     echo
     echo -ne "${C_OPCION}Seleccione opción: ${NC}"
 }
@@ -617,7 +618,6 @@ eliminar_elemento_backup_auto() {
 }
 
 # Menú principal de gestión de lista de backups automáticos
-# si, definitivamente es otro menu
 gestionar_backup_auto() {
     while true; do
         menu_gestion_backup_auto
@@ -957,17 +957,17 @@ backup_diario(){
 configurar_respaldo_remoto() {
     while true; do
         clear 
-        echo "=== ${C_TITULO}CONFIGURACIÓN DE RESPALDO REMOTO${NC} ==="
-        echo "${C_MENU}Estado actual:${NC} $REMOTE_BACKUP_ENABLED"
-        echo "${C_MENU}Delay de transferencia:${NC} $RSYNC_DELAY_MINUTOS minutos"
-        echo "${C_MENU}Hora de backup automático:${NC} $(get_cron_hora_completa)"
+        echo -e "=== ${C_TITULO}CONFIGURACIÓN DE RESPALDO REMOTO${NC} ==="
+        echo -e"${C_MENU}Estado actual:${NC} $REMOTE_BACKUP_ENABLED"
+        echo -e"${C_MENU}Delay de transferencia:${NC} $RSYNC_DELAY_MINUTOS minutos"
+        echo -e"${C_MENU}Hora de backup automático:${NC} $(get_cron_hora_completa)"
         echo
-        echo "1. ${C_MENU}Activar/Desactivar respaldo remoto${NC}"
-        echo "2. ${C_MENU}Probar conexión remota${NC}"
-        echo "3. ${C_MENU}Ver configuración actual${NC}"
-        echo "4. ${C_MENU}Configurar delay de transferencia (actual: $RSYNC_DELAY_MINUTOS min)${NC}"
-        echo "5. ${C_MENU}Configurar hora del backup automático (actual: $(get_cron_hora_completa))${NC}"
-        echo "0. ${C_MENU}Volver al menú principal${NC}"
+        echo -e"1. ${C_MENU}Activar/Desactivar respaldo remoto${NC}"
+        echo -e"2. ${C_MENU}Probar conexión remota${NC}"
+        echo -e"3. ${C_MENU}Ver configuración actual${NC}"
+        echo -e"4. ${C_MENU}Configurar delay de transferencia (actual: $RSYNC_DELAY_MINUTOS min)${NC}"
+        echo -e"5. ${C_MENU}Configurar hora del backup automático (actual: $(get_cron_hora_completa))${NC}"
+        echo -e"0. ${C_MENU}Volver al menú principal${NC}"
         echo
         echo -n "Seleccione opción: "
         read -r opcion
