@@ -35,9 +35,9 @@ C_EXITO="$verde"
 C_ADVERTENCIA="$amarillo"
 C_ERROR="$rojo"
 C_INFO="$azul"
-C_MENU="$blanco"
+C_MENU="$BOLD$blanco"
 C_OPCION="$cyan"
-C_TITULO="$BOLD$azul"
+C_TITULO="$BOLD$cyan"
 C_ESTADO_ACTIVO="$BOLD$verde"
 C_ESTADO_INACTIVO="$BOLD$rojo"
 
@@ -428,22 +428,22 @@ backup_automatico_activo(){
 # Muestra el menú principal del sistema
 menu_alpha(){
     clear  # Limpia la pantalla para una interfaz limpia
-    echo -e "${C_TITULO}=== GESTOR DE BACKUPS ===${NC}"
-    echo -e "${C_MENU}1. Crear backup manual${NC}"
+    echo -e "=== ${C_TITULO}GESTOR DE BACKUPS${NC} ==="
+    echo -e "1. ${C_MENU}Crear backup manual${NC}"
     if backup_automatico_activo; then
-        echo -e "${C_MENU}2. Backup diario automático ${C_ESTADO_ACTIVO}[ACTIVO]${NC}"
+        echo -e "2. ${C_MENU}Backup diario automático ${C_ESTADO_ACTIVO}[ACTIVO]${NC}"
     else
-        echo -e "${C_MENU}2. Backup diario automático ${C_ESTADO_INACTIVO}[INACTIVO]${NC}"
+        echo -e "2. ${C_MENU}Backup diario automático ${C_ESTADO_INACTIVO}[INACTIVO]${NC}"
     fi
     
-    echo -e "${C_MENU}3. Restaurar backup${NC}"
-    echo -e "${C_MENU}4. Gestionar lista de backups automáticos${NC}"
-    echo -e "${C_MENU}5. Configurar respaldo remoto${NC}"
-    echo -e "${C_MENU}6. Probar backup automático (ejecuta ahora)${NC}"
-    echo -e "${C_MENU}7. Verificar dependencias del sistema${NC}"
-    echo -e "${C_MENU}0. Salir${NC}"
+    echo -e "3. ${C_MENU}Restaurar backup${NC}"
+    echo -e "4. ${C_MENU}Gestionar lista de backups automáticos${NC}"
+    echo -e "5. ${C_MENU}Configurar respaldo remoto${NC}"
+    echo -e "6. ${C_MENU}Probar backup automático (ejecuta ahora)${NC}"
+    echo -e "7. ${C_MENU}Verificar dependencias del sistema${NC}"
+    echo -e "0. ${C_MENU}Salir${NC}"
     echo
-    echo -ne "${C_OPCION}Seleccione opción (0 para salir): ${NC}"
+    echo -ne "Seleccione opción ${C_OPCION}(0 para salir)${NC}: "
 }
 
 #muestra el menu de gestión de lista de backups automáticos
