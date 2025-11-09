@@ -1,9 +1,5 @@
 #!/bin/bash
 
-
-# VARIABLES GLOBALES
-
-
 # Archivo de configuración persistente donde se guardan los ajustes del usuario
 CONFIG_FILE="/etc/backup-script/backup-config.conf"
 
@@ -16,7 +12,6 @@ REMOTE_BACKUP_USER="respaldo_user"      #--- usurio para conexión SSH remota
 REMOTE_BACKUP_HOST="192.168.0.93"       #--- dirección del servidor de backups remoto
 REMOTE_BACKUP_DIR="/backups/usuarios"   #--- directorio destino en servidor remoto
 SSH_KEY="/root/.ssh/backup_key"         #--- ruta de la clave SSH para autenticacion 
-
 
 # Variables de rutas y directorios del sistema
 dir_backup="/var/users_backups"         #--- Directorio local donde se almacenan los backups
@@ -34,6 +29,7 @@ purpura='\e[0;35m'
 cyan='\e[0;36m'
 blanco='\e[0;37m'
 BOLD='\e[1m'
+NC='\e[0m'
 
 C_EXITO="$verde"
 C_ADVERTENCIA="$amarillo"
@@ -78,14 +74,14 @@ guardar_configuracion() {
     # Este archivo se actualiza automáticamente - NO EDITAR MANUALMENTE
     cat > "$CONFIG_FILE" << EOF 
 
-    CRON_HORA="$CRON_HORA"
-    CRON_MINUTO="$CRON_MINUTO"
-    RSYNC_DELAY_MINUTOS="$RSYNC_DELAY_MINUTOS"
-    REMOTE_BACKUP_ENABLED="$REMOTE_BACKUP_ENABLED"
-    REMOTE_BACKUP_USER="$REMOTE_BACKUP_USER"
-    REMOTE_BACKUP_HOST="$REMOTE_BACKUP_HOST"
-    REMOTE_BACKUP_DIR="$REMOTE_BACKUP_DIR"
-    SSH_KEY="$SSH_KEY"
+CRON_HORA="$CRON_HORA"            
+CRON_MINUTO="$CRON_MINUTO"
+RSYNC_DELAY_MINUTOS="$RSYNC_DELAY_MINUTOS"
+REMOTE_BACKUP_ENABLED="$REMOTE_BACKUP_ENABLED"
+REMOTE_BACKUP_USER="$REMOTE_BACKUP_USER"
+REMOTE_BACKUP_HOST="$REMOTE_BACKUP_HOST"
+REMOTE_BACKUP_DIR="$REMOTE_BACKUP_DIR"
+SSH_KEY="$SSH_KEY"
 EOF
 
     # chmod 600 asegura que solo root pueda leer/escribir el archivo de configuración
@@ -114,8 +110,7 @@ actualizar_configuracion() {
     echo "$(date): Configuración actualizada - $variable=$valor" >> /var/log/backups.log
 }
 
-
-# Convierte hora en formato 24h a formato AM/PM legible
+# Covierte hora en formato 24h a formato AM/PM legible
 formato_am_pm() {
     local hora_24h="$1"  # hora en formato 24h 0-23
     
@@ -152,7 +147,6 @@ get_cron_hora_completa() {
     echo "${CRON_HORA}:${minuto_formateado} ($hora_ampm)"
 }
 
-
 # Verifica todas las dependencias necesarias para el funcionamiento del sistema
 # Esta funcion es MUY importante para todo lo que sea debuggin y ver donde fallo asi evitar errores sileciosos como el lockfile que estuvo dando error por 14 horas y no entendia porque :))
 verificar_dependencias() {
@@ -187,9 +181,7 @@ verificar_dependencias() {
     fi
     
     # CONECTIVIDAD REMOTA
-    #  Verifica conectividad con el servi
-    
-    dor remoto si está habilitado el respaldo remoto
+    #  Verifica conectividad con el servidor remoto si está habilitado el respaldo remoto
     # solo verificamos si el usuario tiene habilitado el backup remoto
     if [ "$REMOTE_BACKUP_ENABLED" = "true" ]; then
         # ssh con BatchMode=yes evita prompts interactivos modo no-interactivo
@@ -230,8 +222,6 @@ verificar_dependencias() {
     return $errores
 }
 
-
-
 # Programa una transferencia remota con 'at' para no bloquear el script principal
 # El 'at' es mas o menos como cron pero para una sola ejecucion, mas flexible con tiempos variantes
 programar_transferencia_remota() {
@@ -269,53 +259,53 @@ programar_transferencia_remota() {
     # Las variables se expanden AHORA, cuando creamos el script
     # las variables con \$ se expanden DESPUES, cuando se ejecute el script
     cat > "$temp_script" << SCRIPT_EOF
-    #!/bin/bash
-    # Script temporal para transferencia rsync
-    # Auto-eliminación al finalizar
+#!/bin/bash
+# Script temporal para transferencia rsync
+# Auto-eliminación al finalizar
 
-    # Estas variables se remplazan cuando el script se EJECUTA, no cuando se crea
-    LOG_FILE="/var/log/backups.log"
-    BACKUP_FILE="$archivo_backup"
-    REMOTE_USER="$REMOTE_BACKUP_USER"
-    REMOTE_HOST="$REMOTE_BACKUP_HOST"
-    REMOTE_DIR="$REMOTE_BACKUP_DIR"
-    SSH_KEY="$SSH_KEY"
+# Estas variables se remplazan cuando el script se EJECUTA, no cuando se crea
+LOG_FILE="/var/log/backups.log"
+BACKUP_FILE="$archivo_backup"
+REMOTE_USER="$REMOTE_BACKUP_USER"
+REMOTE_HOST="$REMOTE_BACKUP_HOST"
+REMOTE_DIR="$REMOTE_BACKUP_DIR"
+SSH_KEY="$SSH_KEY"
 
-    # logeamos que empezamo el \$(date) se evalua cuando corre el script, no ahora
-    # basiacamente la variable NO se expande en la ejecuccion, se va literalmente 
-    # [AT-TRANSFER] es simplemente lo que le puse para que cuando le hagas cat al log sepas rapido lo que paso
-    echo "\$(date): [AT-TRANSFER] Iniciando transferencia programada de $nombre_archivo" >> "\$LOG_FILE"
+# logeamos que empezamo el \$(date) se evalua cuando corre el script, no ahora
+# basiacamente la variable NO se expande en la ejecuccion, se va literalmente 
+# [AT-TRANSFER] es simplemente lo que le puse para que cuando le hagas cat al log sepas rapido lo que paso
+echo "\$(date): [AT-TRANSFER] Iniciando transferencia programada de $nombre_archivo" >> "\$LOG_FILE"
 
-    #verificamos que el archivo todavia exista
-    # Esto es importante porque pueden pasar 5-15 minutos hasta que se ejecute este script
-    # Y en ese tiempo el archivo de backup podria haberse borrado o movido
-    # Verifica que el archivo todavía exista al momento de la ejecución
-    if [ ! -f "\$BACKUP_FILE" ]; then
-    echo "\$(date): [AT-TRANSFER] ERROR: Archivo local desapareció: $nombre_archivo" >> "\$LOG_FILE"
-    # limpiamos el scrit temporal antes de salr
-    rm -f "$temp_script"
-    exit 1
-    fi
-
-
-    # Probamos que podemos conectar al servidor remoto antes de intentar rsync
-    # Esto nos asegura que rsync se nos quede colgado esperando conexion
-    # Esta es la parte de transferencia con rsync en como tal, -z comprime durante la transferencia, -v verbose te dice lo que va haciendo, -a modo archivo, te dice que estamos copiando un archivo (esto realmente es un paquete completo de opciones -a = -rlptgoD, no voy a entrar en detalle pero son todo lo que necesitariamos para copiar y mandar una estructura de usuario)
-    # -e especifica que es un comando remoto de SSH con opciones, -i es tu manera de decir que vas a usar una clave ssh en especifico y no una default, -o es para preguntarte si confias en este host (por eso mismo luego le ponemos StrictHostKeyChecking=no para que se conecte sin preguntar), la razon de porque ponemos el *-o StrictHostKeyChecking=no* es que si lo dejamos sin eso y el scritp no lo detecta en know_hosts se va a trancar, ConectionTimeout ya lo explicamos (aclaro que -o es simplemente Option para decile luego que tiene que hacer)
-    if /usr/bin/rsync -avz -e "ssh -i \$SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10" \\
-        "\$BACKUP_FILE" \\
-        "\$REMOTE_USER@\$REMOTE_HOST:\$REMOTE_DIR/" >> "\$LOG_FILE" 2>&1; then
-     echo "\$(date): [AT-TRANSFER] TRANSFERENCIA EXITOSA: $nombre_archivo" >> "\$LOG_FILE"
-    else
-     echo "\$(date): [AT-TRANSFER] ERROR en transferencia: $nombre_archivo" >> "\$LOG_FILE"
-    fi
+#verificamos que el archivo todavia exista
+# Esto es importante porque pueden pasar 5-15 minutos hasta que se ejecute este script
+# Y en ese tiempo el archivo de backup podria haberse borrado o movido
+# Verifica que el archivo todavía exista al momento de la ejecución
+if [ ! -f "\$BACKUP_FILE" ]; then
+echo "\$(date): [AT-TRANSFER] ERROR: Archivo local desapareció: $nombre_archivo" >> "\$LOG_FILE"
+# limpiamos el scrit temporal antes de salr
+rm -f "$temp_script"
+exit 1
+fi
 
 
-    #el script temporal se elimina a si mismo despues de ejecutarse
-    # Si no hicieramos esto, /tmp se llenaria de scripts viejos asquerosos
-    # Auto-limpieza: elimina el script temporal después de ejecutarse
-    # -f --force para forzar la eliminacion y que no muestre errores si no existe
-    rm -f "$temp_script"
+# Probamos que podemos conectar al servidor remoto antes de intentar rsync
+# Esto nos asegura que rsync se nos quede colgado esperando conexion
+# Esta es la parte de transferencia con rsync en como tal, -z comprime durante la transferencia, -v verbose te dice lo que va haciendo, -a modo archivo, te dice que estamos copiando un archivo (esto realmente es un paquete completo de opciones -a = -rlptgoD, no voy a entrar en detalle pero son todo lo que necesitariamos para copiar y mandar una estructura de usuario)
+# -e especifica que es un comando remoto de SSH con opciones, -i es tu manera de decir que vas a usar una clave ssh en especifico y no una default, -o es para preguntarte si confias en este host (por eso mismo luego le ponemos StrictHostKeyChecking=no para que se conecte sin preguntar), la razon de porque ponemos el *-o StrictHostKeyChecking=no* es que si lo dejamos sin eso y el scritp no lo detecta en know_hosts se va a trancar, ConectionTimeout ya lo explicamos (aclaro que -o es simplemente Option para decile luego que tiene que hacer)
+if /usr/bin/rsync -avz -e "ssh -i \$SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10" \\
+    "\$BACKUP_FILE" \\
+    "\$REMOTE_USER@\$REMOTE_HOST:\$REMOTE_DIR/" >> "\$LOG_FILE" 2>&1; then
+echo "\$(date): [AT-TRANSFER] TRANSFERENCIA EXITOSA: $nombre_archivo" >> "\$LOG_FILE"
+else
+ echo "\$(date): [AT-TRANSFER] ERROR en transferencia: $nombre_archivo" >> "\$LOG_FILE"
+fi
+
+
+#el script temporal se elimina a si mismo despues de ejecutarse
+# Si no hicieramos esto, /tmp se llenaria de scripts viejos asquerosos
+# Auto-limpieza: elimina el script temporal después de ejecutarse
+# -f --force para forzar la eliminacion y que no muestre errores si no existe
+rm -f "$temp_script"
 SCRIPT_EOF
     
     # HACEMOS EL SCRIPT EJECUTABLE
@@ -358,8 +348,6 @@ probar_conexion_remota() {
     fi
 }
 
-
-
 # Crea todos los directorios y archivos necesarios para el funcionamiento del sistema
 crear_dir_backup(){
     # Crea el directorio principal de backups si no existe
@@ -394,7 +382,6 @@ crear_dir_backup(){
     fi
 }
 
-
 #   Verifica si un usuario existe en el sistema
 # id command retorna 0 si el usuario existe, 1 si no existe
 # id consulta directamente a passwd 
@@ -416,7 +403,6 @@ obtener_usuarios_de_grupo() {
     # tr convierte las comas en saltos de línea para procesar cada usuario por separado
     getent group "$grupo" | cut -d: -f4 | tr ',' '\n'
 }
-
 
 # Lee entrada del usuario con opción de cancelar (0)
 # 
@@ -459,7 +445,6 @@ menu_alpha(){
     echo
     echo -ne "${C_OPCION}Seleccione opción (0 para salir): ${NC}"
 }
-
 
 #muestra el menu de gestión de lista de backups automáticos
 # es un menu, no hay mucho que explicar, ejem... 
@@ -664,7 +649,6 @@ gestionar_backup_auto() {
         read
     done
 }
-
 
  # Crea backup de todos los usuarios pertenecientes a un grupo
 crear_backup_grupo(){
@@ -1311,8 +1295,6 @@ restaurar_backup(){
         break  # salimos del while despues de una restauracion (exitosa o no)
     done
 }
-
-
 
 # Carga la configuración persistente al inicio
 cargar_configuracion
