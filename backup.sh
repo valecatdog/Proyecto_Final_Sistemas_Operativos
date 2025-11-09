@@ -743,7 +743,7 @@ crear_backup(){
         echo "1. Backup de usuario individual"
         echo "2. Backup de grupo (backups individuales por usuario)"
         echo "0. Volver al menú principal"
-        read -pr "Seleccione opción: " tipo_backup
+        read -p "Seleccione opción: " tipo_backup
 
         case $tipo_backup in
             1)
