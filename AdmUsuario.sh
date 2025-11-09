@@ -2,7 +2,6 @@
 
 export LC_ALL=es_ES.UTF-8
 
-#FALTA PONER LO DE ARU
 menu_principal(){
     while true 
         do
