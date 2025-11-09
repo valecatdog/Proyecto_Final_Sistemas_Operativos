@@ -2,17 +2,17 @@
 BACKUP_DIR="/var/users_backups"
 LOG_FILE="/var/log/backup.log"
 REMOTE_USER="respaldo_user"
-REMOTE_HOST="192.168.1.10"
+REMOTE_HOST="192.168.0.93"
 REMOTE_PATH="/backups/usuarios"
 SSH_KEY="/root/.ssh/backup_key"
 
 programar_rsync() {
     ARCHIVO_LOCAL="$1"
-    TIEMPO_AT="now + 50 minutes"
+    TIEMPO_AT="now + 3 minutes"
     
     echo "Programando transferencia remota para $ARCHIVO_LOCAL a $TIEMPO_AT..." >> "$LOG_FILE"
 
-    # DIFERENCIA: Añadir opciones SSH para rsync con clave específic a
+    # DIFERENCIA: Añadir opciones SSH para rsync con clave específica
     echo "/usr/bin/rsync -avz -e \"ssh -i $SSH_KEY -o StrictHostKeyChecking=no\" \"$ARCHIVO_LOCAL\" \"$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/\" >> \"$LOG_FILE\" 2>&1" | at "$TIEMPO_AT"
     
     echo "Transferencia remota programada con 'at'."
