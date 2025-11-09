@@ -30,12 +30,13 @@ cyan='\e[0;36m'
 blanco='\e[0;37m'
 BOLD='\e[1m'
 NC='\e[0m'
+blancointenso='\e[0;97m'
 
 C_EXITO="$verde"
 C_ADVERTENCIA="$amarillo"
 C_ERROR="$rojo"
 C_INFO="$azul"
-C_MENU="$BOLD$blanco"
+C_MENU="$BOLD$blancointenso"
 C_OPCION="$cyan"
 C_TITULO="$BOLD$cyan"
 C_ESTADO_ACTIVO="$BOLD$verde"
@@ -956,17 +957,17 @@ backup_diario(){
 configurar_respaldo_remoto() {
     while true; do
         clear 
-        echo "=== CONFIGURACIÓN DE RESPALDO REMOTO ==="
-        echo "Estado actual: $REMOTE_BACKUP_ENABLED"
-        echo "Delay de transferencia: $RSYNC_DELAY_MINUTOS minutos"
-        echo "Hora de backup automático: $(get_cron_hora_completa)"
+        echo "=== ${C_TITULO}CONFIGURACIÓN DE RESPALDO REMOTO${NC} ==="
+        echo "${C_MENU}Estado actual:${NC} $REMOTE_BACKUP_ENABLED"
+        echo "${C_MENU}Delay de transferencia:${NC} $RSYNC_DELAY_MINUTOS minutos"
+        echo "${C_MENU}Hora de backup automático:${NC} $(get_cron_hora_completa)"
         echo
-        echo "1. Activar/Desactivar respaldo remoto"
-        echo "2. Probar conexión remota"
-        echo "3. Ver configuración actual"
-        echo "4. Configurar delay de transferencia (actual: $RSYNC_DELAY_MINUTOS min)"
-        echo "5. Configurar hora del backup automático (actual: $(get_cron_hora_completa))"
-        echo "0. Volver al menú principal"
+        echo "1. ${C_MENU}Activar/Desactivar respaldo remoto${NC}"
+        echo "2. ${C_MENU}Probar conexión remota${NC}"
+        echo "3. ${C_MENU}Ver configuración actual${NC}"
+        echo "4. ${C_MENU}Configurar delay de transferencia (actual: $RSYNC_DELAY_MINUTOS min)${NC}"
+        echo "5. ${C_MENU}Configurar hora del backup automático (actual: $(get_cron_hora_completa))${NC}"
+        echo "0. ${C_MENU}Volver al menú principal${NC}"
         echo
         echo -n "Seleccione opción: "
         read -r opcion
