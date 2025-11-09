@@ -740,7 +740,7 @@ crear_backup_grupo(){
 # Menu principal para creación de backups manuales
 crear_backup(){
     while true; do
-        echo "${C_TITULO}¿Qué tipo de backup desea crear${NC}?"
+        echo -e "${C_TITULO}¿Qué tipo de backup desea crear${NC}?"
         echo -e "${C_MENU}1.${NC} backup de usuario individual"
         echo -e "${C_MENU}2.${NC} backup de grupo"
         echo -e "${C_MENU}0.${NC} volver al menu"
@@ -1160,7 +1160,7 @@ configurar_backup_automatico() {
 # Restaura un backup seleccionado por el usuario
 restaurar_backup(){
     while true; do
-        echo "${C_TITULO}Backups disponibles:${NC}"
+        echo -e "${C_TITULO}Backups disponibles:${NC}"
         # listamos todos los archivos de backup en el directorio
         # ls -1 muestra un archivo por linea, mas facil de procesar
         # nl enumera las lineas con formato bonito para seleccion
