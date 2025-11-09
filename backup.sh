@@ -27,7 +27,7 @@ amarillo='\e[0;33m'
 azul='\e[0;34m'
 purpura='\e[0;35m'
 cyan='\e[0;36m'
-cyanIntenso='\e[0;97m'
+cyanIntenso='\e[0;95m'
 blanco='\e[0;37m'
 BOLD='\e[1m'
 NC='\e[0m'
@@ -430,7 +430,7 @@ backup_automatico_activo(){
 # Muestra el menú principal del sistema
 menu_alpha(){
     clear
-    echo -e "${C_TITULO}=== GESTOR DE BACKUPS ===${NC}"
+    echo -e "=== ${C_TITULO}GESTOR DE BACKUPS${NC} ==="
     echo
     echo -e "${C_MENU}1.${NC} Crear backup manual"
     if backup_automatico_activo; then
@@ -452,7 +452,7 @@ menu_alpha(){
 # es un menu, no hay mucho que explicar, ejem... 
 menu_gestion_backup_auto() {
     clear
-    echo -e "${C_TITULO}=== GESTIÓN DE BACKUPS AUTOMÁTICOS ===${NC}"
+    echo -e "=== ${C_TITULO}GESTIÓN DE BACKUPS AUTOMÁTICOS${NC} ==="
     echo
     echo -e "${C_MENU}1.${NC} Ver lista actual"
     echo -e "${C_MENU}2.${NC} Añadir usuario a la lista"
@@ -740,7 +740,7 @@ crear_backup_grupo(){
 # Menu principal para creación de backups manuales
 crear_backup(){
     while true; do
-        echo "¿Qué tipo de backup desea crear?"
+        echo "${C_TITULO}¿Qué tipo de backup desea crear${NC}?"
         echo -e "${C_MENU}1.${NC} backup de usuario individual"
         echo -e "${C_MENU}2.${NC} backup de grupo"
         echo -e "${C_MENU}0.${NC} volver al menu"
@@ -958,18 +958,19 @@ configurar_respaldo_remoto() {
     while true; do
         clear 
         echo -e "=== ${C_TITULO}CONFIGURACIÓN DE RESPALDO REMOTO${NC} ==="
-        echo -e "${C_MENU}Estado actual:${NC} $REMOTE_BACKUP_ENABLED"
-        echo -e "${C_MENU}Delay de transferencia:${NC} $RSYNC_DELAY_MINUTOS minutos"
-        echo -e "${C_MENU}Hora de backup automático:${NC} $(get_cron_hora_completa)"
         echo
-        echo -e "1. ${C_MENU}Activar/Desactivar respaldo remoto${NC}"
-        echo -e "2. ${C_MENU}Probar conexión remota${NC}"
-        echo -e "3. ${C_MENU}Ver configuración actual${NC}"
-        echo -e "4. ${C_MENU}Configurar delay de transferencia (actual: $RSYNC_DELAY_MINUTOS min)${NC}"
-        echo -e "5. ${C_MENU}Configurar hora del backup automático (actual: $(get_cron_hora_completa))${NC}"
-        echo -e "0. ${C_MENU}Volver al menú principal${NC}"
+        echo -e "${C_INFO}Estado actual:${NC} $REMOTE_BACKUP_ENABLED"
+        echo -e "${C_INFO}Delay de transferencia:${NC} $RSYNC_DELAY_MINUTOS minutos"
+        echo -e "${C_INFO}Hora de backup automático:${NC} $(get_cron_hora_completa)"
         echo
-        echo -n "Seleccione opción: "
+        echo -e "${C_MENU}1.${NC} Activar/Desactivar respaldo remoto"
+        echo -e "${C_MENU}2.${NC} Probar conexión remota"
+        echo -e "${C_MENU}3.${NC} Ver configuración actual"
+        echo -e "${C_MENU}4.${NC} Configurar delay de transferencia (actual: $RSYNC_DELAY_MINUTOS min)"
+        echo -e "${C_MENU}5.${NC} Configurar hora del backup automático (actual: $(get_cron_hora_completa))"
+        echo -e "${C_MENU}0.${NC} Volver al menú principal"
+        echo
+        echo -ne "${C_OPCION}Seleccione opción: ${NC}"
         read -r opcion
         
         case $opcion in
@@ -1159,7 +1160,7 @@ configurar_backup_automatico() {
 # Restaura un backup seleccionado por el usuario
 restaurar_backup(){
     while true; do
-        echo "Backups disponibles:"
+        echo "${C_TITULO}Backups disponibles:${NC}"
         # listamos todos los archivos de backup en el directorio
         # ls -1 muestra un archivo por linea, mas facil de procesar
         # nl enumera las lineas con formato bonito para seleccion
