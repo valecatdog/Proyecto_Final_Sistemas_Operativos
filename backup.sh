@@ -1381,8 +1381,14 @@ while true; do
             ;;
         0)
             # Salir del plograma
-            echo "Cerrando programa"
-            exit 0 
+            echo "Volviendo a AdmUsuario"
+            sleep 2
+            ./AdmUsuario.sh
+            ;;
+        *)
+            echo "ERROR: opcion incorrecta"
+            sleep 2
+        ;;
     esac
 done
 
