@@ -641,7 +641,7 @@ gestionar_backup_auto() {
                 return 0
                 ;;
             *)
-                echo "Opción inválida"
+                echo -e "${C_ERROR}Opción inválida${NC}"
                 ;;
         esac
         
@@ -741,9 +741,9 @@ crear_backup_grupo(){
 crear_backup(){
     while true; do
         echo "¿Qué tipo de backup desea crear?"
-        echo "1. Backup de usuario individual"
-        echo "2. Backup de grupo (backups individuales por usuario)"
-        echo "0. Volver al menú principal"
+        echo -e "${C_MENU}1.${NC} backup de usuario individual"
+        echo -e "${C_MENU}2.${NC} backup de grupo"
+        echo -e "${C_MENU}0.${NC} volver al menu"
         read -p "Seleccione opción: " tipo_backup
 
         case $tipo_backup in
@@ -797,7 +797,7 @@ crear_backup(){
                 return 1  # retornamos error para indicar que se cancelo
                 ;;
             *)
-                echo "Opción inválida"
+                echo -e "${C_ERROR}Opción inválida${NC}"
                 # el while continua mostrando el menu hasta opcion valida
                 ;;
         esac
@@ -958,16 +958,16 @@ configurar_respaldo_remoto() {
     while true; do
         clear 
         echo -e "=== ${C_TITULO}CONFIGURACIÓN DE RESPALDO REMOTO${NC} ==="
-        echo -e"${C_MENU}Estado actual:${NC} $REMOTE_BACKUP_ENABLED"
-        echo -e"${C_MENU}Delay de transferencia:${NC} $RSYNC_DELAY_MINUTOS minutos"
-        echo -e"${C_MENU}Hora de backup automático:${NC} $(get_cron_hora_completa)"
+        echo -e "${C_MENU}Estado actual:${NC} $REMOTE_BACKUP_ENABLED"
+        echo -e "${C_MENU}Delay de transferencia:${NC} $RSYNC_DELAY_MINUTOS minutos"
+        echo -e "${C_MENU}Hora de backup automático:${NC} $(get_cron_hora_completa)"
         echo
-        echo -e"1. ${C_MENU}Activar/Desactivar respaldo remoto${NC}"
-        echo -e"2. ${C_MENU}Probar conexión remota${NC}"
-        echo -e"3. ${C_MENU}Ver configuración actual${NC}"
-        echo -e"4. ${C_MENU}Configurar delay de transferencia (actual: $RSYNC_DELAY_MINUTOS min)${NC}"
-        echo -e"5. ${C_MENU}Configurar hora del backup automático (actual: $(get_cron_hora_completa))${NC}"
-        echo -e"0. ${C_MENU}Volver al menú principal${NC}"
+        echo -e "1. ${C_MENU}Activar/Desactivar respaldo remoto${NC}"
+        echo -e "2. ${C_MENU}Probar conexión remota${NC}"
+        echo -e "3. ${C_MENU}Ver configuración actual${NC}"
+        echo -e "4. ${C_MENU}Configurar delay de transferencia (actual: $RSYNC_DELAY_MINUTOS min)${NC}"
+        echo -e "5. ${C_MENU}Configurar hora del backup automático (actual: $(get_cron_hora_completa))${NC}"
+        echo -e "0. ${C_MENU}Volver al menú principal${NC}"
         echo
         echo -n "Seleccione opción: "
         read -r opcion
@@ -1021,7 +1021,7 @@ configurar_respaldo_remoto() {
                     echo "Delay de transferencia actualizado a $RSYNC_DELAY_MINUTOS minutos"
                     echo "los proximos backups se transferiran despues de $RSYNC_DELAY_MINUTOS minutos"
                 else
-                    echo "Error: Debe ingresar un número positivo mayor a 0"
+                    echo -e "${C_ERROR}Error:${NC} Debe ingresar un número positivo mayor a 0"
                     echo "ejemplo: 5, 10, 15, etc."
                 fi
                 ;;
@@ -1077,12 +1077,12 @@ configurar_respaldo_remoto() {
                 fi
                 ;;
             0)
-                # alimos del menu de configuracion
+                
                 return 0
                 ;;
             *)
-                #  manejo de opciones invalidas
-                echo "Opción inválida"
+                
+                echo -e "${C_ERROR}Opción inválida${NC}"
                 echo "por favor seleccione una opcion del 0 al 5"
                 ;;
         esac
