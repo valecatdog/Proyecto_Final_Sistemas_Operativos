@@ -1,6 +1,5 @@
 #!/bin/sh
 # Script de backup POSIX-compatible
-# Versión simplificada para máxima portabilidad entre sistemas UNIX
 
 # Configuración de rutas y conexión
 BACKUP_DIR="/var/users_backups"       # Directorio local donde se almacenan los backups
@@ -18,7 +17,7 @@ programar_rsync() {
     
     echo "Programando transferencia remota para $ARCHIVO_LOCAL a $TIEMPO_AT..." >> "$LOG_FILE"
 
-    # DIFERENCIA: En POSIX usamos comillas simples y anidadas para evitar escapes complejos
+    # en POSIX usamos comillas simples y anidadas para evitar escapes complejos
     # El comando completo se pasa a 'at' como una cadena única
     # -i especifica la clave SSH, StrictHostKeyChecking=no evita prompts de verificación
     echo '/usr/bin/rsync -avz -e "ssh -i '"$SSH_KEY"' -o StrictHostKeyChecking=no" "'"$ARCHIVO_LOCAL"'" "'"$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/"'" >> "'"$LOG_FILE"'" 2>&1' | at "$TIEMPO_AT"
@@ -36,7 +35,7 @@ backup_local() {
     # DIFERENCIA: En POSIX usamos grep en /etc/passwd en lugar de 'id' para mayor portabilidad
     if grep -q "^$TARGET:" /etc/passwd 2>/dev/null; then
         TARGET_PATH="/home/$TARGET"   # Ruta del directorio home del usuario
-        FILE_NAME="${TARGET}_$(date +%Y%m%d_%H%M%S).tar.gz"  # Nombre único con timestamp
+        FILE_NAME="${TARGET}_$(date +%Y%m%d_%H%M%S).tar.bz2" # .tar.bz2 para bzip2
         echo "Iniciando respaldo de usuario: $TARGET" >> "$LOG_FILE"
     
     # getent no es POSIX estandar, usamos grep en /etc/group como alternativa
@@ -62,7 +61,8 @@ backup_local() {
 
     ARCHIVE_PATH="$BACKUP_DIR/$FILE_NAME"  # Ruta completa del archivo de backup
     
-    # -c crear archivo, -z comprimir con bzp2, -f especificar archivo output
+    # CORREGIDO: Comentario actualizado para bzip2
+    # -c crear archivo, -j comprimir con bzip2, -f especificar archivo output
     # -C / cambia el directorio raíz para paths relativos en el tar
     # >> "$LOG_FILE" 2>&1 redirige stdout y stderr al logfile
     if tar -cjf "$ARCHIVE_PATH" -C / "$TARGET_PATH" >> "$LOG_FILE" 2>&1; then

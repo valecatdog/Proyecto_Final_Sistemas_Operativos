@@ -1273,7 +1273,7 @@ restaurar_backup(){
             echo "Copiando archivos a $home_destino..."
             rsync -av "$dir_origen/" "$home_destino"/ 2>/dev/null
 
-            # CRITIICO: aseguramos que el usuario sea dueño de todos los archivos
+            # CRITIICO aseguramos que el usuario sea dueño de todos los archivos
             # chown -R cambia owner recursivamente
             chown -R "$usuario:$usuario" "$home_destino"
 
