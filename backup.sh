@@ -142,6 +142,7 @@ get_cron_hora_completa() {
     
     # formateamos los minutos para que siempre tengan 2 digitos
     # printf "%02d" asegura que 5 se convierta en 05, 10 se mantiene 10
+    # % indica que viene el identificador de formato, esto formatea un numero entero de 2 digitos con 0
     # printf "%02d" es un comando que formatea números para que siempre tengan 2 dígitos, rellenando con ceros a la izquierda si es necesario. def oficial :D
     local minuto_formateado=$(printf "%02d" "$CRON_MINUTO")
     
@@ -260,7 +261,7 @@ programar_transferencia_remota() {
     # Usamos << EOF para escribir multiples lineas
     # Las variables se expanden AHORA, cuando creamos el script
     # las variables con \$ se expanden DESPUES, cuando se ejecute el script
-    cat > "$temp_script" << SCRIPT_EOF
+cat > "$temp_script" << SCRIPT_EOF
 #!/bin/bash
 # Script temporal para transferencia rsync
 # Auto-eliminación al finalizar
@@ -1119,13 +1120,14 @@ ejecutar_backup_automatico_ahora() {
     fi
 }
 
-# Reemplaza toggle_backup_automatico por esta función:
+
 configurar_backup_automatico() {
     # Verificar dependencias primero
     echo "Verificando dependencias..." >> /var/log/backups.log
     if ! verificar_dependencias; then
         echo "ERROR: No se puede configurar backup automático debido a errores en dependencias"
         echo "Revisa /var/log/backups.log para más detalles"
+        sleep 5
         return 1
     fi
     
@@ -1335,7 +1337,7 @@ if [ "$1" = "automatico" ]; then
         
         echo "================================================"
         echo "$(date): FINALIZANDO BACKUP AUTOMÁTICO DIARIO"
-        echo "============================================="
+        echo "=============================================="
     } >> /var/log/backups.log 2>&1
     exit 0
 fi
@@ -1380,10 +1382,10 @@ while true; do
             echo "Verificación completada. Revisa /var/log/backups.log"
             ;;
         0)
-            # Salir del plograma
+            # Salir del programa
+            # estas 1400 lineas albergan un nivel de sufrimiento enorme
             echo "Cerrando programa"
             exit 0 
     esac
 done
 
-# estas 1400 lineas albergan un nivel de sufrimiento enorme
