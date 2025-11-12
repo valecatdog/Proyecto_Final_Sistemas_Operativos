@@ -157,9 +157,11 @@ generar_usuario() {
     local apellido
     local user
     local primeraLetra
-    
+
     nombre="$1"
     apellido="$2"
+    nombre="$(echo "$nombre" | tr '[:upper:]' '[:lower:]')"
+    apellido="$(echo "$apellido" | tr '[:upper:]' '[:lower:]')"
     primeraLetra=$(echo "$nombre" | cut -c1)
     user="$primeraLetra$apellido"
     usuario_completo="${nombre}:${apellido}:$user"
