@@ -1,5 +1,0 @@
-*
-\nhola
-$(echo chau)
-./AdmUsuario.sh
-noexistooo
