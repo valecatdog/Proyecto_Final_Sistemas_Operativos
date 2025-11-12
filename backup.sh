@@ -1108,9 +1108,11 @@ ejecutar_backup_automatico_ahora() {
     if backup_diario; then
         echo "Backup automático ejecutado exitosamente"
         echo "Revisa /var/log/backups.log para detalles"
+        sleep 2
     else
         echo "Error en backup automático"
         echo "Revisa /var/log/backups.log para más información"
+        sleep 4
     fi
 }
 
