@@ -359,12 +359,6 @@ crear_dir_backup(){
     if [ ! -f "$backup_list" ]; then
         touch "$backup_list"
         chmod 600 "$backup_list"  # Solo root puede leer/escribir
-        # Agrega encabezado y ejemplos al archivo
-        echo "# Lista de usuarios y grupos para backup automatico" > "$backup_list"
-        echo "# Formato: usuario o @grupo" >> "$backup_list"
-        echo "# Ejemplo:" >> "$backup_list"
-        echo "# usuario1" >> "$backup_list"
-        echo "# @developers" >> "$backup_list"
     fi
 }
 
